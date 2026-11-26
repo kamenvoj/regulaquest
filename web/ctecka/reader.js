@@ -85,8 +85,11 @@ function index(d){
   });
   d.comments.forEach(c => { if (!S.notes.has(c.unit_id)) S.notes.set(c.unit_id, []); S.notes.get(c.unit_id).push(c); });
 
-  document.body.classList.toggle('has-banner', S.draft);
-  $('#draftBanner').classList.toggle('hidden', !S.draft);
+  // Odkaz na pracovní náhled otevřel student: vysvětlit, proč vidí jen publikovaný obsah.
+  const deniedDraft = wantsDraft() && !S.draft;
+  if (deniedDraft) $('#draftBanner').textContent = 'Pracovní náhled je jen pro redakci. Zobrazuje se publikovaný obsah pro studenty.';
+  document.body.classList.toggle('has-banner', S.draft || deniedDraft);
+  $('#draftBanner').classList.toggle('hidden', !(S.draft || deniedDraft));
   $('#docSelect').innerHTML = d.documents.map(x => `<option value="${esc(x.id)}">${esc(docShort(x))}</option>`).join('');
   $('#docSelect').onchange = e => go('#/d/' + e.target.value);
   let timer;

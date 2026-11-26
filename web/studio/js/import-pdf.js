@@ -49,10 +49,27 @@
       }
     });
     // text: položky s polohou (PDF souřadnice, y nahoru)
-    const items = tc.items.filter(it => it.str && it.str.trim()).map(it => ({
-      s: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: Math.abs(it.transform[3]) || it.height || 10,
+    const boldFont = new Map();
+    const isBold = f => {
+      if (!boldFont.has(f)) { let b = false; try { const o = page.commonObjs.get(f); b = /bold|black|heavy|semibold|demi/i.test((o && (o.name || o.loadedName)) || ''); } catch (_) { /* písmo není načtené */ } boldFont.set(f, b); }
+      return boldFont.get(f);
+    };
+    let items = tc.items.filter(it => it.str && it.str.trim()).map(it => ({
+      s: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: Math.abs(it.transform[3]) || it.height || 10, bold: isBold(it.fontName),
     }));
-    return { n, width: vp.width, height: vp.height, items, hs, vs, boxes, images, page };
+    // velikost běžného textu (nejčastější, vážená délkou)
+    const sizes = new Map(); items.forEach(it => { const k = Math.round(it.h * 2) / 2; sizes.set(k, (sizes.get(k) || 0) + it.s.length); });
+    const bodyH = [...sizes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || 11;
+    // horní indexy (čísla poznámek): malé číslo nad účařím sousedního textu → ¹²³
+    const SUP = { 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+    for (const it of items) {
+      if (!/^\d{1,3}$/.test(it.s.trim()) || it.h > 0.82 * bodyH) continue;
+      // nositel: text bezprostředně vlevo, jehož účaří je těsně pod indexem
+      const host = items.filter(o => o !== it && o.h > 0.82 * bodyH && it.y > o.y + 0.12 * o.h && it.y < o.y + o.h && Math.abs(it.x - (o.x + o.w)) < 3 * it.h)
+        .sort((a, b) => (it.y - a.y) - (it.y - b.y) || Math.abs(it.x - (a.x + a.w)) - Math.abs(it.x - (b.x + b.w)))[0];
+      if (host) { it.s = it.s.trim().replace(/\d/g, d => SUP[d]); it.sup = true; it.y = host.y; it.h = host.h; }
+    }
+    return { n, width: vp.width, height: vp.height, items, hs, vs, boxes, images, page, bodyH };
   }
 
   // Seskupí položky do řádků (stejná účaří), zleva doprava.
@@ -66,10 +83,12 @@
       l.items.sort((a, b) => a.x - b.x);
       let t = '', end = null;
       for (const it of l.items) {
-        if (end !== null && it.x - end > 0.18 * it.h && !/\s$/.test(t) && !/^\s/.test(it.s)) t += ' ';
+        if (end !== null && !it.sup && it.x - end > 0.18 * it.h && !/\s$/.test(t) && !/^\s/.test(it.s)) t += ' ';
         t += it.s; end = it.x + it.w;
       }
       l.text = t.replace(/\s+/g, ' ').trim(); l.x = l.items[0].x;
+      l.bold = l.items.filter(i => !i.sup && i.s.trim()).every(i => i.bold);
+      l.small = Math.max(...l.items.filter(i => !i.sup).map(i => i.h), 0);
     }
     return lines.filter(l => l.text).sort((a, b) => b.y - a.y);
   }
@@ -137,15 +156,16 @@
     const out = []; let cur = null, prev = null;
     for (const l of lines) {
       const gap = prev ? prev.y - l.y : 0;
-      const fresh = !cur || prev.page !== l.page && /[.:;]$/.test(cur) || gap > 1.7 * Math.max(prev.h, l.h) || BULLET.test(l.text);
-      if (fresh) { if (cur) out.push(cur); cur = l.text; }
-      else cur = /-$/.test(cur) && /^[a-z]/.test(l.text) ? cur.slice(0, -1) + l.text : cur + ' ' + l.text;
+      const fresh = !cur || (prev.page !== l.page && /[.:;]$/.test(cur.text)) || gap > 1.7 * Math.max(prev.h, l.h) || BULLET.test(l.text) || l.bold !== prev.bold;
+      if (fresh) { if (cur) out.push(cur); cur = { text: l.text, bold: l.bold, lines: 1 }; }
+      else { cur.text = /-$/.test(cur.text) && /^[a-z]/.test(l.text) ? cur.text.slice(0, -1) + l.text : cur.text + ' ' + l.text; cur.lines++; }
       prev = l;
     }
     if (cur) out.push(cur);
     return out;
   }
-  const textHtml = paras => paras.map(esc).join('<br><br>');
+  // tučný krátký odstavec = podnadpis
+  const textHtml = paras => paras.map(p => p.bold && p.lines <= 2 && p.text.length < 160 ? `<b>${esc(p.text)}</b>` : esc(p.text)).join('<br><br>');
 
   // ---------------------------------------------------------------- celý dokument
   const TOC = /^(?:(\d+(?:\.\d+){0,4})\.?\s+)?(.+?)\s*(?:\.\s?){4,}\s*(\d{1,3})$/;
@@ -153,7 +173,7 @@
 
   async function parsePdf(buffer, documentId, filename, progress = () => {}) {
     const L = await lib();
-    const doc = await L.getDocument({ data: new Uint8Array(buffer.slice(0)), standardFontDataUrl: BASE + 'standard_fonts/', wasmUrl: BASE + 'wasm/' }).promise;
+    const doc = await L.getDocument({ data: new Uint8Array(buffer.slice(0)), fontExtraProperties: true, standardFontDataUrl: BASE + 'standard_fonts/', wasmUrl: BASE + 'wasm/' }).promise;
     const pages = [];
     for (let n = 1; n <= doc.numPages; n++) { progress(`Čtu stranu ${n} z ${doc.numPages}…`); pages.push(await readPage(doc, n)); }
     const errors = [], warnings = [];
@@ -195,8 +215,17 @@
       }
       const diagram = p.boxes.length >= 5 || p.images > 0;
       if (diagram) diagramPages.add(p.n);
-      const lines = toLines(free).map(l => ({ ...l, page: p.n })).filter(l => !isEdge(l, p));
-      const entries = [...lines.map(l => ({ kind: 'line', page: p.n, y: l.y, line: l })), ...tables.map(t => ({ kind: 'table', page: p.n, y: t.y1, block: tableBlock(t) }))];
+      const all = toLines(free).map(l => ({ ...l, page: p.n })).filter(l => !isEdge(l, p));
+      // poznámky pod čarou: souvislý blok malého písma ve spodní části strany, první řádek začíná číslem
+      const notes = []; const isSmall = l => l.small && l.small < 0.93 * p.bodyH;
+      for (let i = all.length - 1; i >= 0 && isSmall(all[i]) && all[i].y < p.height * 0.35; i--) notes.unshift(all[i]);
+      // číslo poznámky bývá menším písmem o kousek výš než její text → samostatný řádek; spojit
+      for (let i = notes.length - 2; i >= 0; i--) if (/^\d{1,3}$/.test(notes[i].text)) { notes[i + 1] = { ...notes[i + 1], text: notes[i].text + ' ' + notes[i + 1].text }; notes.splice(i, 1); }
+      while (notes.length && !/^\d{1,3}\s/.test(notes[0].text)) notes.shift();
+      const lines = all.filter(l => !notes.includes(l));
+      const foot = []; notes.forEach(l => { const m = /^(\d{1,3})\s+(.*)$/.exec(l.text); if (m) foot.push({ n: m[1], text: m[2] }); else if (foot.length) foot[foot.length - 1].text += ' ' + l.text; });
+      const entries = [...lines.map(l => ({ kind: 'line', page: p.n, y: l.y, line: l })), ...tables.map(t => ({ kind: 'table', page: p.n, y: t.y1, block: tableBlock(t) })),
+                       ...foot.map(f => ({ kind: 'note', page: p.n, y: -1, note: f }))];
       entries.sort((a, b) => b.y - a.y);
       if (diagram) {   // obrázek stránky hned pod prvním řádkem (nadpis kapitoly zůstane před ním)
         entries.forEach(e => { if (e.kind === 'line') e.diagram = true; });
@@ -231,7 +260,7 @@
       let id = base, k = 2; while (used.has(id)) id = base + '-' + k++; return id;
     };
     const blocksOf = (part, uid) => {
-      const blocks = []; let lines = [];
+      const blocks = [], notes = []; let lines = [];
       const flush = () => { if (lines.length) { const ps = paragraphs(lines); if (ps.length) blocks.push({ type: 'text', html: textHtml(ps) }); lines = []; } };
       for (const e of part) {
         if (e.kind === 'figure') { flush(); blocks.push({ type: 'figure', page: e.page, path: '', caption: `Schéma – strana ${e.page} originálu`, alt: '' }); continue; }
@@ -240,10 +269,18 @@
           if (fig) fig.alt = (fig.alt + ' ' + e.line.text).trim().slice(0, 1000);
           continue;
         }
-        if (e.kind === 'line') lines.push(e.line);
-        else { flush(); blocks.push(e.block); }
+        if (e.kind === 'note') { notes.push(e.note); continue; }
+        if (e.kind === 'line') { lines.push(e.line); continue; }
+        flush();
+        // pokračování tabulky z předchozí strany: stejný počet sloupců, bez záhlaví
+        const last = blocks[blocks.length - 1], cols = t => t.rows[0].reduce((a, c) => a + c.colspan, 0);
+        if (last && last.type === 'table' && e.page > (last.page || 0) && cols(last) === cols(e.block) && !e.block.rows[0].every(c => c.header)
+            && last.rows.length + e.block.rows.length <= 80) { last.rows.push(...e.block.rows); last.page = e.page; continue; }
+        blocks.push({ ...e.block, page: e.page });
       }
       flush();
+      if (notes.length) blocks.push({ type: 'text', html: '<b>Poznámky pod čarou</b><br>' + notes.map(n => esc(n.n.replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]) + ' ' + n.text)).join('<br>') });
+      blocks.forEach(b => { if (b.type === 'table') delete b.page; });
       return blocks;
     };
     const order = { n: 0 };

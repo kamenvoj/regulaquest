@@ -3,7 +3,9 @@
 ## 0.7.0 – import PDF (MDCG)
 
 - **Import dokumentu** přijímá i PDF (pdf.js v prohlížeči, `web/studio/vendor/pdfjs`, Apache-2.0). Kapitoly podle obsahu dokumentu (včetně nečíslovaných podkapitol), v kapitolách s pravidly dál „Rule N“.
-- **Tabulky** s orámováním se převádějí na upravitelné tabulky (včetně sloučených buněk), **schémata** (strany s rámečky a velkými obrázky) se ukládají jako obrázek stránky do úložiště `figures`; jejich text zůstává pro vyhledávání. MDCG 2021-24 Rev.1: 56 částí, 22 pravidel, 37 tabulek, 9 schémat.
+- **Tabulky** s orámováním se převádějí na upravitelné tabulky (včetně sloučených buněk), **schémata** (strany s rámečky a velkými obrázky) se ukládají jako obrázek stránky do úložiště `figures`; jejich text zůstává pro vyhledávání. MDCG 2021-24 Rev.1: 56 částí, 22 pravidel, 9 schémat.
+- Import PDF: čísla poznámek pod čarou jako horní index (gels²), poznámky pod čarou na konci části, tučné podnadpisy („General explanation of the rule“), tabulky pokračující na další straně spojené do jedné (MDCG: 26 tabulek).
+- Čtečka: jednotná šířka textu, odsazení bodů a odrážek podle úrovně; upozornění, když student otevře odkaz na pracovní náhled.
 - Studio zobrazuje obrázky v textu i v editoru (popisek lze upravit); sekce „Změny a původ znění“ jen u dokumentů se seznamem změn.
 - Aktualizace na nové znění porovnává i bloky obsahu (tabulky, obrázky).
 - Opravy databáze: kontrola cesty k obrázku (PostgreSQL nepovolí `{3,300}`), čtečka ukazuje nadpisy i u navigačních částí (migrace `06_import.sql` znovu, `09_ctecka.sql`).
