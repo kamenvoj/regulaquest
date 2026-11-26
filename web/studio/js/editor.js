@@ -28,7 +28,7 @@ function unitPath(id){
 }
 const LIST_LINE=/^([—–•-]|[a-z]\)|\(?[ivx]+\)|\d+[.)]|\(\d+\))\s/;
 function legalLines(body){return String(body).split('\n').map(l=>{const t=l.trim();if(!t)return '<span class="ln gap"></span>';
- const lead=(l.match(/^ */)[0].length)/2,list=lead>0&&LIST_LINE.test(t);
+ const lead=(l.match(/^ */)[0].length)/2,list=LIST_LINE.test(t)&&(lead>0||/^\(?\d+\)/.test(t));
  return `<span class="ln${list?' hang':''}" style="--lvl:${lead}">${esc(t)}</span>`}).join('')}
 function equivalentIn(u,docId){const d=getDoc(u.document_id);return d&&u.id.startsWith(d.id+'-')?getUnit(docId+u.id.slice(d.id.length))||null:null}
 function mirroredRelations(u){

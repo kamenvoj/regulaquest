@@ -202,7 +202,7 @@ function joinLines(par){
   return par.split('\n').reduce((acc, line) => {
     const t = line.trim(); if (!t) return acc;
     const prev = acc[acc.length - 1];
-    if (prev !== undefined && !LIST_LINE.test(t) && !/[:;]$/.test(prev)) acc[acc.length - 1] = prev + ' ' + t;
+    if (prev !== undefined && !LIST_LINE.test(t) && !/^\s/.test(line) && !/[:;]$/.test(prev)) acc[acc.length - 1] = prev + ' ' + t;
     else acc.push(line.replace(/\s+$/, ''));   // úvodní odsazení = pokračování bodu
     return acc;
   }, []);
@@ -215,8 +215,9 @@ function legal(text, q=''){
     const head = par.trim().match(/^\[PDF strana (\d+)\]\n([\s\S]*)$/);
     if (head) return `<span class="pdfpage">PDF str. ${esc(head[1])}</span>` + legal(head[2], q);
     const lines = joinLines(par).map(l => {
-      const t = l.trim(), list = LIST_LINE.test(t) && !/^\d+\.\s/.test(t), cont = !list && /^\s{2,}/.test(l);
-      return `<span class="ln${list ? ' ind hang' : cont ? ' ind' : ''}">${marked(t,q)}</span>`;
+      // odsazení podle úvodních mezer (2 mezery = 1 úroveň), odrážky s visícím odsazením
+      const t = l.trim(), lvl = Math.floor((l.match(/^ */)[0].length) / 2), list = LIST_LINE.test(t) && (lvl > 0 || /^\(?\d+\)/.test(t));
+      return `<span class="ln${list ? ' hang' : ''}" style="--lvl:${lvl}">${marked(t,q)}</span>`;
     });
     const flat = par.trim();
     if (flat.length < 90 && !flat.includes('\n') && /\p{Lu}{3}/u.test(flat) && flat === flat.toLocaleUpperCase('cs')) return `<p class="sub">${marked(flat,q)}</p>`;

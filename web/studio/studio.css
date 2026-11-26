@@ -246,7 +246,7 @@ dialog:has(#impFile){width:min(760px,calc(100vw - 24px));max-width:min(760px,cal
 .import-results summary{cursor:pointer;font-weight:700}
 .legal:has(.ln){white-space:normal}
 .legal .ln{display:block;padding-left:calc(var(--lvl,0) * 1.4em)}
-.legal .ln.hang{padding-left:calc(var(--lvl,0) * 1.4em + 1.2em);text-indent:-1.2em}
+.legal .ln.hang{padding-left:calc(var(--lvl,0) * 1.4em + 1.4em);text-indent:-1.4em}
 .legal .ln.gap{height:.9em}
 dialog:has(#refList){width:min(980px,calc(100vw - 24px));max-width:min(980px,calc(100vw - 24px));max-height:calc(100vh - 32px);overflow:auto}
 .refs-bar{display:grid;grid-template-columns:220px 1fr;gap:12px}
