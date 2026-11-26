@@ -16,12 +16,14 @@ const S = {
   data:null, draft:false,
   units:new Map(), docs:new Map(), children:new Map(),
   rels:new Map(), notes:new Map(), order:new Map(),
-  terms:[], off:loadOff(), focus:null,
+  terms:[], off:loadOff(), focus:null, role:loadRole(), tagNames:new Map(),
   docId:null, unitId:null, query:'', highlight:'', expanded:new Set(), tab:'text'
 };
 
 /* ---------- Data ---------- */
 function loadOff(){ try { const v = JSON.parse(localStorage.getItem('rq-vrstvy-skryte')); if (Array.isArray(v)) return new Set(v); } catch {} return new Set(['duty','deadline','exception']); }
+function loadRole(){ try { return localStorage.getItem('rq-stitek') || ''; } catch { return ''; } }
+const roleName = k => S.tagNames.get(k) || k;
 function saveOff(){ try { localStorage.setItem('rq-vrstvy-skryte', JSON.stringify([...S.off])); } catch {} }
 let RQ = null;
 const wantsDraft = () => new URLSearchParams(location.search).get('nahled') === 'pracovni';
@@ -101,6 +103,16 @@ function index(d){
   let timer;
   $('#search').oninput = e => { clearTimeout(timer); timer = setTimeout(() => { S.query = e.target.value.trim(); renderNav(); }, 140); };
   document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  /* Pohled podle štítku (role, třída rizika, typ…): jen štítky, které jsou u publikovaných částí použité. */
+  (d.tags || []).forEach(t => S.tagNames.set(t.key, t.name));
+  const rs = $('#roleSelect'), used = new Set(d.units.flatMap(u => u.tags || []));
+  if (S.role && !used.has(S.role)) S.role = '';
+  rs.innerHTML = '<option value="">Všechna ustanovení</option>' + (d.tag_groups || []).map(g => {
+    const ts = (d.tags || []).filter(t => t.group_key === g.key && used.has(t.key));
+    return ts.length ? `<optgroup label="${esc(g.name)}">${ts.map(t => `<option value="${esc(t.key)}">${esc(t.name)}</option>`).join('')}</optgroup>` : ''; }).join('');
+  rs.closest('.role-pick').classList.toggle('hidden', !used.size);
+  rs.value = S.role;
+  rs.onchange = () => { S.role = rs.value; try { localStorage.setItem('rq-stitek', S.role); } catch {} renderNav(); const u = S.units.get(S.unitId); if (u) { renderUnit(u); } };
   document.querySelectorAll('#legendPanel .lg').forEach(e => e.innerHTML = ICON(e.dataset.i));
   $('#legendBtn').onclick = () => { const p = $('#legendPanel'), open = p.classList.toggle('hidden'); $('#legendBtn').setAttribute('aria-expanded', String(!open)); };
 }
@@ -297,20 +309,26 @@ function renderNav(){
   if (S.query.length >= 2) return renderResults(box);
   const doc = S.docs.get(S.docId);
   if (!doc){ box.innerHTML = ''; return; }
-  const top = kids('doc:' + doc.id);
+  const top = roleFilter(kids('doc:' + doc.id));
+  if (S.role && !top.length){ box.innerHTML = `<div class="nav-empty">V tomto dokumentu zatím nejsou ustanovení se štítkem „${esc(roleName(S.role))}“.</div>`; return; }
   const groups = doc.document_type === 'regulation'
     ? [['Články', top.filter(u => u.kind === 'article')], ['Přílohy', top.filter(u => u.kind === 'annex')], ['Ostatní', top.filter(u => !['article','annex'].includes(u.kind))]]
     : [['Obsah', top]];
   box.innerHTML = groups.filter(g => g[1].length).map(([name, list]) => `<div class="nav-group">${esc(name)}</div>${tree(list)}`).join('');
   box.querySelectorAll('.caret').forEach(b => b.onclick = () => { const id=b.dataset.id; S.expanded.has(id) ? S.expanded.delete(id) : S.expanded.add(id); renderNav(); });
 }
+/* Pohled podle štítku: ustanovení se štítkem, jejich nadřazené části a celé podřazené části. */
+const hasRole = u => (u.tags || []).includes(S.role);
+function roleHit(u){ if (hasRole(u)) return true; return kids(u.id).some(roleHit); }
+const inRoleBranch = u => ancestors(u).some(hasRole);
+function roleFilter(list){ return S.role ? list.filter(u => roleHit(u) || inRoleBranch(u)) : list; }
 function tree(list){
   return `<ul class="tree">${list.map(u => {
-    const ch = kids(u.id), open = S.expanded.has(u.id) || S.unitId === u.id;
+    const ch = roleFilter(kids(u.id)), open = S.expanded.has(u.id) || S.unitId === u.id;
     const marks = outlineMarks(u);
     const heading = headingOf(u) ? `<span class="h">${esc(trim(headingOf(u),60))}</span>` : '';
     return `<li><div class="node">${ch.length ? `<button class="caret" data-id="${esc(u.id)}" aria-label="${open?'Sbalit':'Rozbalit'}" aria-expanded="${open}">${open?'▼':'▶'}</button>` : '<span class="caret-space"></span>'}
-      <a href="#/u/${encodeURIComponent(u.id)}" class="${u.id===S.unitId?'current':''} ${u.navigation_only?'locked':''}">${esc(u.label)}${marks}${heading}</a></div>
+      <a href="#/u/${encodeURIComponent(u.id)}" class="${u.id===S.unitId?'current':''} ${u.navigation_only?'locked':''} ${S.role&&!hasRole(u)&&!inRoleBranch(u)?'role-dim':''}">${esc(u.label)}${marks}${heading}</a></div>
       ${ch.length && open ? tree(ch) : ''}</li>`;
   }).join('')}</ul>`;
 }
@@ -358,6 +376,9 @@ function renderUnit(u){
   const status = S.draft && u.text_status !== 'verified' && !u.navigation_only ? ' <span class="chip warn">Neověřený text</span>' : '';
   let html = crumbs(u) + `<div class="title-row"><h1>${esc(u.label)}${status}${headingOf(u) ? `<span class="heading">${esc(headingOf(u))}</span>` : ''}</h1>
     ${cp ? `<a class="lang-btn" href="#/u/${encodeURIComponent(cp.unit.id)}" title="Stejné ustanovení v jazyce ${esc(LANG_NAMES[cp.doc.language]||cp.doc.language)}">${esc(cp.doc.language.toUpperCase())}</a>` : ''}</div>`;
+  const known = k => S.tagNames.has(k);
+  const own = (u.tags || []).filter(known), inh = own.length ? [] : [...new Set(ancestors(u).flatMap(a => a.tags || []))].filter(known);
+  if (own.length || inh.length) html += `<div class="roles-row"><span>Štítky:</span>${(own.length ? own : inh).map(k => `<span class="role-chip${k===S.role?' on':''}">${esc(roleName(k))}</span>`).join('')}${inh.length ? '<small>(podle nadřazené části)</small>' : ''}</div>`;
   const ch = kids(u.id);
   if (hasText(u)){
     html += `<div class="legal" data-unit="${esc(u.id)}">${content(u, q)}</div>`;
@@ -369,6 +390,7 @@ function renderUnit(u){
   }
   html += pager(u) + sourceLine(d);
   $('#panelText').innerHTML = html;
+  $('#panelText').classList.remove('focus-mode');
   if (q) document.querySelectorAll('#panelText .rich').forEach(el => markDom(el, q));
   const nTerms = markTerms(d);
   anchorNotes();

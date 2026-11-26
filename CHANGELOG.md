@@ -1,5 +1,15 @@
 # Změny
 
+## 0.15.0 – 2026-11-26 · Štítky a úklid testovacích dat
+- Štítky u částí: obecný slovník skupin a štítků spravovaný ve Studiu („+ Štítek“ → „Spravovat štítky…“), použitelný i pro jiné předpisy.
+  Předvyplněno pro ZP: Koho se týká (výrobce, dovozce, oznámený subjekt …), Třída rizika (I, Is, Im, Ir, IIa, IIb, III),
+  Typ prostředku (implantabilní, invazivní, aktivní, software …). Štítek se zrcadlí do druhé jazykové verze; import ho nemění.
+- Čtečka: výběr „Jen: …“ pod hledáním zúží osnovu na ustanovení se štítkem (včetně nadřazených a podřazených částí);
+  u ustanovení je řádek „Štítky“.
+- `supabase/udrzba/vycistit_testovaci_data.sql`: smaže dokumenty, části, komentáře, vazby, pojmy, historii a publikace;
+  ponechá účty, skupiny a slovník štítků. Vyžaduje ruční potvrzení v souboru.
+- Migrace 14_stitky.sql.
+
 ## 0.14.0 – 2026-11-26 · Zaměření z bočního panelu
 - Klepnutím na položku v panelu Souvislosti (čtečka) nebo Naše komentáře / Propojené pasáže (Studio) se v textu výrazně označí
   jen tato položka (tmavý rámeček), ostatní značky se ztlumí. Funguje i tehdy, když je její vrstva vypnutá.

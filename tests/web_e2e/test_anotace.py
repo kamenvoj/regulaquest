@@ -106,6 +106,15 @@ with sync_playwright() as pw:
     p.screenshot(path='/tmp/a11-studio-focus.png')
     p.click('#reader .focus-chip button'); time.sleep(0.4); p.click('#reader .lb-note'); time.sleep(0.4)
     print('po zrušení:', p.locator('#reader .rq-focus').count(), p.locator('#reader.focus-mode').count())
+    # role
+    p.click('#rqTagAdd'); p.click('[data-tag-add=role_vyrobce]'); time.sleep(0.9)
+    p.click('#rqTagAdd'); p.click('[data-tag-add=typ_software]'); time.sleep(0.9)
+    print('štítky studio:', p.locator('#rqTags .role-chip').all_inner_texts())
+    p.click('#rqTagAdd'); p.click('#rqTagManage'); time.sleep(0.4)
+    p.fill('#tgNewGroup', 'Oblast'); p.click('#tgAddGroup'); time.sleep(0.9)
+    p.fill('[data-newtag=oblast]', 'Ochrana osobních údajů'); p.click('[data-tadd=oblast]'); time.sleep(0.9)
+    print('správa štítků:', p.locator('.tg-group').count(), p.locator('[data-t=oblast_ochrana_osobnich_udaju]').count())
+    p.screenshot(path='/tmp/a14-tags.png'); p.click('#tgClose'); time.sleep(0.3)
     # rychlé odstranění konceptu komentáře
     before = p.locator('#context .boxnote').count()
     p.locator('#context [data-com-drop]').first.click(); time.sleep(0.9)
@@ -135,6 +144,10 @@ with sync_playwright() as pw:
     print('čtečka zaměření:', r.locator('#panelText .rq-focus').count(), r.inner_text('#panelText .focus-chip')[:70].replace('\n',' '))
     r.screenshot(path='/tmp/a12-reader-focus.png')
     r.click('#panelText .focus-chip button'); time.sleep(0.3); r.locator('.lb-note').click(); time.sleep(0.3)
+    r.select_option('#roleSelect', 'role_vyrobce'); time.sleep(0.4)
+    print('pohled výrobce:', r.locator('#roleSelect option').all_inner_texts(), r.locator('.tree a').all_inner_texts(), r.locator('#panelText .roles-row').inner_text().replace('\n',' '))
+    r.screenshot(path='/tmp/a13-reader-role.png')
+    r.select_option('#roleSelect', ''); time.sleep(0.3)
     print('souvislosti:', [h.strip() for h in r.locator('#panelContext h3').all_inner_texts()])
     r.click('#legendBtn'); time.sleep(0.2); r.screenshot(path='/tmp/a4-legend.png')
     # hledání: zvýraznění výsledku je jiné než klíčová pasáž

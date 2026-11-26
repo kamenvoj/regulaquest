@@ -127,7 +127,7 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(set(units), {'mdr-cs-annex-viii', 'mdr-cs-rule-11'})
         self.assertTrue(units['mdr-cs-annex-viii']['navigation_only'])
         self.assertEqual(units['mdr-cs-annex-viii']['body'], '')
-        self.assertNotIn('Aktivní', json.dumps(data, ensure_ascii=False))
+        self.assertNotIn('Aktivní…', json.dumps(data, ensure_ascii=False))
         self.assertEqual([c['id'] for c in data['comments']], [cid])
         # Pracovní změna se studentů nedotkne, dokud se nepublikuje.
         self.as_user(ADMIN)
@@ -359,6 +359,23 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(r['created'], 1)
         self.assertEqual(self.sql("select anchor_text from relations where relation_type='related'")[0][0], 'Software')
         self.assertIn('anchor_text', self.call('rq_draft_preview')['relations'][0])
+
+    def test_unit_tags(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        self.assertEqual(self.call('rq_set_unit_tags', 'mdr-cs-rule-11', ['role_vyrobce', 'typ_software']), 1)
+        self.assertEqual(self.sql("select tags from units where id='mdr-cs-rule-11'")[0][0], ['role_vyrobce', 'typ_software'])
+        self.fails('Neznámý štítek', 'rq_set_unit_tags', 'mdr-cs-rule-11', ['pekar'])
+        g = self.call('rq_save_tag_group', '', 'Oblast GDPR', 50)
+        self.assertEqual(g, 'oblast_gdpr')
+        k = self.call('rq_save_tag', '', g, 'Správce údajů', 1)
+        self.assertEqual(k, 'oblast_gdpr_spravce_udaju')
+        self.call('rq_archive_tag', k, True)
+        self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
+        pv = self.call('rq_draft_preview')
+        self.assertEqual([x for x in pv['units'] if x['id'] == 'mdr-cs-rule-11'][0]['tags'], ['role_vyrobce', 'typ_software'])
+        self.assertNotIn(k, [t['key'] for t in pv['tags']])
+        self.assertIn('tags', self.call('rq_backup'))
 
     def test_structure_editor(self):
         self.setup_doc()

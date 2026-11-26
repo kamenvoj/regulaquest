@@ -186,3 +186,13 @@ h1 .heading{display:block;font-size:18px;font-weight:600;color:#4a6168;letter-sp
 .anchor-q{display:block;width:100%;text-align:left;border:0;background:#f6f4ee;border-radius:6px;padding:5px 8px;margin:0 0 6px;font:inherit;font-size:12.5px;font-style:italic;color:#4b6168;cursor:pointer}
 .anchor-q:hover{background:#efe7cf}
 .ctx-card.warning{border-left-color:#b5761c}
+
+/* Pohled role (0.15) */
+.role-pick{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:#5d7177}
+.role-pick select{flex:1;border:1px solid #cfdcde;border-radius:8px;padding:6px 8px;font:inherit;font-size:12.5px;background:#fff;color:#21414a}
+.tree a.role-dim{opacity:.55}
+.nav-empty{padding:14px 6px;font-size:13px;color:#5d7177}
+.roles-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 14px;font-size:12px;color:#5d7177}
+.role-chip{border:1px solid #cfdcde;border-radius:999px;padding:2px 9px;background:#f6f9f9;color:#34525a;font-weight:600}
+.role-chip.on{background:#16313c;border-color:#16313c;color:#fff}
+.roles-row small{color:#8a9b9f}

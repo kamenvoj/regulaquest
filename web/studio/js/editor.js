@@ -87,6 +87,7 @@ const ACTIONS={
  restore_comment_draft:d=>['rq_restore_comment_draft',{p_id:d.comment_id}],
  propose_comment_revision:d=>['rq_propose_comment_revision',{p_id:d.comment_id,p_change_type:d.change_type,p_reason:d.change_reason,...(d.change_type==='edit'?{p_kind:d.kind,p_language:d.language,p_body:d.body,p_author:d.author}:{})}],
  decide_comment_revision:d=>['rq_decide_comment_revision',{p_revision_id:d.revision_id,p_decision:d.decision}],
+ set_tags:d=>['rq_set_unit_tags',{p_unit_id:d.unit_id,p_tags:d.tags}],
  new_relation:d=>['rq_new_relation',{p_source_id:d.source_id,p_target_id:d.target_id,p_relation_type:d.relation_type,p_rationale:d.rationale,p_evidence:d.evidence||'',p_provenance:d.provenance||'manual',...(d.anchor_text?{p_anchor_text:d.anchor_text,p_anchor_occurrence:Number(d.anchor_occurrence)||1}:{})}],
  relation_status:d=>['rq_relation_status',{p_id:d.id,p_status:d.status}],
  propose_relation_revision:d=>['rq_propose_relation_revision',{p_relation_id:d.relation_id,p_change_type:d.change_type,p_reason:d.change_reason,...(d.change_type==='edit'?{p_target_id:d.target_id,p_relation_type:d.relation_type,p_rationale:d.rationale,p_evidence:d.evidence}:{})}],
@@ -311,7 +312,7 @@ if(!u){const d=getDoc(selected);if(!d){selected=null;return renderReader()}const
 const d=getDoc(u.document_id);const related=db.units.filter(x=>x.parent_id===u.id&&!x.editor_archived);
 box.innerHTML=`<div class="hero-line"><span class="crumb">${esc(d.family)} / ${esc(d.language.toUpperCase())} / ${esc(u.locator||u.label)}</span>${u.editor_archived?'<span class="tag bad">Archivováno</span>':tag(u.text_status)}</div>
 ${u.editor_archived?`<div class="notice archived-note"><strong>Archivovaná část.</strong> Není v osnově ani ve čtečce${u.merged_into?' (sloučena do '+esc(unitPath(u.merged_into))+')':''}. Zůstává jen pro dohledání historie.${u.merged_into?'':' <button class="btn tiny" type="button" id="rqRestore">Obnovit</button>'}</div>`:''}
-<h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>
+<h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>${u.editor_archived?'':rqTagsRow(u)}
 <div class="sourcebox"><strong>Zdroj:</strong> ${esc(d.title)}<br><strong>Verze:</strong> ${esc(d.version)} · ${esc(d.language.toUpperCase())}<br><strong>Umístění:</strong> ${esc(u.locator||u.label)}<br><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Porovnat s originálem ↗</a></div>
 ${u.content_blocks&&u.content_blocks.length?`<div class="rq-prepared-content" data-anchor-root><div class="section-kicker">REDAKČNĚ STRUKTUROVANÝ OBSAH A TABULKY · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>${rqRenderBlocks(u.content_blocks)}</div>`:''}
 ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚNÍ ZDROJE · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>
@@ -320,7 +321,7 @@ ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚ
 <div class="read-actions rq-structure-actions"><button class="btn accent" id="rqEditContent">▦ Editor textu a tabulek</button><button class="btn" id="rqEditStructure">Struktura</button><button class="btn" id="rqSplit" ${!u.body?'disabled':''}>Rozdělit</button><button class="btn" id="rqMove" ${!u.body?'disabled':''}>Přesunout text</button><button class="btn" id="rqMerge" ${!u.body?'disabled':''}>Sloučit</button><button class="btn" id="rqHistory">Historie změn</button>${window.RQTerms&&RQNotes.parseDefinitions(u.body).length>=5?`<button class="btn" id="rqTerms">Pojmy z definic (${RQNotes.parseDefinitions(u.body).length})</button>`:''}<button class="btn danger" id="rqArchive">Archivovat</button>${u.body&&u.text_status!=='verified'?'<button class="btn accent" id="verifyText">Ověřil(a) jsem proti zdroji</button>':''}</div>
 ${u.source_note?`<p class="fine">Původ importu: ${esc(u.source_note)}</p>`:''}
 ${related.length?`<div class="soft-rule"></div><div class="section-kicker">PODŘAZENÉ ČÁSTI</div><div class="doc-outline">${related.map(x=>`<button class="outline-row" data-unit-open="${esc(x.id)}" style="text-align:left;cursor:pointer"><strong>${esc(x.label)} · ${esc(x.heading)}</strong><small>${esc(statusName[x.text_status])}</small></button>`).join('')}</div>`:''}`;
-rqAnchors(box,u);
+rqAnchors(box,u);rqTagsBind(box,u);
 box.querySelector('#rqEditContent').onclick=()=>rqContentEditor(u);
 box.querySelector('#rqEditStructure').onclick=()=>rqStructureEditor(u);
 box.querySelector('#rqSplit').onclick=()=>rqSplit(u);
@@ -973,6 +974,47 @@ function dialogRelated(unitId){
    Kotva = přesné znění výběru + kolikátý výskyt v části. Po novém znění se nenalezené kotvy označí. */
 let rqMissing=new Set();
 function rqUnitComments(u){return db.comments.filter(c=>c.unit_id===u.id&&!['archived','rejected'].includes(c.status))}
+/* Štítky: koho se ustanovení týká, třída rizika, typ prostředku… (zrcadlí se do druhé jazykové verze). */
+const rqTag=k=>(db.tags||[]).find(t=>t.key===k);
+const rqTagName=k=>rqTag(k)?.name||k;
+function rqAncestorIds(u){const out=[];let p=u.parent_id,guard=0;while(p&&guard++<50){out.push(p);p=getUnit(p)?.parent_id}return out}
+function rqTagsRow(u){
+ const own=u.tags||[],inh=own.length?[]:[...new Set(rqAncestorIds(u).flatMap(id=>getUnit(id)?.tags||[]))];
+ const groups=(db.tag_groups||[]).map(g=>[g,(db.tags||[]).filter(t=>t.group_key===g.key&&!t.archived&&!own.includes(t.key))]).filter(x=>x[1].length);
+ return `<div class="roles-edit" id="rqTags"><span class="smallcaps">Štítky</span>${own.map(k=>`<span class="role-chip on" title="${esc((db.tag_groups||[]).find(g=>g.key===rqTag(k)?.group_key)?.name||'')}">${esc(rqTagName(k))}<button type="button" data-tag-del="${esc(k)}" aria-label="Odebrat štítek ${esc(rqTagName(k))}">×</button></span>`).join('')}
+  ${inh.length?`<span class="fine">z nadřazené části: ${inh.map(k=>esc(rqTagName(k))).join(', ')}</span>`:''}
+  <span class="role-add"><button type="button" class="btn tiny" id="rqTagAdd">+ Štítek</button><span class="role-menu" hidden>${groups.map(([g,ts])=>`<span class="rm-h">${esc(g.name)}</span>${ts.map(t=>`<button type="button" data-tag-add="${esc(t.key)}">${esc(t.name)}</button>`).join('')}`).join('')}<span class="rm-sep"></span><button type="button" id="rqTagManage">Spravovat štítky…</button></span></span></div>`;
+}
+function rqTagsBind(box,u){
+ const row=box.querySelector('#rqTags');if(!row)return;const own=u.tags||[];
+ const save=tags=>safeAct({action:'set_tags',unit_id:u.id,tags});
+ row.querySelectorAll('[data-tag-del]').forEach(b=>b.onclick=()=>save(own.filter(k=>k!==b.dataset.tagDel)));
+ const menu=row.querySelector('.role-menu');row.querySelector('#rqTagAdd').onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;if(!menu.hidden)document.addEventListener('click',()=>{menu.hidden=true},{once:true})};
+ row.querySelectorAll('[data-tag-add]').forEach(b=>b.onclick=()=>save([...own,b.dataset.tagAdd]));
+ row.querySelector('#rqTagManage').onclick=()=>rqTagManager();
+}
+function rqTagManager(){
+ const d=$('#modal'),f=$('#modalContent');f.onsubmit=e=>e.preventDefault();
+ const used=k=>db.units.filter(u=>(u.tags||[]).includes(k)).length;
+ const draw=()=>{
+  f.innerHTML=`<h2>Štítky</h2><p>Slovník štítků je společný pro celé Studio. Pro jiné předpisy si založte vlastní skupiny (např. „Oblast“ pro GDPR). Vyřazený štítek zmizí z nabídky i ze čtečky; u částí zůstane uložen a po obnovení se vrátí.</p>
+  ${(db.tag_groups||[]).map(g=>`<div class="tg-group"><div class="tg-head"><input class="input tg-gname" data-g="${esc(g.key)}" value="${esc(g.name)}" aria-label="Název skupiny"><button type="button" class="btn tiny" data-gsave="${esc(g.key)}">Uložit název</button></div>
+   ${(db.tags||[]).filter(t=>t.group_key===g.key).map(t=>`<div class="tg-row${t.archived?' arch':''}"><input class="input tg-name" data-t="${esc(t.key)}" value="${esc(t.name)}" aria-label="Název štítku"><small>${used(t.key)}× použito</small><button type="button" class="btn tiny" data-tsave="${esc(t.key)}">Uložit</button><button type="button" class="btn tiny ${t.archived?'':'danger'}" data-tarch="${esc(t.key)}">${t.archived?'Obnovit':'Vyřadit'}</button></div>`).join('')}
+   <div class="tg-row new"><input class="input" data-newtag="${esc(g.key)}" placeholder="Nový štítek ve skupině „${esc(g.name)}“"><button type="button" class="btn tiny accent" data-tadd="${esc(g.key)}">Přidat</button></div></div>`).join('')}
+  <div class="tg-group"><div class="tg-row new"><input class="input" id="tgNewGroup" placeholder="Nová skupina štítků (např. Oblast)"><button type="button" class="btn tiny accent" id="tgAddGroup">Založit skupinu</button></div></div>
+  <div class="modal-actions"><button class="btn" type="button" id="tgClose">Zavřít</button></div>`;
+  const run=async(fn,msg)=>{try{await fn();await refresh();toast(msg);draw();render()}catch(e){toast(e.message,true)}};
+  f.querySelector('#tgClose').onclick=()=>d.close();
+  f.querySelectorAll('[data-gsave]').forEach(b=>b.onclick=()=>{const g=db.tag_groups.find(x=>x.key===b.dataset.gsave);run(()=>rpc('rq_save_tag_group',{p_key:g.key,p_name:f.querySelector(`[data-g="${CSS.escape(g.key)}"]`).value,p_sort:g.sort}),'Skupina uložena.')});
+  f.querySelectorAll('[data-tsave]').forEach(b=>b.onclick=()=>{const t=rqTag(b.dataset.tsave);run(()=>rpc('rq_save_tag',{p_key:t.key,p_group_key:t.group_key,p_name:f.querySelector(`[data-t="${CSS.escape(t.key)}"]`).value,p_sort:t.sort}),'Štítek uložen.')});
+  f.querySelectorAll('[data-tarch]').forEach(b=>b.onclick=()=>{const t=rqTag(b.dataset.tarch);run(()=>rpc('rq_archive_tag',{p_key:t.key,p_archived:!t.archived}),t.archived?'Štítek obnoven.':'Štítek vyřazen.')});
+  f.querySelectorAll('[data-tadd]').forEach(b=>b.onclick=()=>{const g=b.dataset.tadd,inp=f.querySelector(`[data-newtag="${CSS.escape(g)}"]`);if(!inp.value.trim())return;
+   const n=(db.tags||[]).filter(t=>t.group_key===g).length+1;run(()=>rpc('rq_save_tag',{p_key:'',p_group_key:g,p_name:inp.value.trim(),p_sort:n}),'Štítek přidán.')});
+  f.querySelector('#tgAddGroup').onclick=()=>{const v=f.querySelector('#tgNewGroup').value.trim();if(!v)return;run(()=>rpc('rq_save_tag_group',{p_key:'',p_name:v,p_sort:((db.tag_groups||[]).length+1)*10}),'Skupina založena.')};
+ };
+ d.classList.add('wide');d.addEventListener('close',()=>d.classList.remove('wide'),{once:true});
+ draw();d.showModal();
+}
 let rqFocus=null;
 function rqSetFocus(src){
  const u=getUnit(selected);if(!u)return;
