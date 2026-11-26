@@ -50,7 +50,7 @@ function relationsSeenFrom(docId){
   out.push({...r,source_id:s2.id,target_id:t2.id,mirrored:true})}
  return out}
 function documentLabel(d){return d?`${d.family} · ${d.language.toUpperCase()} · ${d.version}`:'Neznámý dokument'}
-const fullname=id=>{const u=getUnit(id);if(!u)return id;const d=getDoc(u.document_id);return `${documentLabel(d)} › ${unitPath(id)}${u.heading?' – '+u.heading:''}`};
+const fullname=id=>{const u=getUnit(id);if(!u)return id;const d=getDoc(u.document_id);return `${documentLabel(d)} › ${unitPath(id)}${u.heading?' – '+u.heading:''}${u.editor_archived?' [archivováno]':''}`};
 const tag=(s)=>`<span class="tag ${statuses[s]||''}">${esc(statusName[s]||s)}</span>`;
 function toast(t,bad=false){const n=$('#toast');n.textContent=t;n.className='toast visible'+(bad?' error':'');setTimeout(()=>n.classList.remove('visible'),4200)}
 // Supabase: stav z rq_studio_state(), zápisy výhradně přes funkce rq_*.
@@ -123,7 +123,7 @@ function renderDocumentSelector(){
  $('#workDocSubtitle').textContent=d?`${d.title} · ${d.version}`:'Vyberte dokument v katalogu.';
 }
 function renderHome(){
- const c=db.counts||{},totalText=db.units.filter(u=>String(u.body||'').trim()).length;
+ const c=db.counts||{},totalText=db.units.filter(u=>!u.editor_archived&&String(u.body||'').trim()).length;
  $('#homeSummary').innerHTML=`<button type="button" class="metric metric-link" id="homeOpenDocs"><span>Dokumentů ↗</span><strong>${c.documents||0}</strong><small>Otevřít katalog</small></button>
  <button type="button" class="metric metric-link" id="homeOpenVerified"><span>Ověřeno ↗</span><strong>${c.verified||0} / ${totalText}</strong><small>Pasáží s dostupným textem</small></button>
  <button type="button" class="metric metric-link" id="homeOpenReview"><span>Vazby ke kontrole ↗</span><strong>${c.proposed||0}</strong><small>Napříč dokumenty</small></button>
@@ -171,7 +171,7 @@ function renderDocumentsOverview(){
    const currentGroup=d.jurisdiction+'|'+d.document_type;
    const previousGroup=i?docs[i-1].jurisdiction+'|'+docs[i-1].document_type:null;
    const heading=currentGroup!==previousGroup?`<div class="catalog-section-title">${esc(jurisdictions[d.jurisdiction]||'Nezařazeno')} / ${esc(docTypes[d.document_type]||'Ostatní')}</div>`:'';
-   const units=db.units.filter(u=>u.document_id===d.id);
+   const units=db.units.filter(u=>u.document_id===d.id&&!u.editor_archived);
    const verified=units.filter(u=>u.text_status==='verified'&&String(u.body||'').trim()).length;
    const withText=units.filter(u=>String(u.body||'').trim()).length;
    return `${heading}<div class="review-card overview-card"><div><h3>${esc(d.family)} · ${esc(d.language.toUpperCase())}</h3>
@@ -190,7 +190,7 @@ function renderVerifiedOverview(){
  select.innerHTML=options.map(o=>`<option value="${esc(o.id)}">${esc(o.label)}</option>`).join('');
  if(!options.some(o=>o.id===verifiedDocFilter))verifiedDocFilter='all';select.value=verifiedDocFilter;
  const q=verifiedOverviewSearch.trim().toLocaleLowerCase('cs');
- const verified=db.units.filter(u=>u.text_status==='verified'&&String(u.body||'').trim()&&
+ const verified=db.units.filter(u=>!u.editor_archived&&u.text_status==='verified'&&String(u.body||'').trim()&&
   (verifiedDocFilter==='all'||u.document_id===verifiedDocFilter)&&
   (!q||[fullname(u.id),u.body,u.locator].join(' ').toLocaleLowerCase('cs').includes(q)));
  holder.innerHTML=verified.length?verified.map(u=>`<div class="review-card overview-card"><div><h3>${esc(fullname(u.id))}</h3>
@@ -304,7 +304,8 @@ if(!u){const d=getDoc(selected);if(!d){selected=null;return renderReader()}const
  box.innerHTML=`<div class="crumb">ZDROJ / ${esc(d.family)}</div><h2>${esc(d.title)}</h2><p class="section-sub">${esc(d.kind)} · ${esc(d.language.toUpperCase())} · ${esc(d.version)}</p><div class="sourcebox"><strong>Vydavatel:</strong> ${esc(d.publisher)}<br><strong>Verze:</strong> ${esc(d.version)}<br><strong>Oficiální zdroj:</strong> <a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Otevřít dokument ↗</a></div><button class="btn" id="editDocMetadataReader">Upravit údaje a tagy</button><div class="section-kicker">HLAVNÍ ČÁSTI DOKUMENTU (${related.length} POLOŽEK CELKEM)</div><div class="doc-outline">${related.filter(x=>!x.parent_id).map(x=>`<button class="outline-row" data-unit-open="${esc(x.id)}" style="text-align:left;cursor:pointer"><strong>${esc(x.label)} · ${esc(x.heading)}</strong><small>${esc(x.locator||'')} · ${esc(statusName[x.text_status])}</small></button>`).join('')}</div>${archived.length?`<div class="section-kicker">ARCHIVOVANÉ ČÁSTI (${archived.length})</div><div class="doc-outline">${archived.slice(0,200).map(x=>`<div class="outline-row"><strong>${esc(unitPath(x.id))}${x.heading?' · '+esc(x.heading):''}</strong><small>${esc(x.locator||'')}</small><button class="btn tiny" type="button" data-unit-restore="${esc(x.id)}">Obnovit</button></div>`).join('')}</div>`:''}`;
  box.querySelectorAll('[data-unit-open]').forEach(el=>el.onclick=()=>openUnit(el.dataset.unitOpen));box.querySelectorAll('[data-unit-restore]').forEach(el=>el.onclick=()=>{if(confirm('Obnovit tuto část? Vrátí se do osnovy ve stavu „Nutno ověřit“.'))safeAct({action:'restore_unit',unit_id:el.dataset.unitRestore})});const edit=box.querySelector('#editDocMetadataReader');if(edit)edit.onclick=()=>dialogDocumentMetadata(d.id);return}
 const d=getDoc(u.document_id);const related=db.units.filter(x=>x.parent_id===u.id&&!x.editor_archived);
-box.innerHTML=`<div class="hero-line"><span class="crumb">${esc(d.family)} / ${esc(d.language.toUpperCase())} / ${esc(u.locator||u.label)}</span>${tag(u.text_status)}</div>
+box.innerHTML=`<div class="hero-line"><span class="crumb">${esc(d.family)} / ${esc(d.language.toUpperCase())} / ${esc(u.locator||u.label)}</span>${u.editor_archived?'<span class="tag bad">Archivováno</span>':tag(u.text_status)}</div>
+${u.editor_archived?`<div class="notice archived-note"><strong>Archivovaná část.</strong> Není v osnově ani ve čtečce${u.merged_into?' (sloučena do '+esc(unitPath(u.merged_into))+')':''}. Zůstává jen pro dohledání historie.${u.merged_into?'':' <button class="btn tiny" type="button" id="rqRestore">Obnovit</button>'}</div>`:''}
 <h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>
 <div class="sourcebox"><strong>Zdroj:</strong> ${esc(d.title)}<br><strong>Verze:</strong> ${esc(d.version)} · ${esc(d.language.toUpperCase())}<br><strong>Umístění:</strong> ${esc(u.locator||u.label)}<br><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Porovnat s originálem ↗</a></div>
 ${u.content_blocks&&u.content_blocks.length?`<div class="rq-prepared-content"><div class="section-kicker">REDAKČNĚ STRUKTUROVANÝ OBSAH A TABULKY · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>${rqRenderBlocks(u.content_blocks)}</div>`:''}
@@ -320,6 +321,8 @@ box.querySelector('#rqSplit').onclick=()=>rqSplit(u);
 box.querySelector('#rqMove').onclick=()=>rqMoveText(u,false);
 box.querySelector('#rqMerge').onclick=()=>rqMoveText(u,true);
 box.querySelector('#rqHistory').onclick=()=>rqHistory(u);
+const rs=box.querySelector('#rqRestore');if(rs)rs.onclick=()=>{if(confirm('Obnovit tuto část? Vrátí se do osnovy ve stavu „Nutno ověřit“.'))safeAct({action:'restore_unit',unit_id:u.id})};
+if(u.editor_archived)box.querySelector('#rqArchive').style.display='none';
 box.querySelector('#rqArchive').onclick=()=>{
  if(related.length){toast('Část má podřazené části. Nejprve archivujte je.',true);return}
  const reason=prompt(`Archivovat „${unitPath(u.id)}“?\n\nČást zmizí z osnovy i ze čtečky, v databázi zůstane i s historií a lze ji obnovit (Katalog → dokument → Archivované části). Její schválené vazby a komentáře se vrátí do kontroly.\n\nDůvod:`,'Nepotřebná nebo duplicitní část');
@@ -459,7 +462,7 @@ function dialogRelationRevision(id){
  <div class="modal-actions"><button type="button" class="btn" id="editRelCancel">Zrušit</button><button class="btn accent" type="submit" id="editRelSave">Uložit návrh změny</button></div>`;
  const doc=f.querySelector('#editRelDoc'),search=f.querySelector('#editRelSearch'),target=f.querySelector('#editRelTarget'),count=f.querySelector('#editRelCount');
  function fill(){const q=search.value.trim().toLocaleLowerCase('cs'),prior=target.value||r.target_id;
- const found=db.units.filter(u=>u.document_id===doc.value && u.id!==r.source_id && [unitPath(u.id),u.heading,u.locator].join(' ').toLocaleLowerCase('cs').includes(q));
+ const found=db.units.filter(u=>u.document_id===doc.value && u.id!==r.source_id && !u.editor_archived && [unitPath(u.id),u.heading,u.locator].join(' ').toLocaleLowerCase('cs').includes(q));
  target.innerHTML='<option value="">— Vyberte cílové ustanovení —</option>';
  for(const u of found.slice(0,250)){let opt=document.createElement('option');opt.value=u.id;opt.textContent=unitPath(u.id)+(u.heading?' – '+u.heading:'');target.appendChild(opt)}
  if(found.some(u=>u.id===prior))target.value=prior;
@@ -669,7 +672,7 @@ function dialogRelation(u,preset=null){
   target.innerHTML='<option value="">— Vyberte cílové ustanovení —</option>';
   target.disabled=!id; search.disabled=!id;
   if(!id){count.textContent='Nejprve vyberte cílový dokument.';chosenTarget();return}
-  const matching=db.units.filter(x=>x.document_id===id && x.id!==u.id && [unitPath(x.id),x.heading,x.locator].join(' ').toLocaleLowerCase('cs').includes(q));
+  const matching=db.units.filter(x=>x.document_id===id && x.id!==u.id && !x.editor_archived && [unitPath(x.id),x.heading,x.locator].join(' ').toLocaleLowerCase('cs').includes(q));
   const limit=200;
   for(const x of matching.slice(0,limit)){
    const opt=document.createElement('option');opt.value=x.id;
@@ -731,7 +734,7 @@ function dialogDoc(){const html=`<p>Nový dokument bude mít vlastní verzi, jaz
  const g=vals.group_key&&db.documents.find(x=>(x.group_key||x.id)===vals.group_key);
  if(g)Object.assign(vals,{jurisdiction:g.jurisdiction,document_type:g.document_type,topics:g.topics||[]});
  safeAct({action:'new_document',...vals})})}
-function dialogUnit(){const doc=getDoc(selected) || getDoc(getUnit(selected)?.document_id) || getDoc(activeDocId) || db.documents[0];if(!doc){toast('Nejdřív založte dokument.',true);return}const all=db.units.filter(u=>u.document_id===doc.id);const html=`<p>Vytvoříte rejstříkovou část. Text vložíte dodatečně, aby nešlo o neověřené přepisy.</p>${select('Dokument','document_id',db.documents.map(d=>[d.id,`${d.family} · ${d.language.toUpperCase()}`]),doc.id)}${select('Nadřazená část','parent_id',[['','Bez nadřazené části'],...all.map(u=>[u.id,u.label+' · '+u.heading])])}${select('Typ části','kind',[['article','Článek'],['annex','Příloha'],['paragraph','Odstavec'],['rule','Pravidlo'],['section','Kapitola / pasáž']])}${field('Označení','label')}<label class="form-field"><span>Nadpis / stručný popis (nepovinné)</span><input class="input" name="heading" type="text" placeholder="Např. Definice"></label><label class="form-field"><span>Lokátor v originále (nepovinné)</span><input class="input" name="locator" type="text" placeholder="Např. Článek 2 nebo Annex VIII, Rule 11"></label>`;dialog('Nové ustanovení / pasáž',html,vals=>safeAct({action:'new_unit',...vals}))}
+function dialogUnit(){const doc=getDoc(selected) || getDoc(getUnit(selected)?.document_id) || getDoc(activeDocId) || db.documents[0];if(!doc){toast('Nejdřív založte dokument.',true);return}const all=db.units.filter(u=>u.document_id===doc.id&&!u.editor_archived);const html=`<p>Vytvoříte rejstříkovou část. Text vložíte dodatečně, aby nešlo o neověřené přepisy.</p>${select('Dokument','document_id',db.documents.map(d=>[d.id,`${d.family} · ${d.language.toUpperCase()}`]),doc.id)}${select('Nadřazená část','parent_id',[['','Bez nadřazené části'],...all.map(u=>[u.id,u.label+' · '+u.heading])])}${select('Typ části','kind',[['article','Článek'],['annex','Příloha'],['paragraph','Odstavec'],['rule','Pravidlo'],['section','Kapitola / pasáž']])}${field('Označení','label')}<label class="form-field"><span>Nadpis / stručný popis (nepovinné)</span><input class="input" name="heading" type="text" placeholder="Např. Definice"></label><label class="form-field"><span>Lokátor v originále (nepovinné)</span><input class="input" name="locator" type="text" placeholder="Např. Článek 2 nebo Annex VIII, Rule 11"></label>`;dialog('Nové ustanovení / pasáž',html,vals=>safeAct({action:'new_unit',...vals}))}
 
 // Import konsolidovaného znění z EUR-Lexu: převod v prohlížeči (import-eurlex.js), originál do Storage,
 // části po dávkách přes rq_import_units, závěr rq_import_finish. Nic se samo neověřuje.
