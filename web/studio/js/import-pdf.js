@@ -220,11 +220,11 @@
       // začátek poznámek: řádek ve spodní části strany, který začíná malým číslem (ne horním indexem u slova)
       const startsNote = l => l.y < p.height * 0.35 && /^\d{1,3}$/.test(l.items[0].s.trim()) && !l.items[0].sup && l.items[0].h < 0.82 * p.bodyH;
       const first = all.findIndex(startsNote);
-      const notes = first >= 0 ? all.slice(first) : [];
+      const notes = first >= 0 ? all.slice(first) : [], noteLines = new Set(notes);
       // číslo poznámky bývá menším písmem o kousek výš než její text → samostatný řádek; spojit
       for (let i = notes.length - 2; i >= 0; i--) if (/^\d{1,3}$/.test(notes[i].text)) { notes[i + 1] = { ...notes[i + 1], text: notes[i].text + ' ' + notes[i + 1].text }; notes.splice(i, 1); }
       while (notes.length && !/^\d{1,3}\s/.test(notes[0].text)) notes.shift();
-      const lines = all.filter(l => !notes.includes(l));
+      const lines = all.filter(l => !noteLines.has(l));   // (spojováním čísel vznikají nové objekty)
       const foot = []; notes.forEach(l => { const m = /^(\d{1,3})\s+(.*)$/.exec(l.text); if (m) foot.push({ n: m[1], text: m[2] }); else if (foot.length) foot[foot.length - 1].text += ' ' + l.text; });
       const entries = [...lines.map(l => ({ kind: 'line', page: p.n, y: l.y, line: l })), ...tables.map(t => ({ kind: 'table', page: p.n, y: t.y1, block: tableBlock(t) })),
                        ...foot.map(f => ({ kind: 'note', page: p.n, y: -1, note: f }))];
