@@ -172,7 +172,7 @@ function rqContentEditor(u){
  function readEdits(){
   host.querySelectorAll('[data-rq-block]').forEach(el=>{
    const i=Number(el.dataset.rqBlock),block=blocks[i];if(!block)return;
-   if(block.type==='text'){block.html=el.querySelector('[data-rq-editable-text]')?.innerHTML||'';}
+   if(block.type==='text'){block.html=(el.querySelector('[data-rq-editable-text]')?.innerHTML||'').replace(/\r\n?|\n/g,'<br>');}
    if(block.type==='table'){
     block.caption=el.querySelector('[data-rq-caption]')?.value||'';block.notes=el.querySelector('[data-rq-notes]')?.value||'';
     for(const [r,row] of block.rows.entries())for(const [j,cell] of row.entries()){
