@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
 
 DSN = os.environ.get('RQ_PG_DSN')
 ROOT = Path(__file__).resolve().parents[1]
-FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[123567]_*.sql'))
+FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[1235678]_*.sql'))
 
 OWNER, ADMIN, STUDENT, STUDENT2 = (str(uuid.UUID(int=i)) for i in (1, 2, 3, 4))
 
@@ -273,6 +273,17 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(self.sql("select archived, text_status from units where id='mdr-cs-rule-12'")[0], (False, 'needs_review'))
         self.as_user(STUDENT)
         self.fails('', 'rq_archive_unit', 'mdr-cs-rule-11', None, 'x')
+
+    def test_translated_comment_tracks_source(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        src = self.call('rq_new_comment', 'mdr-cs-rule-11', 'explanation', 'cs', 'Původní výklad', 'R')
+        tr = self.call('rq_new_comment', 'mdr-cs-rule-12', 'explanation', 'en', 'Translated', 'R', src)
+        self.assertEqual(self.sql("select translated_from, source_body from comments where id=%s", tr)[0], (src, 'Původní výklad'))
+        self.call('rq_edit_comment_draft', src, 'explanation', 'cs', 'Změněný výklad', 'R')
+        self.call('rq_mark_translation_current', tr)
+        self.assertEqual(self.sql("select source_body from comments where id=%s", tr)[0][0], 'Změněný výklad')
+        self.fails('nevznikl', 'rq_mark_translation_current', src)
 
     def test_structure_editor(self):
         self.setup_doc()

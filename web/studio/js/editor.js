@@ -49,6 +49,8 @@ function relationsSeenFrom(docId){
   for(const x of db.documents)if((x.group_key||x.id)===(td.group_key||td.id)&&x.language===doc.language){const c=equivalentIn(t,x.id);if(c){t2=c;break}}
   out.push({...r,source_id:s2.id,target_id:t2.id,mirrored:true})}
  return out}
+const translationSource=c=>c&&c.translated_from?db.comments.find(x=>x.id===c.translated_from):null;
+const translationStale=c=>{const s=translationSource(c);return !!s&&c.status!=='archived'&&s.body!==c.source_body};
 function documentLabel(d){return d?`${d.family} · ${d.language.toUpperCase()} · ${d.version}`:'Neznámý dokument'}
 const fullname=id=>{const u=getUnit(id);if(!u)return id;const d=getDoc(u.document_id);return `${documentLabel(d)} › ${unitPath(id)}${u.heading?' – '+u.heading:''}${u.editor_archived?' [archivováno]':''}`};
 const tag=(s)=>`<span class="tag ${statuses[s]||''}">${esc(statusName[s]||s)}</span>`;
@@ -73,11 +75,12 @@ const ACTIONS={
  split_unit:d=>['rq_split_unit',{p_unit_id:d.unit_id,p_index:d.index,p_new_label:d.new_label,p_new_heading:d.new_heading,p_new_locator:d.new_locator,p_expected:d.expected_updated_at,p_confirm_flatten:!!d.confirm_flatten_rich,p_reason:d.reason||undefined}],
  move_unit_text:d=>['rq_move_unit_text',{p_unit_id:d.unit_id,p_target_id:d.target_id,p_fragment:d.fragment,p_expected:d.expected_updated_at,p_target_expected:d.target_updated_at,p_confirm_flatten:!!d.confirm_flatten_rich,p_reason:d.reason||undefined}],
  merge_units:d=>['rq_merge_units',{p_unit_id:d.unit_id,p_target_id:d.target_id,p_expected:d.expected_updated_at,p_target_expected:d.target_updated_at,p_confirm_flatten:!!d.confirm_flatten_rich,p_reason:d.reason||undefined}],
- new_comment:d=>['rq_new_comment',{p_unit_id:d.unit_id,p_kind:d.kind,p_language:d.language,p_body:d.body,p_author:d.author||''}],
+ new_comment:d=>['rq_new_comment',{p_unit_id:d.unit_id,p_kind:d.kind,p_language:d.language,p_body:d.body,p_author:d.author||'',...(d.translated_from?{p_translated_from:d.translated_from}:{})}],
  comment_status:d=>['rq_comment_status',{p_id:d.id,p_status:d.status}],
  edit_comment_draft:d=>['rq_edit_comment_draft',{p_id:d.comment_id,p_kind:d.kind,p_language:d.language,p_body:d.body,p_author:d.author||''}],
  archive_unit:d=>['rq_archive_unit',{p_unit_id:d.unit_id,p_expected:getUnit(d.unit_id)?.updated_at||null,p_reason:d.reason||undefined}],
  restore_unit:d=>['rq_restore_unit',{p_unit_id:d.unit_id}],
+ translation_current:d=>['rq_mark_translation_current',{p_id:d.id}],
  archive_comment_draft:d=>['rq_archive_comment_draft',{p_id:d.comment_id}],
  restore_comment_draft:d=>['rq_restore_comment_draft',{p_id:d.comment_id}],
  propose_comment_revision:d=>['rq_propose_comment_revision',{p_id:d.comment_id,p_change_type:d.change_type,p_reason:d.change_reason,...(d.change_type==='edit'?{p_kind:d.kind,p_language:d.language,p_body:d.body,p_author:d.author}:{})}],
@@ -340,7 +343,7 @@ const origin=getDoc(u.document_id);
 box.innerHTML=`<div class="context-section"><div class="context-head"><h3>↗ Propojené pasáže <span class="tag">${rel.length}</span></h3><div class="actionrow"><button class="btn tiny" id="suggestLinks" title="Výslovné odkazy v textu této části">✧ Návrhy</button><button class="btn tiny" id="addLink">+ Propojit</button></div></div>
 ${rel.length?rel.map(r=>{const other=r.source_id===u.id?r.target_id:r.source_id;return `<div class="boxnote"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">${esc(r.rationale)}</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-relation-detail="${esc(r.id)}">Detail vazby</button></div></div>`}).join(''):'<p class="fine">Zatím bez propojení. Vazby je možné vytvářet na úrovni kapitol, pravidel i jednotlivých pasáží.</p>'}
 ${mirror.length?`<div class="section-kicker">Z JINÉ JAZYKOVÉ VERZE · PLATÍ I ZDE</div>${mirror.map(({r,from,other})=>`<div class="boxnote mirrored"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">Vazba vytvořená u ${esc(documentLabel(getDoc(from.document_id)))}; upravuje a schvaluje se tam.</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-jump="${esc(from.id)}">Otevřít původní</button></div></div>`).join('')}`:''}</div>
-<div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>▤ Naše komentáře <span class="tag">${comments.length}</span></h3><button class="btn tiny" id="addNote">+ Přidat</button></div>${comments.length?comments.map(c=>`<div class="boxnote"><div class="meta"><strong>${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</strong>${tag(c.status)}</div><p>${esc(c.body)}</p><div class="helper">${esc(c.author||'RegulaQuest redakce')}</div><div class="actionrow"><button type="button" class="btn tiny" data-comment-detail="${esc(c.id)}">Detail / upravit</button></div></div>`).join(''):'<p class="fine">Zatím bez autorských komentářů.</p>'}</div><div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>◷ Změny a původ znění <span class="tag">${amendments.length}</span></h3></div>
+<div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>▤ Naše komentáře <span class="tag">${comments.length}</span></h3><button class="btn tiny" id="addNote">+ Přidat</button></div>${comments.length?comments.map(c=>`<div class="boxnote"><div class="meta"><strong>${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</strong>${tag(c.status)}${translationStale(c)?' <span class="tag warn">Originál změněn</span>':''}</div><p>${esc(c.body)}</p><div class="helper">${esc(c.author||'RegulaQuest redakce')}</div><div class="actionrow"><button type="button" class="btn tiny" data-comment-detail="${esc(c.id)}">Detail / upravit</button></div></div>`).join(''):'<p class="fine">Zatím bez autorských komentářů.</p>'}</div><div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>◷ Změny a původ znění <span class="tag">${amendments.length}</span></h3></div>
 ${amendments.length?amendments.map(a=>`<div class="boxnote"><div class="meta"><strong>${esc(a.marker)} · ${a.kind==='corrigendum'?'Oprava':'Pozměňující akt'}</strong></div><p>${esc(a.title||'Označení změny v konsolidovaném dokumentu')}</p>${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">Přejít na původní akt ↗</a>`:`<a href="${esc(origin?.url||'#')}" target="_blank" rel="noopener noreferrer">Ověřit akt v přehledu „Ve znění“ na EUR-Lexu ↗</a>`}</div>`).join(''):'<p class="fine">U tohoto textu nejsou v importovaném konsolidovaném znění zachyceny změnové značky. Neznamená to, že text nikdy nebyl měněn.</p>'}
 <p class="fine">Zobrazené znění je informativní konsolidace k datu uvedenému u zdroje. Změnové značky se do textu nevypisují.</p></div>
 <div class="soft-rule"></div><div class="fine">Komentář je oddělený od oficiálního znění. Pro studentský export musí být schválený.</div>`;
@@ -419,7 +422,7 @@ function relationHistory(r){
  function parse(s){try{return s?JSON.parse(s):{}}catch{return {}}}
  return history.map(h=>{const old=parse(h.before_json),current=parse(h.after_json);
   const changed=Object.keys(fields).filter(k=>old[k]!==undefined&&current[k]!==undefined&&old[k]!==current[k]);
-  return `<div class="history-row"><strong>${esc(labels[h.event_type]||h.event_type)}</strong><small>${esc(h.created_at)}</small>
+  return `<div class="history-row"><strong>${esc(labels[h.event_type]||h.event_type)}</strong><small>${esc(new Date(h.created_at).toLocaleString('cs-CZ'))}</small>
   ${changed.map(k=>`<div class="history-change"><strong>${esc(fields[k])}:</strong>
   <div class="fine">Před: ${esc(k==='target_id'?fullname(old[k]):k==='relation_type'?relName[old[k]]:old[k])}</div>
   <div class="fine">Po: ${esc(k==='target_id'?fullname(current[k]):k==='relation_type'?relName[current[k]]:current[k])}</div></div>`).join('')}
@@ -497,13 +500,13 @@ function renderComments(){
  $('#commentStateFilter').value=commentStatusFilter;$('#commentListSearch').value=commentSearch;
  const q=commentSearch.trim().toLocaleLowerCase('cs');
  const items=db.comments.filter(c=>(commentDocFilter==='all'||getUnit(c.unit_id)?.document_id===commentDocFilter)&&
- (commentStatusFilter==='all'||c.status===commentStatusFilter)&&
+ (commentStatusFilter==='all'||(commentStatusFilter==='stale'?translationStale(c):c.status===commentStatusFilter))&&
  (!q||[fullname(c.unit_id),noteName[c.kind],c.body,c.author,c.language].join(' ').toLocaleLowerCase('cs').includes(q)));
  const area=$('#commentList');area.innerHTML=items.length?items.map(c=>{
  const pending=(db.comment_revisions||[]).find(r=>r.comment_id===c.id&&r.status==='proposed');
  return `<div class="review-card comment-list-item"><h3>${esc(fullname(c.unit_id))}</h3>
  <small>${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())} · ${esc(c.author||'Redakce RegulaQuest')}</small>
- <p class="comment-preview">${esc(c.body)}</p><div class="actionrow">${tag(c.status)}${pending?'<span class="tag proposed">Čeká návrh změny</span>':''}<button class="btn tiny" data-manage-comment="${esc(c.id)}">Otevřít detail / historie</button><button class="btn tiny" data-open-comment-unit="${esc(c.unit_id)}">Přejít na ustanovení</button></div></div>`;
+ <p class="comment-preview">${esc(c.body)}</p><div class="actionrow">${tag(c.status)}${pending?'<span class="tag proposed">Čeká návrh změny</span>':''}${translationStale(c)?'<span class="tag warn">Originál překladu změněn</span>':''}<button class="btn tiny" data-manage-comment="${esc(c.id)}">Otevřít detail / historie</button><button class="btn tiny" data-open-comment-unit="${esc(c.unit_id)}">Přejít na ustanovení</button></div></div>`;
  }).join(''):'<div class="review-card">Žádné komentáře neodpovídají vybranému filtru.</div>';
  area.querySelectorAll('[data-manage-comment]').forEach(b=>b.onclick=()=>dialogCommentDetail(b.dataset.manageComment));
  area.querySelectorAll('[data-open-comment-unit]').forEach(b=>b.onclick=()=>openUnit(b.dataset.openCommentUnit));
@@ -515,7 +518,7 @@ function commentHistory(id){
  const before=(()=>{try{return JSON.parse(h.before_json||'{}')}catch{return {}}})();
  const after=(()=>{try{return JSON.parse(h.after_json||'{}')}catch{return {}}})();
  const contentChanged=before.body!==undefined&&after.body!==undefined&&before.body!==after.body;
- return `<div class="history-row"><strong>${esc(descriptions[h.event_type]||h.event_type)}</strong><small>${esc(h.created_at)}</small>${contentChanged?`<details><summary>Porovnat původní a nové znění</summary><div class="revision-text"><strong>Před</strong><p>${esc(before.body)}</p><strong>Po</strong><p>${esc(after.body)}</p></div></details>`:''}</div>`;
+ return `<div class="history-row"><strong>${esc(descriptions[h.event_type]||h.event_type)}</strong><small>${esc(new Date(h.created_at).toLocaleString('cs-CZ'))}</small>${contentChanged?`<details><summary>Porovnat původní a nové znění</summary><div class="revision-text"><strong>Před</strong><p>${esc(before.body)}</p><strong>Po</strong><p>${esc(after.body)}</p></div></details>`:''}</div>`;
  }).join(''):'<p class="fine">Žádná historie.</p>';
 }
 function commentWasApproved(id){return (db.comment_history||[]).some(h=>{
@@ -529,6 +532,10 @@ function dialogCommentDetail(id){
  <div class="comment-detail-meta">${tag(c.status)} <span class="tag">${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</span> <span>${esc(c.author||'Redakce RegulaQuest')}</span></div>
  <div class="revision-text"><p>${esc(c.body)}</p></div>
  ${pending?`<div class="notice">Čeká návrh ${pending.change_type==='edit'?'úpravy':pending.change_type==='archive'?'archivace':'obnovení'}: ${esc(pending.change_reason)}. Dosavadní schválená verze zůstává beze změny.</div>`:''}
+ ${translationSource(c)?`<div class="notice"><strong>Převzato z ${esc(translationSource(c).language.toUpperCase())} komentáře</strong> u ${esc(fullname(translationSource(c).unit_id))}.
+ ${translationStale(c)?`<br><strong>Originál se od převzetí změnil.</strong> Zkontrolujte, zda je potřeba upravit i tento komentář.
+ <div class="revision-text"><strong>Originál při převzetí</strong><p>${esc(c.source_body)}</p><strong>Originál nyní</strong><p>${esc(translationSource(c).body)}</p></div>
+ <button class="btn tiny accent" type="button" id="markTranslation">Zkontrolováno – překlad odpovídá</button>`:' Originál se od převzetí nezměnil.'}</div>`:''}
  <h3>Historie komentáře</h3><div class="history-box">${commentHistory(id)}</div>
  <div class="modal-actions"><button class="btn" type="button" id="closeComment">Zavřít</button><button class="btn" type="button" id="goCommentUnit">Otevřít ustanovení</button>
  ${!pending&&c.status!=='archived'?`<button class="btn accent" type="button" id="editComment">${c.status==='approved'?'Navrhnout úpravu':'Upravit koncept'}</button>`:''}
@@ -536,6 +543,7 @@ function dialogCommentDetail(id){
  ${!pending&&['draft','rejected'].includes(c.status)?'<button class="btn danger" type="button" id="archiveDraftComment">Archivovat koncept</button>':''}
  ${!pending&&c.status==='archived'?`<button class="btn accent" type="button" id="restoreComment">${commentWasApproved(c.id)?'Navrhnout obnovení':'Obnovit koncept'}</button>`:''}</div>`;
  f.querySelector('#closeComment').onclick=()=>d.close();
+ const mt=f.querySelector('#markTranslation');if(mt)mt.onclick=()=>{d.close();safeAct({action:'translation_current',id})};
  f.querySelector('#goCommentUnit').onclick=()=>{d.close();openUnit(c.unit_id)};
  const edit=f.querySelector('#editComment');if(edit)edit.onclick=()=>{d.close();dialogCommentEdit(id)};
  const archive=f.querySelector('#archiveComment');if(archive)archive.onclick=()=>{d.close();dialogCommentStatusRevision(id,'archive')};
@@ -722,12 +730,12 @@ function dialogComment(u){
  const others=db.comments.filter(c=>twins.some(t=>t.id===c.unit_id)&&['approved','draft'].includes(c.status));
  const html=`<p>Komentář není součástí právního předpisu. Nejprve se uloží jako koncept.</p>
  ${others.length?`<div class="notice"><strong>Komentáře u jiné jazykové verze</strong> – lze převzít jako podklad a upravit (přeložit):${others.map(c=>`<div class="take-row"><span>${esc(getDoc(getUnit(c.unit_id).document_id).language.toUpperCase())} · ${esc(noteName[c.kind]||c.kind)} · ${tag(c.status)} ${esc(c.body.slice(0,140))}${c.body.length>140?'…':''}</span><button type="button" class="btn tiny" data-take="${esc(c.id)}">Převzít</button></div>`).join('')}</div>`:''}
- ${select('Typ komentáře','kind',Object.entries(noteName))}${select('Jazyk','language',[['cs','Čeština'],['en','English']],lang)}${field('Autor / garant','author','Redakce RegulaQuest')}${field('Obsah komentáře','body','','textarea')}`;
+ ${select('Typ komentáře','kind',Object.entries(noteName))}${select('Jazyk','language',[['cs','Čeština'],['en','English']],lang)}${field('Autor / garant','author','Redakce RegulaQuest')}${field('Obsah komentáře','body','','textarea')}<input type="hidden" name="translated_from" value="">`;
  dialog('Nový komentář · '+u.label,html,vals=>safeAct({action:'new_comment',unit_id:u.id,...vals}));
  const f=$('#modalContent');
  f.querySelectorAll('[data-take]').forEach(b=>b.onclick=()=>{const c=db.comments.find(x=>x.id===b.dataset.take);
   f.querySelector('[name=kind]').value=c.kind;f.querySelector('[name=author]').value=c.author||'Redakce RegulaQuest';
-  const body=f.querySelector('[name=body]');body.value=c.body;body.focus();toast('Text převzat – upravte ho (přeložte) a uložte.')});
+  f.querySelector('[name=translated_from]').value=c.id;const body=f.querySelector('[name=body]');body.value=c.body;body.focus();toast('Text převzat – upravte ho (přeložte) a uložte.')});
 }
 function dialogDoc(){const html=`<p>Nový dokument bude mít vlastní verzi, jazyk a původ. Po vytvoření do něj můžete přidávat kapitoly a konkrétní pasáže.</p>${field('Název','title')}${field('Zkratka / rodina','family')}${select('Typ','kind',[['Právní předpis','Právní předpis'],['Metodický dokument','Metodický dokument'],['Doplňující dokument','Doplňující dokument']])}${select('Jazyk','language',[['cs','Čeština'],['en','English']])}${field('Revize / časová verze','version')}${db.documents.length?select('Jiná jazyková verze téhož předpisu (nepovinné)','group_key',[['','— samostatný dokument —'],...db.documents.map(x=>[x.group_key||x.id,documentLabel(x)])]):''}<label class="form-field"><span>Vydavatel (nepovinné)</span><input class="input" name="publisher" type="text" placeholder="Např. Evropský parlament a Rada"></label><label class="form-field"><span>Oficiální URL (nepovinné)</span><input class="input" name="url" type="url" placeholder="https://…"></label>`;dialog('Nový zdrojový dokument',html,vals=>{
  // jiná jazyková verze: převzít zařazení a tagy skupiny
