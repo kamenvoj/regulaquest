@@ -8,7 +8,7 @@ RQAuth.start({
     app.replaceChildren(document.getElementById('studioTpl').content.cloneNode(true));
     const me = rq.me;
     document.getElementById('whoName').textContent =
-      (me.profile?.display_name || me.profile?.username || '') + (me.isOwner ? ' · správce' : ' · admin');
+      (me.profile?.display_name || me.profile?.username || '') + (me.isOwner ? ' · správce' : ' · admin') + (window.RQ_VERSION ? ' · v' + window.RQ_VERSION : '');
     document.getElementById('logoutTop').onclick = () => rq.logout();
     document.querySelectorAll('[data-reader]').forEach(a => { a.href = rq.cfg.readerUrl + '/' + a.dataset.reader; });
     RQAccess.init(rq);
