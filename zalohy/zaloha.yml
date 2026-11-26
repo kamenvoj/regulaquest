@@ -1,0 +1,126 @@
+# Záloha RegulaQuest – patří do SOUKROMÉHO repozitáře regulaquest-zalohy
+# jako .github/workflows/zaloha.yml (ne do veřejného repozitáře aplikace).
+#
+# Každou noc uloží:
+#   databaze/regulaquest.sql  – schémata public a rq_private (struktura, data, práva)
+#   databaze/ucty.sql         – auth.users a auth.identities (přihlašovací účty)
+#   uloziste/<bucket>/...     – soubory ze Supabase Storage (originály, obrázky)
+# Commit vznikne jen při změně; starší stavy zůstávají v historii gitu.
+# Běh zároveň udržuje projekt Supabase Free aktivní (neuspí se po týdnu).
+#
+# Potřebné secrets (Settings → Secrets and variables → Actions):
+#   RQ_DB_URL      – připojení „Session pooler“ ze Supabase (Connect), s heslem databáze
+#   RQ_SECRET_KEY  – secret key ze Supabase (Project Settings → API Keys)
+
+name: Záloha
+
+on:
+  schedule:
+    - cron: "17 1 * * *"   # každou noc (UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: zaloha
+
+jobs:
+  zaloha:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RQ_URL: https://nalzqiaypbguzqukikej.supabase.co
+      RQ_DB_URL: ${{ secrets.RQ_DB_URL }}
+      RQ_SECRET_KEY: ${{ secrets.RQ_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kontrola nastavení
+        run: |
+          [ -n "$RQ_DB_URL" ] || { echo "::error::Chybí secret RQ_DB_URL"; exit 1; }
+          [ -n "$RQ_SECRET_KEY" ] || { echo "::error::Chybí secret RQ_SECRET_KEY"; exit 1; }
+
+      - name: Klient PostgreSQL ve verzi serveru
+        run: |
+          sudo apt-get install -y -qq postgresql-common >/dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          num=$(psql "$RQ_DB_URL" -Atc "show server_version_num")
+          major=$((num / 10000))
+          echo "Server PostgreSQL $major"
+          sudo apt-get install -y -qq "postgresql-client-$major" >/dev/null
+          echo "PGBIN=/usr/lib/postgresql/$major/bin" >> "$GITHUB_ENV"
+
+      - name: Záloha databáze
+        run: |
+          mkdir -p databaze
+          extra=""
+          "$PGBIN/pg_dump" --help | grep -q -- --restrict-key && extra="--restrict-key=regulaquest"
+          "$PGBIN/pg_dump" "$RQ_DB_URL" $extra --no-owner \
+            --schema=public --schema=rq_private \
+            --file=databaze/regulaquest.sql
+          "$PGBIN/pg_dump" "$RQ_DB_URL" $extra --no-owner --data-only \
+            --table=auth.users --table=auth.identities \
+            --file=databaze/ucty.sql
+          ls -l databaze
+
+      - name: Záloha souborů (Storage)
+        shell: python3 {0}
+        run: |
+          import json, os, shutil, urllib.parse, urllib.request
+          base = os.environ["RQ_URL"] + "/storage/v1"
+          key = os.environ["RQ_SECRET_KEY"]
+          head = {"apikey": key, "Authorization": "Bearer " + key}
+
+          def call(path, body=None):
+              data = None if body is None else json.dumps(body).encode()
+              h = dict(head, **({"Content-Type": "application/json"} if data else {}))
+              req = urllib.request.Request(base + path, data=data, headers=h)
+              with urllib.request.urlopen(req, timeout=60) as r:
+                  return r.read()
+
+          def files(bucket, prefix=""):
+              offset = 0
+              while True:
+                  items = json.loads(call(f"/object/list/{bucket}", {
+                      "prefix": prefix, "limit": 1000, "offset": offset,
+                      "sortBy": {"column": "name", "order": "asc"}}))
+                  for it in items:
+                      path = f"{prefix}/{it['name']}" if prefix else it["name"]
+                      if it.get("id") is None:
+                          yield from files(bucket, path)
+                      elif it["name"] != ".emptyFolderPlaceholder":
+                          yield path
+                  if len(items) < 1000:
+                      break
+                  offset += 1000
+
+          root = "uloziste"
+          shutil.rmtree(root, ignore_errors=True)
+          total = 0
+          for b in json.loads(call("/bucket")):
+              os.makedirs(os.path.join(root, b["id"]), exist_ok=True)
+              n = 0
+              for path in files(b["id"]):
+                  target = os.path.join(root, b["id"], *path.split("/"))
+                  os.makedirs(os.path.dirname(target), exist_ok=True)
+                  url = f"/object/{b['id']}/" + urllib.parse.quote(path, safe="/")
+                  with open(target, "wb") as f:
+                      f.write(call(url))
+                  n += 1
+              open(os.path.join(root, b["id"], ".gitkeep"), "w").close()
+              print(f"{b['id']}: {n} souborů")
+              total += n
+          print(f"Celkem {total} souborů")
+
+      - name: Uložení do repozitáře
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A databaze uloziste
+          if git diff --cached --quiet; then
+            echo "Beze změn od poslední zálohy."
+          else
+            git commit -q -m "Záloha $(date -u +%Y-%m-%d)"
+            git push -q
+            echo "Záloha uložena."
+          fi
