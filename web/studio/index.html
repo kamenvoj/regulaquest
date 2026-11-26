@@ -11,11 +11,111 @@
 </head>
 <body>
 <div id="app"><div class="rq-login"></div></div>
+<template id="studioTpl">
+<header class="topbar">
+ <div class="brand"><div class="brandmark"><svg width="30" height="30" viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="17" r="12.5" stroke="#E9CB90" stroke-width="1.5"/><path d="M18 5L22 15L30 18L20 22L17 30L14 20L6 17L16 14Z" fill="#E9CB90"/><circle cx="18" cy="17" r="3.3" fill="#153240" stroke="#E9CB90" stroke-width="1.3"/><path d="M24 24L32 32" stroke="#E9CB90" stroke-width="2.5" stroke-linecap="round"/></svg></div><div><strong>RegulaQuest</strong><span>STUDIO</span></div></div>
+ <div class="top-sep"></div><div class="environment">Sdílené redakční prostředí <span class="dot"></span> <span id="whoName"></span></div>
+ <div class="grow"></div><button class="btn btn-top" id="refreshTop" type="button" title="Načíst změny ostatních adminů">⟳ Obnovit</button><a class="btn btn-top" data-reader="" target="_blank" rel="noopener" title="Čtečka tak, jak ji vidí studenti">▣ Pohled studenta ↗</a><button class="btn btn-top" id="logoutTop" type="button">Odhlásit</button>
+</header>
+<div class="shell">
+ <nav class="rail" aria-label="Sekce aplikace">
+  <div class="rail-kicker">OBSAH</div>
+  <button class="nav-item active" data-page="home"><span class="nav-icon">▦</span> Přehled Studia</button>
+  <button class="nav-item" data-page="documents"><span class="nav-icon">▤</span> Katalog zdrojů</button>
+  <button class="nav-item" data-page="library"><span class="nav-icon">▧</span> Práce s dokumentem</button>
+  <div class="rail-kicker">REDAKCE</div>
+  <button class="nav-item" data-page="review"><span class="nav-icon">◇</span> Ke kontrole <span class="nav-count" id="navReview">–</span></button>
+  <button class="nav-item" data-page="relations"><span class="nav-icon">↗</span> Správa vazeb</button>
+  <button class="nav-item" data-page="comments"><span class="nav-icon">✎</span> Správa komentářů</button>
+  <div class="rail-kicker">VÝSTUP</div>
+  <button class="nav-item" data-page="publish"><span class="nav-icon">↥</span> Publikování</button>
+  <div class="rail-kicker">SPRÁVA</div>
+  <button class="nav-item" data-page="access"><span class="nav-icon">⚿</span> Přístupy</button>
+  <div class="rail-bottom"><div class="smallcaps">ČTEČKA PRO STUDENTY</div><a data-reader="" target="_blank" rel="noopener">Co uvidí studenti ↗</a><br><a data-reader="?nahled=pracovni" target="_blank" rel="noopener">Pracovní náhled ↗</a></div>
+ </nav>
+ <main class="content">
+  <section class="page" id="page-home">
+   <div class="page-head"><div><div class="eyebrow">REGULAQUEST / PRACOVIŠTĚ</div><h1>Přehled Studia</h1><p>Souhrn všech dokumentů a postup ověřování. Vyberte zdroj pro odbornou redakci.</p></div>
+    <div class="head-actions"><button class="btn accent" id="goCatalog">Otevřít katalog dokumentů ↗</button><button class="btn" id="homeNewDoc">+ Nový dokument</button></div></div>
+   <div id="homeSummary" class="global-cards"></div>
+   <div class="section-head"><h2>Dokumenty a jejich stav</h2><p>Po otevření dokumentu uvidíte jeho vlastní statistiky, ustanovení, vazby a komentáře.</p></div>
+   <div id="homeDocuments" class="document-home-list"></div>
+  </section>
+  <section class="page hidden" id="page-library">
+   <div class="page-head"><div><div class="eyebrow">01 / ZNALOSTNÍ DATABÁZE</div><h1 id="workDocTitle">Práce s dokumentem</h1><p id="workDocSubtitle">Originální text, odborné vazby a výukové poznámky.</p></div><div class="head-actions"><button class="btn" id="newDoc">+ Nový dokument</button></div></div>
+   <div class="metric-grid">
+    <button class="metric metric-link" type="button" id="statDocsCard" title="Zobrazit zdroj"><span>Ustanovení v dokumentu ↗</span><strong id="statDocs">0</strong><small id="statDocsSub">Zobrazit dokument</small></button>
+    <button class="metric metric-link" type="button" id="statVerifiedCard" title="Otevřít ověřené pasáže"><span>Ověřené pasáže ↗</span><strong id="statVerified">0</strong><small id="statVerifiedSub">Zobrazit ověřené texty</small></button>
+    <button class="metric metric-link" type="button" id="statProposedCard" title="Otevřít frontu vazeb ke kontrole"><span>Vazby ke kontrole ↗</span><strong id="statProposed">0</strong><small>U vybraného dokumentu</small></button>
+    <button class="metric metric-link" type="button" id="statApprovedCard" title="Zobrazit schválené vazby"><span>Schválené vazby ↗</span><strong id="statApproved">0</strong><small>U vybraného dokumentu</small></button>
+   </div>
+   <div class="workspace">
+    <aside class="pane explorer"><div class="pane-head"><div class="smallcaps">OSNOVA DOKUMENTU</div><button class="iconbtn" id="newUnit" title="Nová kapitola nebo ustanovení">+</button></div>
+    <label class="form-field work-doc-picker"><span>Aktivní dokument</span><select class="select" id="activeDocumentSelect" aria-label="Přepnout aktivní dokument"></select></label>
+    <button class="btn tiny work-catalog-btn" id="workOpenCatalog" type="button">Zobrazit celý katalog ↗</button>
+    <input class="search" id="filter" placeholder="Hledat článek, pravidlo, pojem…" aria-label="Vyhledávání"><div class="doc-list" id="docList"></div><div class="tiny-note">Importované texty vyžadují ověření. Rozbalte pouze část, se kterou nyní pracujete.</div></aside>
+    <article class="pane reader" id="reader"><div class="empty-state">Vyberte dokument nebo ustanovení vlevo.</div></article>
+    <aside class="pane context" id="context"><div class="empty-state">Po výběru ustanovení se zobrazí vazby a komentáře.</div></aside>
+   </div>
+  </section>
+  <section class="page hidden" id="page-documents">
+   <div class="page-head"><div><div class="eyebrow">01 / ZNALOSTNÍ DATABÁZE</div><h1>Dokumenty v registru</h1><p>Otevřete dokument, jeho strukturu a dostupné pasáže.</p></div><button class="btn" type="button" data-page="library">← Zpět do knihovny</button></div>
+   <div class="overview-toolbar catalog-filter-controls">
+    <label class="form-field"><span>Hledat dokument / tag</span><input class="input" id="documentListSearch" type="search" placeholder="Např. MDR, klinické hodnocení…"></label>
+    <label class="form-field"><span>Původ</span><select class="select" id="catalogJurisdiction"><option value="all">Všechny</option><option value="eu">EU</option><option value="cz">ČR</option><option value="international">Mezinárodní</option><option value="other">Ostatní</option></select></label>
+    <label class="form-field"><span>Druh</span><select class="select" id="catalogType"><option value="all">Všechny</option><option value="regulation">Nařízení</option><option value="directive">Směrnice</option><option value="law">Zákon</option><option value="decree">Vyhláška</option><option value="guidance">Metodika</option><option value="standard">Technická norma</option><option value="other">Ostatní</option></select></label>
+   </div>
+   <div class="overview-list" id="documentOverview"></div>
+  </section>
+  <section class="page hidden" id="page-verified">
+   <div class="page-head"><div><div class="eyebrow">01 / ZNALOSTNÍ DATABÁZE</div><h1>Ověřené pasáže</h1><p>Seznam znění ověřených proti zdroji. Schvalování vazeb a komentářů se řídí samostatně.</p></div><button class="btn" type="button" data-page="library">← Zpět do knihovny</button></div>
+   <div class="overview-toolbar"><label class="form-field"><span>Dokument</span><select class="select" id="verifiedDocFilter"></select></label><label class="form-field overview-search"><span>Hledat ověřenou pasáž</span><input class="input" id="verifiedListSearch" type="search" placeholder="Např. článek 10, klinické hodnocení…"></label></div>
+   <div class="overview-list" id="verifiedOverview"></div>
+  </section>
+  <section class="page hidden" id="page-review"><div class="page-head"><div><div class="eyebrow">02 / ODBORNÁ KONTROLA</div><h1>Schvalovací fronta</h1><p>Zde se rozhoduje, které vazby a komentáře jsou odborně potvrzené.</p></div></div><div class="review-filter-row"><label class="form-field"><span>Zobrazit návrhy pro</span><select class="select" id="reviewDocFilter"></select></label></div><div class="review-layout"><div><h2>Navržené změny schválených vazeb</h2><div id="reviewRevisions" class="review-stack"></div><h2 style="margin-top:24px">Nové vazby</h2><div id="reviewLinks" class="review-stack"></div></div><div><h2>Navržené změny komentářů</h2><div id="reviewCommentRevisions" class="review-stack"></div><h2 style="margin-top:24px">Koncepty komentářů</h2><div id="reviewComments" class="review-stack"></div></div></div></section>
+  <section class="page hidden" id="page-relations">
+   <div class="page-head"><div><div class="eyebrow">03 / SPRÁVA VAZEB</div><h1>Vazby mezi dokumenty</h1><p>Otevřete schválené i rozpracované vazby, zobrazte jejich historii a navrhujte kontrolované změny.</p></div></div>
+   <div class="relation-list-controls">
+     <label class="form-field"><span>Dokument</span><select class="select" id="relationDocFilter"></select></label>
+     <label class="form-field"><span>Stav vazby</span><select class="select" id="relationStateFilter"><option value="approved">Schválené</option><option value="proposed">Návrhy</option><option value="archived">Archivované</option><option value="rejected">Zamítnuté</option><option value="all">Všechny</option></select></label>
+     <label class="form-field"><span>Hledat zdroj, cíl nebo zdůvodnění</span><input type="search" class="input" id="relationListSearch" placeholder="Např. článek 61, MDR, klinické hodnocení"></label>
+   </div><div id="relationList" class="review-stack"></div>
+  </section>
+  <section class="page hidden" id="page-comments">
+   <div class="page-head"><div><div class="eyebrow">03 / SPRÁVA KOMENTÁŘŮ</div><h1>Odborné komentáře</h1><p>Koncepty, schválené výklady, historie a kontrolované revize.</p></div></div>
+   <div class="relation-list-controls">
+    <label class="form-field"><span>Dokument</span><select class="select" id="commentDocFilter"></select></label>
+    <label class="form-field"><span>Stav komentáře</span><select class="select" id="commentStateFilter"><option value="all">Všechny</option><option value="approved">Schválené</option><option value="draft">Koncepty</option><option value="rejected">Zamítnuté</option><option value="archived">Archivované</option></select></label>
+    <label class="form-field"><span>Hledat v komentářích</span><input type="search" class="input" id="commentListSearch" placeholder="Např. článek 10, klinické hodnocení…"></label>
+   </div><div id="commentList" class="review-stack"></div>
+  </section>
+  <section class="page hidden" id="page-publish"><div class="page-head"><div><div class="eyebrow">03 / PUBLIKAČNÍ VÝSTUP</div><h1>Publikování</h1><p>Studenti dostanou pouze ověřené právní texty a schválené vazby a komentáře.</p></div></div>
+   <div class="publish-cols">
+    <div class="publish-card"><div class="card-symbol">✓</div><h2>Co se publikuje</h2><p id="publishInfo">Načítání údajů…</p>
+     <div class="notice" id="publishCurrent"></div>
+     <label class="form-field"><span>Poznámka k verzi (nepovinné)</span><input class="input" id="publishNote" maxlength="200" placeholder="Např. doplněna příloha VIII"></label>
+     <button class="btn accent wide" id="publishBtn" type="button">⇪ Publikovat pro studenty</button>
+     <p class="fine">Publikace je pevný snímek. Další úpravy ve Studiu studenti uvidí až po příští publikaci.</p></div>
+    <div class="publish-card"><div class="card-symbol">▣</div><h2>Kontrola a historie</h2>
+     <a data-reader="" target="_blank" rel="noopener" class="btn accent wide">Pohled studenta ↗</a><a data-reader="?nahled=pracovni" target="_blank" rel="noopener" class="btn wide">Pracovní náhled (včetně neověřených) ↗</a>
+     <div class="soft-rule"></div><h3>Publikované verze</h3><div id="publishHistory" class="history-box"></div>
+     <div class="soft-rule"></div><h3>Záloha</h3><p class="fine">Databáze se zálohuje automaticky každou noc. Ruční záloha stáhne celý obsah Studia jako JSON.</p><button class="btn wide" id="backupBottom" type="button">↓ Stáhnout zálohu obsahu</button></div>
+   </div></section>
+  <section class="page hidden" id="page-access"><div id="accessContent"></div></section>
+ </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<dialog id="modal"><form method="dialog" id="modalContent"></form></dialog>
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+</template>
 <div id="tisk" aria-hidden="true"></div>
 <script src="sdilene/supabase.js"></script>
 <script src="sdilene/config.js"></script>
 <script src="sdilene/prihlaseni.js"></script>
 <script src="vendor/qrcode.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/structure-ui.js"></script>
+<script src="js/pristupy.js"></script>
 <script src="js/studio.js"></script>
 </body>
 </html>

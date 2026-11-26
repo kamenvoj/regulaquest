@@ -1,5 +1,17 @@
 # Změny
 
+## 0.4.0 – webové Studio (Supabase)
+
+**Nové**
+- Studio na `regulaquest-studio.pages.dev` obsahuje celou redakci: katalog, práci s dokumentem, editor textu a tabulek, strukturu (rozdělit, přesunout, sloučit), historii změn s autorem, vazby, komentáře, schvalovací frontu.
+- Publikování pro studenty z prohlížeče (`rq_publish`), historie publikací a vrácení starší verze; ruční záloha obsahu jako JSON.
+- Přístupy jsou stránkou Studia; tlačítko **Obnovit** a automatické načtení změn druhého admina po návratu do okna.
+- Konflikt verzí (stejnou část mezitím upravil jiný admin) ohlásí chybu a načte aktuální stav.
+- Noční záloha databáze, účtů a souborů do soukromého repozitáře (`zalohy/`).
+- Lokální zkouška Studia v prohlížeči proti PostgreSQL (`tests/web_e2e/`).
+
+**Zatím chybí (další etapy):** import dokumentů v prohlížeči, automatické návrhy výslovných odkazů a souvislostí.
+
 ## 0.3.0 – studentská čtečka (navazuje na 0.2.15)
 
 **Nové**
