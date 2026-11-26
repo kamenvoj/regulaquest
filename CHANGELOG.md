@@ -1,5 +1,12 @@
 # Změny
 
+## 0.12.0 – 2026-11-26 · Pojmy CS ↔ EN, úpravy pojmů, přichycená lišta
+- Pojmy se s jinou jazykovou verzí párují samy podle čísla bodu definice; v seznamu i v definici se ukazuje protějšek („EN: medical device“).
+- V okně Pojmy z definic tlačítko „Přepnout na EN/CS“ a „Smazat vybrané“ (koncepty a vyřazené; migrace 13_pojmy_mazani.sql).
+- Ve Studiu má definice po klepnutí na pojem tlačítko „Upravit pojem“ – otevře seznam pojmů rovnou s tímto pojmem.
+- Lišta tlačítek pod textem (Editor, Struktura, …, Pojmy z definic) zůstává při posouvání dlouhého textu viditelná dole v panelu.
+- Totožné vzory dvou pojmů se v textu neoznačují dvakrát.
+
 ## 0.11.0 – 2026-11-26 · Vazby z místa v textu
 - Vazbu lze vytvořit z vybraného úseku textu (lišta výběru → **Propojit**). V textu je místo podtržené a označené ikonou řetízku;
   ve čtečce se po klepnutí rozbalí seznam propojených ustanovení. Totéž cílové ustanovení lze propojit z více míst jedné části.

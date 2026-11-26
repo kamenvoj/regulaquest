@@ -403,7 +403,9 @@ function toggleTerm(t, el){
   const du = S.units.get(t.unit_id), text = du ? RQNotes.definitionText(bodyOf(du), t.number) : '';
   const pop = document.createElement('span');
   pop.className = 'rq-pop term'; pop.dataset.term = t.id; pop.dataset.noAnchor = '1';
-  pop.innerHTML = `<span class="rq-pop-h">${ICON('term')} Definice · ${du ? `<a href="#/u/${encodeURIComponent(du.id)}">${esc(du.label)}, bod ${t.number}</a>` : ''}</span>${esc(text || t.name).replace(/\n/g,'<br>')}`;
+  const tw = du ? [...S.docs.values()].filter(x => x.id !== du.document_id && x.group_key === S.docs.get(du.document_id)?.group_key)
+    .map(x => { const eu = equivalentIn(du, x.id); const tt = eu && S.terms.find(y => y.unit_id === eu.id && y.number === t.number); return tt ? `${x.language.toUpperCase()}: ${esc(tt.name)}` : ''; }).filter(Boolean).join(' · ') : '';
+  pop.innerHTML = `<span class="rq-pop-h">${ICON('term')} Definice · ${du ? `<a href="#/u/${encodeURIComponent(du.id)}">${esc(du.label)}, bod ${t.number}</a>` : ''}${tw ? `<span class="tw">${tw}</span>` : ''}</span>${esc(text || t.name).replace(/\n/g,'<br>')}`;
   (el.closest('p, .ln, li, td, .legal') || el.parentElement).after(pop);
 }
 /* Vrstvy nad textem: jen ty, které v části opravdu jsou; klepnutím zapnout / vypnout. */

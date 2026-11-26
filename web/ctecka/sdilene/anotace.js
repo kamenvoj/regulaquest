@@ -154,8 +154,11 @@
     terms.forEach(t => patterns(t).forEach(p => cands.push({ t, p })));
     cands.sort((x, y) => y.p.length - x.p.length || y.p.reduce((s, w) => s + w.w.length, 0) - x.p.reduce((s, w) => s + w.w.length, 0));
     const done = new Set();
+    const seenPat = new Set();
     for (const { t, p } of cands) {
-      if (done.has(t.id) || !p.length) continue;
+      const key = p.map(w => w.w + (w.pre ? '*' : '')).join(' ');
+      if (done.has(t.id) || !p.length || seenPat.has(key)) continue;
+      seenPat.add(key);
       for (let i = 0; i + p.length <= toks.length; i++) {
         let ok = true;
         for (let k = 0; k < p.length && ok; k++) { const tk = toks[i + k], w = p[k];

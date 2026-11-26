@@ -4,6 +4,15 @@
    Ve čtečce se označí první výskyt pojmu v každé části a po klepnutí se ukáže definice z aktuálního textu. */
 window.RQTerms = (function () {
   const live = () => (db.terms || []).filter(t => t.status !== 'archived');
+  // Stejný pojem v jiné jazykové verzi: stejné číslo bodu v odpovídajícím definičním článku.
+  function twinUnits(u) {
+    const d = getDoc(u.document_id); if (!d) return [];
+    return db.documents.filter(x => x.id !== d.id && (x.group_key || x.id) === (d.group_key || d.id)).map(x => equivalentIn(u, x.id)).filter(Boolean);
+  }
+  function twins(t) {
+    const du = getUnit(t.unit_id); if (!du) return [];
+    return twinUnits(du).map(tu => ({ lang: getDoc(tu.document_id).language, term: (db.terms || []).find(x => x.unit_id === tu.id && x.number === t.number) }));
+  }
 
   function mark(root, u) {
     const doc = getDoc(u.document_id); if (!doc) return;
@@ -17,11 +26,14 @@ window.RQTerms = (function () {
     const du = getUnit(t.unit_id), text = du ? RQNotes.definitionText(du.body, t.number) : '';
     const p = document.createElement('span');
     p.className = 'rq-pop term'; p.dataset.term = t.id; p.dataset.noAnchor = '1';
-    p.innerHTML = `<span class="rq-pop-h">${RQNotes.ICON.term} Definice · ${esc(du ? du.label : '')}, bod ${t.number}${t.status === 'draft' ? ' · koncept' : ''}</span>${esc(text || t.name).replace(/\n/g, '<br>')}`;
+    const tw = twins(t).filter(x => x.term).map(x => `${x.lang.toUpperCase()}: ${esc(x.term.name)}`).join(' · ');
+    p.innerHTML = `<span class="rq-pop-h">${RQNotes.ICON.term} Definice · ${esc(du ? du.label : '')}, bod ${t.number}${t.status === 'draft' ? ' · koncept' : ''}${tw ? ' · ' + tw : ''}
+      <button type="button" class="btn tiny tm-edit">Upravit pojem</button></span>${esc(text || t.name).replace(/\n/g, '<br>')}`;
+    p.querySelector('.tm-edit').onclick = e => { e.stopPropagation(); if (du) dialog(du, t.name); };
     (el.closest('p, .ln, li, td, [data-anchor-root]') || el.parentElement).after(p);
   }
 
-  function dialog(u) {
+  function dialog(u, preset) {
     const d = $('#modal'), f = $('#modalContent'), doc = getDoc(u.document_id);
     d.classList.add('wide');
     d.addEventListener('close', () => d.classList.remove('wide'), { once: true });
@@ -29,7 +41,8 @@ window.RQTerms = (function () {
     // výskyty se počítají v ostatních částech dokumentů stejného jazyka
     const toks = RQNotes.tokens(db.units.filter(x => !x.editor_archived && x.id !== u.id && getDoc(x.document_id)?.language === doc.language)
       .map(x => x.body || '').join('\n'));
-    let filter = '';
+    let filter = preset || '';
+    const other = twinUnits(u).filter(x => RQNotes.parseDefinitions(x.body).length >= 5);
     const draw = () => {
       const defs = RQNotes.parseDefinitions(u.body);
       const mine = (db.terms || []).filter(t => t.unit_id === u.id).sort((a, b) => a.number - b.number);
@@ -41,13 +54,14 @@ window.RQTerms = (function () {
       <strong>Vzory</strong>: jeden na řádek, slova oddělená mezerou, <code>*</code> na konci slova = libovolná koncovka, diakritika a velká písmena se ignorují.
       Pojem s příliš mnoha výskyty (obecné slovo) raději vyřaďte nebo zpřesněte.</p>
       ${missing.length ? `<div class="notice"><strong>${missing.length} bodů definice zatím není mezi pojmy.</strong> <button type="button" class="btn tiny accent" id="tmImport">Načíst ${missing.length} pojmů jako koncept</button></div>` : ''}
+      ${other.length ? `<p class="fine">Pojmy se s jinou jazykovou verzí párují samy podle čísla bodu. ${other.map(x => `<button type="button" class="btn tiny" data-twin="${esc(x.id)}">Přepnout na ${esc(getDoc(x.document_id).language.toUpperCase())}</button>`).join(' ')}</p>` : ''}
       <div class="tm-tools"><input class="input" id="tmFilter" placeholder="Filtrovat pojmy…" value="${esc(filter)}">
        <label class="tm-all"><input type="checkbox" id="tmAll"> vybrat zobrazené</label>
-       <button type="button" class="btn tiny accent" data-bulk="approved">Schválit vybrané</button><button type="button" class="btn tiny" data-bulk="draft">Vrátit do konceptu</button><button type="button" class="btn tiny danger" data-bulk="archived">Vyřadit vybrané</button></div>
+       <button type="button" class="btn tiny accent" data-bulk="approved">Schválit vybrané</button><button type="button" class="btn tiny" data-bulk="draft">Vrátit do konceptu</button><button type="button" class="btn tiny danger" data-bulk="archived">Vyřadit vybrané</button><button type="button" class="btn tiny danger" id="tmDelete" title="Jen koncepty a vyřazené">Smazat vybrané</button></div>
       <div class="tm-list">${shown.map(t => `<div class="tm-row" data-id="${esc(t.id)}">
         <input type="checkbox" class="tm-sel" aria-label="Vybrat pojem ${t.number}">
         <span class="tm-n">${t.number}</span>
-        <div class="tm-main"><input class="input tm-name" value="${esc(t.name)}" aria-label="Název pojmu"><small>v textu: „${esc(t.source_label)}“</small></div>
+        <div class="tm-main"><input class="input tm-name" value="${esc(t.name)}" aria-label="Název pojmu"><small>v textu: „${esc(t.source_label)}“${twins(t).map(x => ` · ${x.lang.toUpperCase()}: ${x.term ? esc(x.term.name) : '<em>nenačteno</em>'}`).join('')}</small></div>
         <textarea class="textarea tm-forms" rows="2" aria-label="Vzory pro vyhledání">${esc(t.forms)}</textarea>
         <div class="tm-side">${st(t)}<small>${RQNotes.countTerm(toks, t)}× v textech</small><button type="button" class="btn tiny tm-save" disabled>Uložit</button></div>
        </div>`).join('') || '<p class="fine">Žádné pojmy.</p>'}</div>
@@ -67,6 +81,13 @@ window.RQTerms = (function () {
         name.oninput = dirty; forms.oninput = () => { dirty(); row.querySelector('.tm-side small').textContent = RQNotes.countTerm(toks, { forms: forms.value }) + '× v textech'; };
         save.onclick = () => run(save, () => rpc('rq_edit_term', { p_id: t.id, p_name: name.value.trim() || t.source_label, p_forms: forms.value }), 'Pojem uložen.');
       });
+      f.querySelectorAll('[data-twin]').forEach(b => b.onclick = () => { d.close(); setTimeout(() => dialog(getUnit(b.dataset.twin)), 0); });
+      f.querySelector('#tmDelete').onclick = () => {
+        const ids = [...f.querySelectorAll('.tm-row')].filter(r => r.querySelector('.tm-sel').checked).map(r => r.dataset.id);
+        if (!ids.length) { toast('Nejprve vyberte pojmy.', true); return; }
+        if (!confirm(`Trvale smazat ${ids.length} pojmů? Schválené je nutné nejdřív vyřadit. Bod definice lze později znovu načíst.`)) return;
+        run(f.querySelector('#tmDelete'), () => rpc('rq_delete_terms', { p_ids: ids }), `Smazáno: ${ids.length}.`);
+      };
       f.querySelectorAll('[data-bulk]').forEach(b => b.onclick = () => {
         const ids = [...f.querySelectorAll('.tm-row')].filter(r => r.querySelector('.tm-sel').checked).map(r => r.dataset.id);
         if (!ids.length) { toast('Nejprve vyberte pojmy.', true); return; }

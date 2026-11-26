@@ -332,6 +332,9 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(self.sql("select name from terms where id=%s", tid)[0][0], 'software')
         self.call('rq_edit_term', tid, 'software (SW)', 'software*\nSW')
         self.assertEqual(self.call('rq_term_status', [tid], 'approved'), 1)
+        self.fails('nejdřív vyřaďte', 'rq_delete_terms', [tid])
+        t2 = self.sql("select id from terms where number=2")[0][0]
+        self.assertEqual(self.call('rq_delete_terms', [t2]), 1)
         d = self.call('rq_new_comment', 'mdr-cs-rule-11', 'duty', 'cs', '', 'R', '', 'Software', 1)
         self.assertEqual(self.sql("select body from comments where id=%s", d)[0][0], 'Povinnost')
         self.fails('vybraný text', 'rq_new_comment', 'mdr-cs-rule-11', 'deadline', 'cs', '', 'R', '', '', 1)
