@@ -26,6 +26,10 @@ function unitPath(id){
  }
  return trail.join(' › ');
 }
+const LIST_LINE=/^([—–•-]|[a-z]\)|\(?[ivx]+\)|\d+[.)]|\(\d+\))\s/;
+function legalLines(body){return String(body).split('\n').map(l=>{const t=l.trim();if(!t)return '<span class="ln gap"></span>';
+ const lead=(l.match(/^ */)[0].length)/2,list=lead>0&&LIST_LINE.test(t);
+ return `<span class="ln${list?' hang':''}" style="--lvl:${lead}">${esc(t)}</span>`}).join('')}
 function documentLabel(d){return d?`${d.family} · ${d.language.toUpperCase()} · ${d.version}`:'Neznámý dokument'}
 const fullname=id=>{const u=getUnit(id);if(!u)return id;const d=getDoc(u.document_id);return `${documentLabel(d)} › ${unitPath(id)}${u.heading?' – '+u.heading:''}`};
 const tag=(s)=>`<span class="tag ${statuses[s]||''}">${esc(statusName[s]||s)}</span>`;
@@ -286,7 +290,7 @@ box.innerHTML=`<div class="hero-line"><span class="crumb">${esc(d.family)} / ${e
 <div class="sourcebox"><strong>Zdroj:</strong> ${esc(d.title)}<br><strong>Verze:</strong> ${esc(d.version)} · ${esc(d.language.toUpperCase())}<br><strong>Umístění:</strong> ${esc(u.locator||u.label)}<br><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Porovnat s originálem ↗</a></div>
 ${u.content_blocks&&u.content_blocks.length?`<div class="rq-prepared-content"><div class="section-kicker">REDAKČNĚ STRUKTUROVANÝ OBSAH A TABULKY · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>${rqRenderBlocks(u.content_blocks)}</div>`:''}
 ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚNÍ ZDROJE · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>
-  ${u.body?`<div class="legal">${esc(u.body)}</div>`:`<div class="unloaded"><strong>Text zatím není vložen.</strong>Otevřete „Editor textu a tabulek“ a vložte doslovné znění z oficiálního zdroje.</div>`}`}
+  ${u.body?`<div class="legal">${legalLines(u.body)}</div>`:`<div class="unloaded"><strong>Text zatím není vložen.</strong>Otevřete „Editor textu a tabulek“ a vložte doslovné znění z oficiálního zdroje.</div>`}`}
 
 <div class="read-actions rq-structure-actions"><button class="btn accent" id="rqEditContent">▦ Editor textu a tabulek</button><button class="btn" id="rqEditStructure">Struktura</button><button class="btn" id="rqSplit" ${!u.body?'disabled':''}>Rozdělit</button><button class="btn" id="rqMove" ${!u.body?'disabled':''}>Přesunout text</button><button class="btn" id="rqMerge" ${!u.body?'disabled':''}>Sloučit</button><button class="btn" id="rqHistory">Historie změn</button><button class="btn danger" id="rqArchive">Archivovat</button>${u.body&&u.text_status!=='verified'?'<button class="btn accent" id="verifyText">Ověřil(a) jsem proti zdroji</button>':''}</div>
 ${u.source_note?`<p class="fine">Původ importu: ${esc(u.source_note)}</p>`:''}

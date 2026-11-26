@@ -192,12 +192,12 @@ function legal(text, q=''){
     const head = par.trim().match(/^\[PDF strana (\d+)\]\n([\s\S]*)$/);
     if (head) return `<span class="pdfpage">PDF str. ${esc(head[1])}</span>` + legal(head[2], q);
     const lines = joinLines(par).map(l => {
-      const t = l.trim(); const ind = (LIST_LINE.test(t) && !/^\d+\.\s/.test(t)) || /^\s{2,}/.test(l);
-      return ind ? `<span class="ind">${marked(t,q)}</span>` : marked(t,q);
+      const t = l.trim(), list = LIST_LINE.test(t) && !/^\d+\.\s/.test(t), cont = !list && /^\s{2,}/.test(l);
+      return `<span class="ln${list ? ' ind hang' : cont ? ' ind' : ''}">${marked(t,q)}</span>`;
     });
     const flat = par.trim();
     if (flat.length < 90 && !flat.includes('\n') && /\p{Lu}{3}/u.test(flat) && flat === flat.toLocaleUpperCase('cs')) return `<p class="sub">${marked(flat,q)}</p>`;
-    return `<p>${lines.join('<br>')}</p>`;
+    return `<p>${lines.join('')}</p>`;
   }).join('');
 }
 /* Strukturovaný obsah z editoru Studia (text s formátováním a tabulky).
