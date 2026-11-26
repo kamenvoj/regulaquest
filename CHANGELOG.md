@@ -1,5 +1,13 @@
 # Změny
 
+## 0.7.0 – import PDF (MDCG)
+
+- **Import dokumentu** přijímá i PDF (pdf.js v prohlížeči, `web/studio/vendor/pdfjs`, Apache-2.0). Kapitoly podle obsahu dokumentu (včetně nečíslovaných podkapitol), v kapitolách s pravidly dál „Rule N“.
+- **Tabulky** s orámováním se převádějí na upravitelné tabulky (včetně sloučených buněk), **schémata** (strany s rámečky a velkými obrázky) se ukládají jako obrázek stránky do úložiště `figures`; jejich text zůstává pro vyhledávání. MDCG 2021-24 Rev.1: 56 částí, 22 pravidel, 37 tabulek, 9 schémat.
+- Studio zobrazuje obrázky v textu i v editoru (popisek lze upravit); sekce „Změny a původ znění“ jen u dokumentů se seznamem změn.
+- Aktualizace na nové znění porovnává i bloky obsahu (tabulky, obrázky).
+- Opravy databáze: kontrola cesty k obrázku (PostgreSQL nepovolí `{3,300}`), čtečka ukazuje nadpisy i u navigačních částí (migrace `06_import.sql` znovu, `09_ctecka.sql`).
+
 ## 0.6.0 – návrhy výslovných odkazů
 
 - **Vazby platí pro všechny jazykové verze předpisu:** tvoří se jednou, v kterékoli jazykové verzi (obvykle CS), čtečka je ukáže i u anglické části a cíl převede na verzi ve stejném jazyce (MDR EN čl. 61 → MDR EN příloha I). Ve Studiu jsou u jiné jazykové verze vidět jako „Z jiné jazykové verze · platí i zde“. Návrhy odkazů a ruční propojení poznají vazbu vytvořenou u jiné verze jako už existující. Komentáře zůstávají jazykové; při přidání komentáře lze převzít text z jiné jazykové verze a přeložit ho. Když se originál později změní, Studio převzatý komentář označí („Originál překladu změněn“, filtr ve Správě komentářů), ukáže staré a nové znění originálu a po kontrole ho lze označit jako aktuální (migrace `08_preklady.sql`).
@@ -32,7 +40,7 @@
 - Formulář dokumentu má pole Vydavatel; v „Upravit údaje a tagy“ lze změnit i název, zkratku, verzi, vydavatele a URL.
 - Lokátor a nadpis nové části nejsou předvyplněné ukázkovým textem.
 
-**Zatím chybí (další etapy):** import PDF (MDCG), hledání souvislostí MDR ↔ MDCG.
+**Zatím chybí (další etapy):** hledání souvislostí MDR ↔ MDCG.
 
 ## 0.3.0 – studentská čtečka (navazuje na 0.2.15)
 

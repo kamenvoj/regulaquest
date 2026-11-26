@@ -17,9 +17,14 @@ function rqClone(x){return JSON.parse(JSON.stringify(x))}
 function rqBlankCell(){return {text:'',header:false,align:'left',colspan:1,rowspan:1}}
 function rqBlockFallback(u){return u.content_blocks&&u.content_blocks.length?rqClone(u.content_blocks):[{type:'text',html:esc(u.body||'').replace(/\n/g,'<br>')}]}
 function rqRenderBlocks(blocks){
- return `<div class="rq-rich-view">${(blocks||[]).map(b=>b.type==='text'?`<div class="rq-rich-text">${b.html||''}</div>`:
+ return `<div class="rq-rich-view">${(blocks||[]).map(b=>b.type==='text'?`<div class="rq-rich-text">${b.html||''}</div>`:b.type==='figure'?rqFigure(b):
  `<div class="rq-table-display">${b.caption?`<div class="rq-table-title">${esc(b.caption)}</div>`:''}<div class="rq-table-wrap"><table>${b.rows.map(row=>`<tr>${row.map(c=>`<${c.header?'th':'td'} rowspan="${Number(c.rowspan)||1}" colspan="${Number(c.colspan)||1}" style="text-align:${c.align||'left'}">${esc(c.text).replace(/\n/g,'<br>')}</${c.header?'th':'td'}>`).join('')}</tr>`).join('')}</table></div>${b.notes?`<div class="rq-table-notes">${esc(b.notes)}</div>`:''}</div>`).join('')}</div>`;
 }
+function rqFigure(b){return `<figure class="rq-fig"><img data-fig="${esc(b.path)}" alt="${esc(b.alt||b.caption||'')}" loading="lazy"><figcaption>${esc(b.caption||'')}${b.page?` · <span class="fine">PDF str. ${Number(b.page)}</span>`:''}</figcaption></figure>`}
+const rqFigUrls=new Map();
+function rqLoadFigures(root){root.querySelectorAll('img[data-fig]').forEach(async img=>{const p=img.dataset.fig;if(!p)return;
+ if(!rqFigUrls.has(p)){const {data}=await RQ.client.storage.from('figures').createSignedUrl(p,3600);rqFigUrls.set(p,data?.signedUrl||'')}
+ if(rqFigUrls.get(p))img.src=rqFigUrls.get(p)})}
 function rqImpactSummary(ids){
  const idset=new Set(ids);let links=db.relations.filter(x=>x.status==='approved'&&(idset.has(x.source_id)||idset.has(x.target_id))).length;
  let comments=db.comments.filter(x=>x.status==='approved'&&idset.has(x.unit_id)).length;
@@ -173,6 +178,7 @@ function rqContentEditor(u){
   host.querySelectorAll('[data-rq-block]').forEach(el=>{
    const i=Number(el.dataset.rqBlock),block=blocks[i];if(!block)return;
    if(block.type==='text'){block.html=(el.querySelector('[data-rq-editable-text]')?.innerHTML||'').replace(/\r\n?|\n/g,'<br>');}
+   if(block.type==='figure'){block.caption=el.querySelector('[data-rq-figcaption]')?.value||'';}
    if(block.type==='table'){
     block.caption=el.querySelector('[data-rq-caption]')?.value||'';block.notes=el.querySelector('[data-rq-notes]')?.value||'';
     for(const [r,row] of block.rows.entries())for(const [j,cell] of row.entries()){
@@ -183,10 +189,11 @@ function rqContentEditor(u){
   });
  }
  function renderBlocks(){
-  host.innerHTML=blocks.map((b,i)=>`<section class="rq-block" data-rq-block="${i}"><div class="rq-block-head"><strong>${b.type==='text'?'Textový blok':'Tabulka'} ${i+1}</strong><div>
+  host.innerHTML=blocks.map((b,i)=>`<section class="rq-block" data-rq-block="${i}"><div class="rq-block-head"><strong>${b.type==='text'?'Textový blok':b.type==='figure'?'Obrázek':'Tabulka'} ${i+1}</strong><div>
    <button type="button" class="btn tiny" data-rq-up="${i}">↑</button><button type="button" class="btn tiny" data-rq-down="${i}">↓</button>
    <button type="button" class="btn tiny danger" data-rq-remove="${i}">Odstranit blok</button></div></div>
-   ${b.type==='text'?`<div class="rq-rich-editable" contenteditable="true" spellcheck="false" data-rq-editable-text>${b.html||''}</div>`:rqTableGrid(b,i)}</section>`).join('');
+   ${b.type==='text'?`<div class="rq-rich-editable" contenteditable="true" spellcheck="false" data-rq-editable-text>${b.html||''}</div>`:b.type==='figure'?`${rqFigure(b)}<label class="form-field"><span>Popisek obrázku</span><input class="input" data-rq-figcaption value="${esc(b.caption||'')}"></label>`:rqTableGrid(b,i)}</section>`).join('');
+  rqLoadFigures(host);
   host.querySelectorAll('[data-rq-remove]').forEach(el=>el.onclick=()=>{readEdits();blocks.splice(Number(el.dataset.rqRemove),1);selection=null;renderBlocks()});
   host.querySelectorAll('[data-rq-up],[data-rq-down]').forEach(el=>el.onclick=()=>{
    readEdits();let i=Number(el.dataset.rqUp??el.dataset.rqDown),j=i+(el.hasAttribute('data-rq-up')?-1:1);

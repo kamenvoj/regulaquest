@@ -6,6 +6,92 @@
 --              „Nutno ověřit“, jeho schválené vazby a komentáře jdou do kontroly a původní znění se uloží do historie.
 -- Lze spustit opakovaně.
 
+-- Oprava kontroly cesty k obrázku (PostgreSQL nedovolí opakování {3,300}).
+create or replace function rq_private.validate_blocks(p_blocks jsonb, out blocks jsonb, out body text)
+language plpgsql as $$
+declare b jsonb; r int; rows_n int; v_row jsonb; cell jsonb; cs int; rs int; maxcol int;
+        used jsonb; col int; rr int; cc int; texts text[] := '{}'; clean jsonb := '[]'; newrows jsonb; newrow jsonb;
+        t text; plain text;
+begin
+  if jsonb_typeof(p_blocks) <> 'array' or jsonb_array_length(p_blocks) > 100 then
+    raise exception 'Obsah musí mít nejvýše 100 bloků';
+  end if;
+  for b in select * from jsonb_array_elements(p_blocks) loop
+    if jsonb_typeof(b) <> 'object' then raise exception 'Neplatný blok obsahu'; end if;
+    case b->>'type'
+    when 'text' then
+      t := b->>'html';
+      if t is null or length(t) > 750000 then raise exception 'Neplatný nebo příliš dlouhý formátovaný text'; end if;
+      t := rq_private.clean_html(t);
+      clean := clean || jsonb_build_array(jsonb_build_object('type', 'text', 'html', t));
+      texts := texts || rq_private.html_text(t);
+    when 'table' then
+      if jsonb_typeof(b->'rows') <> 'array' then raise exception 'Tabulka musí mít řádky'; end if;
+      rows_n := jsonb_array_length(b->'rows');
+      if rows_n < 1 or rows_n > 80 then raise exception 'Tabulka musí mít 1 až 80 řádků'; end if;
+      used := '{}'; maxcol := 0; newrows := '[]';
+      for r in 0 .. rows_n - 1 loop
+        v_row := b->'rows'->r;
+        if jsonb_typeof(v_row) <> 'array' or jsonb_array_length(v_row) > 35 then raise exception 'Neplatný řádek tabulky'; end if;
+        col := 0; newrow := '[]';
+        for cell in select * from jsonb_array_elements(v_row) loop
+          while used ? (r || ',' || col) loop col := col + 1; end loop;
+          if jsonb_typeof(cell) <> 'object' then raise exception 'Neplatná buňka tabulky'; end if;
+          cs := coalesce((cell->>'colspan')::int, 1); rs := coalesce((cell->>'rowspan')::int, 1);
+          if cs < 1 or cs > 30 or rs < 1 or rs > 30 or r + rs > rows_n then raise exception 'Neplatné sloučení buněk'; end if;
+          if col + cs > 35 then raise exception 'Tabulka může mít nejvýše 35 sloupců'; end if;
+          for rr in r .. r + rs - 1 loop
+            for cc in col .. col + cs - 1 loop
+              if used ? (rr || ',' || cc) then raise exception 'Buňky tabulky se překrývají'; end if;
+              used := used || jsonb_build_object(rr || ',' || cc, true);
+            end loop;
+          end loop;
+          t := coalesce(cell->>'text', '');
+          if length(t) > 10000 then raise exception 'Příliš dlouhý text buňky'; end if;
+          if coalesce(cell->>'align', 'left') not in ('left', 'center', 'right') then raise exception 'Neznámé zarovnání'; end if;
+          newrow := newrow || jsonb_build_array(jsonb_build_object('text', t,
+            'header', coalesce((cell->>'header')::boolean, false), 'align', coalesce(cell->>'align', 'left'),
+            'colspan', cs, 'rowspan', rs));
+          col := col + cs;
+        end loop;
+        maxcol := greatest(maxcol, col);
+        newrows := newrows || jsonb_build_array(newrow);
+      end loop;
+      if maxcol = 0 then raise exception 'Prázdná tabulka'; end if;
+      for rr in 0 .. rows_n - 1 loop
+        for cc in 0 .. maxcol - 1 loop
+          if not used ? (rr || ',' || cc) then raise exception 'Tabulka obsahuje mezeru v mřížce; upravte sloučené buňky'; end if;
+        end loop;
+      end loop;
+      if length(coalesce(b->>'caption', '')) > 400 or length(coalesce(b->>'notes', '')) > 4000 then
+        raise exception 'Příliš dlouhý nadpis nebo poznámka tabulky';
+      end if;
+      clean := clean || jsonb_build_array(jsonb_build_object('type', 'table', 'caption', coalesce(b->>'caption', ''),
+        'rows', newrows, 'notes', coalesce(b->>'notes', '')));
+      select coalesce(b->>'caption', '') || E'\n' || coalesce(string_agg(
+               (select string_agg(x->>'text', ' | ') from jsonb_array_elements(rw) x), E'\n'), '')
+             || E'\n' || coalesce(b->>'notes', '')
+        into plain from jsonb_array_elements(newrows) rw;
+      texts := texts || btrim(plain, E'\n ');
+    when 'figure' then
+      t := coalesce(b->>'path', '');
+      if t !~ '^[A-Za-z0-9._/-]+$' or length(t) not between 3 and 300 or position('..' in t) > 0 then raise exception 'Neplatná cesta k obrázku'; end if;
+      if length(coalesce(b->>'caption', '')) > 400 or length(coalesce(b->>'alt', '')) > 1000 then
+        raise exception 'Příliš dlouhý popisek obrázku';
+      end if;
+      clean := clean || jsonb_build_array(jsonb_build_object('type', 'figure', 'path', t,
+        'caption', coalesce(b->>'caption', ''), 'alt', coalesce(b->>'alt', ''),
+        'page', case when b ? 'page' and jsonb_typeof(b->'page') = 'number' then b->'page' else 'null'::jsonb end));
+      texts := texts || btrim(coalesce(b->>'caption', '') || E'\n' || coalesce(b->>'alt', ''), E'\n ');
+    else
+      raise exception 'Nepodporovaný typ bloku';
+    end case;
+  end loop;
+  blocks := clean;
+  body := btrim(array_to_string(array(select x from unnest(texts) x where btrim(x) <> ''), E'\n\n'));
+  if length(body) > 450000 then raise exception 'Obsah je příliš dlouhý'; end if;
+end $$;
+
 create or replace function rq_private.same_text(a text, b text) returns boolean
 language sql immutable as $$
   -- shoda včetně odsazení a zalomení; ignorují se jen mezery na konci řádků a na okrajích
@@ -20,7 +106,7 @@ declare d jsonb; old public.units; v_added int := 0; v_updated int := 0; v_repla
         v_same int := 0; v_changed int := 0; changed_ids text[] := '{}';
         applied text[] := '{}'; marked text[] := '{}'; edited boolean; mk text;
         v_mode text := coalesce(p_meta->>'mode', 'new');
-        v_body text; v_status text; before jsonb;
+        v_body text; v_status text; before jsonb; v_blocks jsonb; vb record;
 begin
   perform rq_private.require_admin();
   if v_mode not in ('new', 'update') then raise exception 'Neznámý režim importu'; end if;
@@ -32,12 +118,18 @@ begin
     raise exception 'Duplicitní identifikátory v importu. Nic nebylo uloženo.';
   end if;
   for d in select * from jsonb_array_elements(p_units) loop
-    v_body := btrim(coalesce(d->>'body', ''));
+    -- obsah z PDF přichází jako bloky (text, tabulka, obrázek); prostý text se z nich odvodí
+    if jsonb_typeof(d->'content_blocks') = 'array' and jsonb_array_length(d->'content_blocks') > 0 then
+      select * into vb from rq_private.validate_blocks(d->'content_blocks');
+      v_blocks := vb.blocks; v_body := btrim(vb.body);
+    else
+      v_blocks := null; v_body := btrim(coalesce(d->>'body', ''));
+    end if;
     v_status := case when v_body <> '' then 'needs_review' else 'missing' end;
     select * into old from public.units where id = d->>'id';
     if not found then
-      insert into public.units(id, document_id, kind, label, heading, body, locator, text_status, source_note, sort_order, updated_by)
-      values (d->>'id', p_document_id, d->>'kind', d->>'label', coalesce(d->>'heading', ''), v_body,
+      insert into public.units(id, document_id, kind, label, heading, body, content_blocks, locator, text_status, source_note, sort_order, updated_by)
+      values (d->>'id', p_document_id, d->>'kind', d->>'label', coalesce(d->>'heading', ''), v_body, v_blocks,
               coalesce(d->>'locator', ''), v_status, coalesce(d->>'source_note', ''), coalesce((d->>'sort_order')::bigint, 0), auth.uid());
       v_added := v_added + 1; applied := applied || (d->>'id');
       continue;
@@ -47,14 +139,15 @@ begin
     if v_mode = 'update' then
       if old.archived then
         v_protected := v_protected + 1;
-      elsif rq_private.same_text(old.body, v_body) and rq_private.same_text(old.heading, d->>'heading') then
+      elsif rq_private.same_text(old.body, v_body) and rq_private.same_text(old.heading, d->>'heading')
+            and old.content_blocks is not distinct from v_blocks then
         update public.units set sort_order = coalesce((d->>'sort_order')::bigint, sort_order),
           locator = coalesce(d->>'locator', locator) where id = old.id;
         v_same := v_same + 1; marked := marked || old.id;
       else
         before := to_jsonb(old);
         update public.units set kind = d->>'kind', label = d->>'label', heading = coalesce(d->>'heading', ''),
-          body = v_body, content_blocks = null, locator = coalesce(d->>'locator', ''), text_status = v_status,
+          body = v_body, content_blocks = v_blocks, locator = coalesce(d->>'locator', ''), text_status = v_status,
           verified_at = null, verified_by = null, source_note = coalesce(d->>'source_note', ''),
           sort_order = coalesce((d->>'sort_order')::bigint, sort_order), updated_at = clock_timestamp(), updated_by = auth.uid()
         where id = old.id;
@@ -71,7 +164,7 @@ begin
     elsif btrim(old.body) = '' or (p_replace and old.text_status = 'needs_review'
                                    and position('automatický import' in lower(old.source_note)) > 0) then
       update public.units set kind = d->>'kind', label = d->>'label', heading = coalesce(d->>'heading', ''),
-        body = v_body, content_blocks = null, locator = coalesce(d->>'locator', ''), text_status = v_status,
+        body = v_body, content_blocks = v_blocks, locator = coalesce(d->>'locator', ''), text_status = v_status,
         verified_at = null, verified_by = null, source_note = coalesce(d->>'source_note', ''),
         sort_order = coalesce((d->>'sort_order')::bigint, sort_order), updated_at = clock_timestamp(), updated_by = auth.uid()
       where id = old.id;
@@ -132,10 +225,10 @@ begin
   if not exists (select 1 from public.documents where id = p_document_id) then raise exception 'Neznámý dokument'; end if;
   if coalesce(p_meta->>'mode', 'new') = 'update' then
     if jsonb_typeof(p_ids) <> 'array' or jsonb_array_length(p_ids) = 0 then raise exception 'Prázdný seznam částí nového znění'; end if;
-    -- Archivují se jen části vzniklé importem (označení -art-, -annex-, -rule-), nikdy ručně založené.
+    -- Archivují se jen části vzniklé importem (označení -art-, -annex-, -rule-, -sec-, -front), nikdy ručně založené.
     for r in select * from public.units where document_id = p_document_id and not archived
                and not (p_ids ? id) and left(id, length(p_document_id) + 1) = p_document_id || '-'
-               and substr(id, length(p_document_id) + 2) ~ '^(art|annex|rule)-' loop
+               and substr(id, length(p_document_id) + 2) ~ '^((art|annex|rule|sec)-|front$)' loop
       update public.units set archived = true, updated_at = clock_timestamp(), updated_by = auth.uid() where id = r.id;
       perform rq_private.log_unit(r.id, 'removed_in_new_version', to_jsonb(r), to_jsonb(rq_private.unit_row(r.id)),
                                   coalesce(p_meta->>'reason', 'Nové znění předpisu'));

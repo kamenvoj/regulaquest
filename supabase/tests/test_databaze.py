@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
 
 DSN = os.environ.get('RQ_PG_DSN')
 ROOT = Path(__file__).resolve().parents[1]
-FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[1235678]_*.sql'))
+FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[12356789]_*.sql'))
 
 OWNER, ADMIN, STUDENT, STUDENT2 = (str(uuid.UUID(int=i)) for i in (1, 2, 3, 4))
 
@@ -284,6 +284,22 @@ class DatabaseTest(unittest.TestCase):
         self.call('rq_mark_translation_current', tr)
         self.assertEqual(self.sql("select source_body from comments where id=%s", tr)[0][0], 'Změněný výklad')
         self.fails('nevznikl', 'rq_mark_translation_current', src)
+
+    def test_import_with_blocks(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        blocks = [{'type': 'text', 'html': 'Úvod<br><br>Druhý odstavec'},
+                  {'type': 'table', 'caption': '', 'notes': '', 'rows': [[{'text': 'Class', 'header': True}, {'text': 'Rule 5', 'header': True}], [{'text': 'I'}, {'text': 'Text'}]]},
+                  {'type': 'figure', 'path': 'mdcg/abc/p19.png', 'caption': 'Schéma', 'alt': 'Rule 1', 'page': 19}]
+        u = [{'id': 'mdr-cs-sec-1', 'kind': 'section', 'label': '1', 'heading': 'X', 'content_blocks': blocks, 'sort_order': 9}]
+        self.call('rq_import_units', 'mdr-cs', u, {'mode': 'new'}, False)
+        body, cb = self.sql("select body, content_blocks from units where id='mdr-cs-sec-1'")[0]
+        self.assertIn('Rule 5', body); self.assertEqual(len(cb), 3)
+        res = self.call('rq_import_units', 'mdr-cs', u, {'mode': 'update', 'chunk': True}, False)
+        self.assertEqual(res['same'], 1)
+        u[0]['content_blocks'][0]['html'] = 'Změněný úvod'
+        res = self.call('rq_import_units', 'mdr-cs', u, {'mode': 'update', 'chunk': True}, False)
+        self.assertEqual(res['changed'], 1)
 
     def test_structure_editor(self):
         self.setup_doc()

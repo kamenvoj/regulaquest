@@ -268,16 +268,19 @@
   // Porovnání s tím, co už je v databázi (aktualizace na nové znění).
   // Porovnává se i odsazení a zalomení (formát textu), jen bez koncových mezer na řádcích.
   const norm = s => String(s || '').replace(/\r/g, '').replace(/[ \t]+$/gm, '').trim();
+  // JSON se seřazenými klíči (bloky z databáze mají jiné pořadí klíčů)
+  const stable = v => JSON.stringify(v ?? null, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(key => [key, x[key]])) : x);
   function compare(units, existing) {
     const byId = new Map(existing.map(u => [u.id, u])), incoming = new Set(units.map(u => u.id));
     const out = { added: [], changed: [], same: [], removed: [] };
     for (const u of units) {
       const old = byId.get(u.id);
       if (!old) out.added.push(u);
-      else if (norm(old.body) !== norm(u.body) || norm(old.heading) !== norm(u.heading)) out.changed.push(u);
+      else if ((u.content_blocks ? stable(old.content_blocks) !== stable(u.content_blocks) : norm(old.body) !== norm(u.body))
+               || norm(old.heading) !== norm(u.heading)) out.changed.push(u);
       else out.same.push(u);
     }
-    for (const u of existing) if (!u.editor_archived && !incoming.has(u.id) && /-(art|annex|rule)-/.test(u.id)) out.removed.push(u);
+    for (const u of existing) if (!u.editor_archived && !incoming.has(u.id) && /-(art|annex|rule|sec)-|-front$/.test(u.id)) out.removed.push(u);
     return out;
   }
 

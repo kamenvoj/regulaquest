@@ -193,7 +193,7 @@ begin
       texts := texts || btrim(plain, E'\n ');
     when 'figure' then
       t := coalesce(b->>'path', '');
-      if t !~ '^[A-Za-z0-9._/-]{3,300}$' or position('..' in t) > 0 then raise exception 'Neplatná cesta k obrázku'; end if;
+      if t !~ '^[A-Za-z0-9._/-]+$' or length(t) not between 3 and 300 or position('..' in t) > 0 then raise exception 'Neplatná cesta k obrázku'; end if;
       if length(coalesce(b->>'caption', '')) > 400 or length(coalesce(b->>'alt', '')) > 1000 then
         raise exception 'Příliš dlouhý popisek obrázku';
       end if;
@@ -840,7 +840,7 @@ language sql stable set search_path = public as $$
         'group_key', group_key, 'jurisdiction', jurisdiction, 'document_type', document_type, 'topics', topics) order by id) from docs), '[]'),
     'units', coalesce((select jsonb_agg(jsonb_build_object('id', id, 'document_id', document_id, 'parent_id', parent_id,
         'kind', kind, 'label', label,
-        'heading', case when nav then '' else heading end,
+        'heading', heading,
         'body', case when nav then '' else body end,
         'content_blocks', case when nav then null else content_blocks end,
         'locator', locator,

@@ -42,4 +42,5 @@ class H(SimpleHTTPRequestHandler):
         data = json.dumps(out, default=str).encode()
         self.send_response(code); self.send_header('Content-Type', 'application/json'); self.end_headers(); self.wfile.write(data)
 
+H.extensions_map['.mjs'] = 'text/javascript'
 ThreadingHTTPServer(('127.0.0.1', 8765), partial(H, directory=ROOT)).serve_forever()
