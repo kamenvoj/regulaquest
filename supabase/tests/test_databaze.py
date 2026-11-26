@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
 
 DSN = os.environ.get('RQ_PG_DSN')
 ROOT = Path(__file__).resolve().parents[1]
-FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[1235]_*.sql'))
+FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[12356]_*.sql'))
 
 OWNER, ADMIN, STUDENT, STUDENT2 = (str(uuid.UUID(int=i)) for i in (1, 2, 3, 4))
 
@@ -229,6 +229,38 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(bodies['mdr-cs-rule-11'], 'Software…')
         self.assertEqual(bodies['mdr-cs-rule-12'], 'Ručně opravený text')
         self.assertEqual(bodies['mdr-cs-annex-viii'], 'NOVÁ PŘÍLOHA')
+
+    def test_import_new_version(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        for uid in ('mdr-cs-annex-viii', 'mdr-cs-rule-11', 'mdr-cs-rule-12'):
+            self.call('rq_verify_unit', uid, None)
+        rel = self.call('rq_new_relation', 'mdr-cs-rule-11', 'mdr-cs-rule-12', 'related', 'souvisí', '', 'manual')
+        self.call('rq_relation_status', rel, 'approved')
+        new = [{'id': 'mdr-cs-annex-viii', 'parent_id': None, 'kind': 'annex', 'label': 'Příloha VIII', 'body': 'Celá  příloha',
+                'source_note': 'nové znění; automatický import', 'sort_order': 1},
+               {'id': 'mdr-cs-rule-11', 'parent_id': 'mdr-cs-annex-viii', 'kind': 'rule', 'label': 'Pravidlo 11', 'body': 'Software (změněno)',
+                'source_note': 'nové znění; automatický import', 'sort_order': 2},
+               {'id': 'mdr-cs-rule-23', 'parent_id': 'mdr-cs-annex-viii', 'kind': 'rule', 'label': 'Pravidlo 23', 'body': 'Nové pravidlo',
+                'source_note': 'nové znění; automatický import', 'sort_order': 4}]
+        res = self.call('rq_import_units', 'mdr-cs', new, {'mode': 'update', 'chunk': True}, False)
+        self.assertEqual((res['same'], res['changed'], res['added']), (1, 1, 1))
+        fin = self.call('rq_import_finish', 'mdr-cs', ['mdr-cs-annex-viii', 'mdr-cs-rule-11', 'mdr-cs-rule-23'],
+                        {'mode': 'update', 'filename': 'n.html', 'sha256': 'c' * 64, 'format': 'eurlex-html', 'counts': res})
+        self.assertEqual(fin['removed'], 1)
+        st = {r[0]: r[1:] for r in self.sql("select id, text_status, archived, body from units")}
+        self.assertEqual(st['mdr-cs-annex-viii'][:2], ('verified', False))      # shodný text zůstává ověřený
+        self.assertEqual(st['mdr-cs-rule-11'][:3], ('needs_review', False, 'Software (změněno)'))
+        self.assertEqual(st['mdr-cs-rule-12'][1], True)                          # chybí v novém znění → archiv
+        self.assertEqual(st['mdr-cs-rule-23'][0], 'needs_review')
+        self.assertEqual(self.sql("select status from relations")[0][0], 'proposed')
+        before = self.sql("select before_json->>'body' from unit_edit_history where unit_id='mdr-cs-rule-11' and event='new_version'")
+        self.assertEqual(before[0][0], 'Software…')
+        self.assertEqual(self.sql("select count(*) from import_log")[0][0], 2)
+        # ručně založená část se nikdy automaticky nearchivuje
+        self.call('rq_new_unit', {'document_id': 'mdr-cs', 'kind': 'section', 'label': 'Poznámka'})
+        self.call('rq_import_finish', 'mdr-cs', ['mdr-cs-annex-viii'], {'mode': 'update'})
+        self.assertEqual(self.sql("select archived from units where label='Poznámka'")[0][0], False)
 
     def test_structure_editor(self):
         self.setup_doc()

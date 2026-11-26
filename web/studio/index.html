@@ -36,13 +36,13 @@
  <main class="content">
   <section class="page" id="page-home">
    <div class="page-head"><div><div class="eyebrow">REGULAQUEST / PRACOVIŠTĚ</div><h1>Přehled Studia</h1><p>Souhrn všech dokumentů a postup ověřování. Vyberte zdroj pro odbornou redakci.</p></div>
-    <div class="head-actions"><button class="btn accent" id="goCatalog">Otevřít katalog dokumentů ↗</button><button class="btn" id="homeNewDoc">+ Nový dokument</button></div></div>
+    <div class="head-actions"><button class="btn accent" id="goCatalog">Otevřít katalog dokumentů ↗</button><button class="btn" id="homeNewDoc">+ Nový dokument</button><button class="btn" id="homeImport">↧ Import z EUR-Lexu</button></div></div>
    <div id="homeSummary" class="global-cards"></div>
    <div class="section-head"><h2>Dokumenty a jejich stav</h2><p>Po otevření dokumentu uvidíte jeho vlastní statistiky, ustanovení, vazby a komentáře.</p></div>
    <div id="homeDocuments" class="document-home-list"></div>
   </section>
   <section class="page hidden" id="page-library">
-   <div class="page-head"><div><div class="eyebrow">01 / ZNALOSTNÍ DATABÁZE</div><h1 id="workDocTitle">Práce s dokumentem</h1><p id="workDocSubtitle">Originální text, odborné vazby a výukové poznámky.</p></div><div class="head-actions"><button class="btn" id="newDoc">+ Nový dokument</button></div></div>
+   <div class="page-head"><div><div class="eyebrow">01 / ZNALOSTNÍ DATABÁZE</div><h1 id="workDocTitle">Práce s dokumentem</h1><p id="workDocSubtitle">Originální text, odborné vazby a výukové poznámky.</p></div><div class="head-actions"><button class="btn" id="newDoc">+ Nový dokument</button><button class="btn accent" id="importBtn">↧ Import z EUR-Lexu</button></div></div>
    <div class="metric-grid">
     <button class="metric metric-link" type="button" id="statDocsCard" title="Zobrazit zdroj"><span>Ustanovení v dokumentu ↗</span><strong id="statDocs">0</strong><small id="statDocsSub">Zobrazit dokument</small></button>
     <button class="metric metric-link" type="button" id="statVerifiedCard" title="Otevřít ověřené pasáže"><span>Ověřené pasáže ↗</span><strong id="statVerified">0</strong><small id="statVerifiedSub">Zobrazit ověřené texty</small></button>
@@ -113,6 +113,7 @@
 <script src="sdilene/config.js"></script>
 <script src="sdilene/prihlaseni.js"></script>
 <script src="vendor/qrcode.js"></script>
+<script src="js/import-eurlex.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/structure-ui.js"></script>
 <script src="js/pristupy.js"></script>

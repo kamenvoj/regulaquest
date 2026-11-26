@@ -239,3 +239,8 @@ table.list{width:100%;border-collapse:collapse;font-size:13px}
   .slip .cred{font-family:"Courier New",monospace;font-size:12.5pt;font-weight:bold}
 }
 .rq-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+dialog:has(#impFile){width:min(760px,calc(100vw - 24px));max-width:min(760px,calc(100vw - 24px));max-height:calc(100vh - 32px);overflow:auto}
+.import-report{margin-top:12px;font-size:12.5px;line-height:1.55}
+.imp-list{max-height:180px;overflow:auto;margin:6px 0 10px;padding-left:18px;font-size:12px}
+.import-results details{margin:6px 0}
+.import-results summary{cursor:pointer;font-weight:700}

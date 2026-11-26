@@ -1,5 +1,13 @@
 # Změny
 
+## 0.5.0 – import z EUR-Lexu v prohlížeči
+
+- **Import z EUR-Lexu** ve Studiu: uložené HTML konsolidovaného znění se převede v prohlížeči na články, odstavce, přílohy a klasifikační pravidla (stejný výsledek jako dřívější Python import, včetně kontroly úplnosti textu a seznamu změnových aktů). Originál se uloží do Supabase Storage.
+- **Aktualizace na nové znění**: shodné části zůstanou ověřené, změněné se vrátí k ověření (staré znění v historii, schválené vazby a komentáře do kontroly), nové přibudou, chybějící se archivují. Náhled ukáže seznam změn před importem.
+- Rozpoznání CELEX, jazyka a data znění; nastavení verze a odkazu dokumentu.
+- Nový dokument lze zařadit jako jinou jazykovou verzi existujícího předpisu (společné tagy a zařazení).
+- Databáze: migrace `06_import.sql` (`rq_import_units` po dávkách a v režimu nového znění, `rq_import_finish`).
+
 ## 0.4.0 – webové Studio (Supabase)
 
 **Nové**
@@ -15,7 +23,7 @@
 - Formulář dokumentu má pole Vydavatel; v „Upravit údaje a tagy“ lze změnit i název, zkratku, verzi, vydavatele a URL.
 - Lokátor a nadpis nové části nejsou předvyplněné ukázkovým textem.
 
-**Zatím chybí (další etapy):** import dokumentů v prohlížeči, automatické návrhy výslovných odkazů a souvislostí.
+**Zatím chybí (další etapy):** import PDF (MDCG), automatické návrhy výslovných odkazů a souvislostí.
 
 ## 0.3.0 – studentská čtečka (navazuje na 0.2.15)
 

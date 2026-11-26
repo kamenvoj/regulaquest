@@ -11,6 +11,6 @@ window.supabase={createClient(){return{
   async signOut(){ss.removeItem('uid')}},
  from, rpc:(n,a)=>post('/rpc/'+n,a||{}),
  functions:{async invoke(){return{data:null,error:{message:'Funkce ucty se v testu nevolá'}}}},
- storage:{from(){return{async createSignedUrl(){return{data:{signedUrl:'about:blank'}}}}}}
+ storage:{from(){return{async createSignedUrl(){return{data:{signedUrl:'about:blank'}}},async upload(path){window.__uploaded=path;return{data:{path},error:null}}}}}
 }}};
 })();

@@ -41,7 +41,7 @@ async function refresh(){
 }
 const field_=(d,keys)=>Object.fromEntries(keys.filter(k=>d[k]!==undefined).map(k=>[k,d[k]]));
 const ACTIONS={
- new_document:d=>['rq_new_document',{p:field_(d,['title','family','kind','language','version','url','valid_date','publisher','jurisdiction','document_type'])}],
+ new_document:d=>['rq_new_document',{p:field_(d,['title','family','kind','language','version','url','valid_date','publisher','jurisdiction','document_type','group_key'])}],
  update_document_metadata:d=>['rq_update_document',{p_id:d.document_id,p:field_(d,['title','family','version','publisher','url','jurisdiction','document_type','topics'])}],
  new_unit:d=>['rq_new_unit',{p:field_(d,['document_id','parent_id','kind','label','heading','locator'])}],
  verify_unit:d=>['rq_verify_unit',{p_unit_id:d.unit_id,p_expected:getUnit(d.unit_id)?.updated_at||null}],
@@ -681,9 +681,86 @@ function dialogRelation(u,preset=null){
 }
 
 function dialogComment(u){const html=`<p>Komentář není součástí právního předpisu. Nejprve se uloží jako koncept.</p>${select('Typ komentáře','kind',Object.entries(noteName))}${select('Jazyk','language',[['cs','Čeština'],['en','English']])}${field('Autor / garant','author','Redakce RegulaQuest')}${field('Obsah komentáře','body','','textarea')}`;dialog('Nový komentář · '+u.label,html,vals=>safeAct({action:'new_comment',unit_id:u.id,...vals}))}
-function dialogDoc(){const html=`<p>Nový dokument bude mít vlastní verzi, jazyk a původ. Po vytvoření do něj můžete přidávat kapitoly a konkrétní pasáže.</p>${field('Název','title')}${field('Zkratka / rodina','family')}${select('Typ','kind',[['Právní předpis','Právní předpis'],['Metodický dokument','Metodický dokument'],['Doplňující dokument','Doplňující dokument']])}${select('Jazyk','language',[['cs','Čeština'],['en','English']])}${field('Revize / časová verze','version')}<label class="form-field"><span>Vydavatel (nepovinné)</span><input class="input" name="publisher" type="text" placeholder="Např. Evropský parlament a Rada"></label><label class="form-field"><span>Oficiální URL (nepovinné)</span><input class="input" name="url" type="url" placeholder="https://…"></label>`;dialog('Nový zdrojový dokument',html,vals=>safeAct({action:'new_document',...vals}))}
+function dialogDoc(){const html=`<p>Nový dokument bude mít vlastní verzi, jazyk a původ. Po vytvoření do něj můžete přidávat kapitoly a konkrétní pasáže.</p>${field('Název','title')}${field('Zkratka / rodina','family')}${select('Typ','kind',[['Právní předpis','Právní předpis'],['Metodický dokument','Metodický dokument'],['Doplňující dokument','Doplňující dokument']])}${select('Jazyk','language',[['cs','Čeština'],['en','English']])}${field('Revize / časová verze','version')}${db.documents.length?select('Jiná jazyková verze téhož předpisu (nepovinné)','group_key',[['','— samostatný dokument —'],...db.documents.map(x=>[x.group_key||x.id,documentLabel(x)])]):''}<label class="form-field"><span>Vydavatel (nepovinné)</span><input class="input" name="publisher" type="text" placeholder="Např. Evropský parlament a Rada"></label><label class="form-field"><span>Oficiální URL (nepovinné)</span><input class="input" name="url" type="url" placeholder="https://…"></label>`;dialog('Nový zdrojový dokument',html,vals=>safeAct({action:'new_document',...vals}))}
 function dialogUnit(){const doc=getDoc(selected) || getDoc(getUnit(selected)?.document_id) || getDoc(activeDocId) || db.documents[0];if(!doc){toast('Nejdřív založte dokument.',true);return}const all=db.units.filter(u=>u.document_id===doc.id);const html=`<p>Vytvoříte rejstříkovou část. Text vložíte dodatečně, aby nešlo o neověřené přepisy.</p>${select('Dokument','document_id',db.documents.map(d=>[d.id,`${d.family} · ${d.language.toUpperCase()}`]),doc.id)}${select('Nadřazená část','parent_id',[['','Bez nadřazené části'],...all.map(u=>[u.id,u.label+' · '+u.heading])])}${select('Typ části','kind',[['article','Článek'],['annex','Příloha'],['paragraph','Odstavec'],['rule','Pravidlo'],['section','Kapitola / pasáž']])}${field('Označení','label')}<label class="form-field"><span>Nadpis / stručný popis (nepovinné)</span><input class="input" name="heading" type="text" placeholder="Např. Definice"></label><label class="form-field"><span>Lokátor v originále (nepovinné)</span><input class="input" name="locator" type="text" placeholder="Např. Článek 2 nebo Annex VIII, Rule 11"></label>`;dialog('Nové ustanovení / pasáž',html,vals=>safeAct({action:'new_unit',...vals}))}
-function init(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='review')reviewDocFilter='all';if(b.dataset.page==='relations')relationDocFilter='all';if(b.dataset.page==='comments')commentDocFilter='all';setPage(b.dataset.page)});$('#filter').addEventListener('input',e=>{query=e.target.value;renderList()});$('#newDoc').onclick=$('#homeNewDoc').onclick=dialogDoc;$('#newUnit').onclick=dialogUnit;$('#statDocsCard').onclick=()=>{selected=activeDocId;renderReader();renderContext()};
+
+// Import konsolidovaného znění z EUR-Lexu: převod v prohlížeči (import-eurlex.js), originál do Storage,
+// části po dávkách přes rq_import_units, závěr rq_import_finish. Nic se samo neověřuje.
+function dialogImport(){
+ if(!db.documents.length){toast('Nejdřív založte dokument („+ Nový dokument“).',true);return}
+ const d=$('#modal'),f=$('#modalContent');let prepared=null;
+ f.onsubmit=e=>e.preventDefault();
+ f.innerHTML=`<h2>Import z EUR-Lexu</h2>
+ <p>Na EUR-Lexu otevřete <strong>konsolidované znění</strong> předpisu, zvolte formát HTML a uložte stránku do počítače (Ctrl+S, „Webová stránka, pouze HTML“). Pak ji vyberte zde.</p>
+ ${select('Dokument ve Studiu','doc',db.documents.map(x=>[x.id,documentLabel(x)]),getDoc(activeDocId)?activeDocId:db.documents[0].id)}
+ <label class="form-field"><span>Uložený soubor HTML</span><input class="input" id="impFile" type="file" accept=".html,.htm,text/html"></label>
+ <div id="impReport" class="import-report" role="status">Vyberte soubor a stiskněte „Zkontrolovat“.</div>
+ <div class="modal-actions"><button class="btn" type="button" id="impClose">Zavřít</button><button class="btn" type="button" id="impCheck">Zkontrolovat</button><button class="btn accent" type="button" id="impGo" disabled>Importovat</button></div>`;
+ const docSel=f.querySelector('[name=doc]'),file=f.querySelector('#impFile'),rep=f.querySelector('#impReport'),go=f.querySelector('#impGo'),check=f.querySelector('#impCheck');
+ const reset=()=>{prepared=null;go.disabled=true;rep.textContent='Vyberte soubor a stiskněte „Zkontrolovat“.'};
+ docSel.onchange=reset;file.onchange=reset;f.querySelector('#impClose').onclick=()=>d.close();
+ check.onclick=async()=>{
+  try{
+   const fl=file.files[0];if(!fl)throw Error('Vyberte soubor HTML.');
+   check.disabled=true;rep.textContent='Čtu a kontroluji soubor…';
+   const doc=getDoc(docSel.value),buffer=await fl.arrayBuffer(),html=new TextDecoder('utf-8').decode(buffer);
+   const p=RQImport.parseEurlex(html,doc.id,fl.name);
+   if(p.id.language!==doc.language)p.errors.unshift(`Jazyk souboru (${p.id.language.toUpperCase()}) neodpovídá dokumentu (${doc.language.toUpperCase()}).`);
+   const existing=db.units.filter(u=>u.document_id===doc.id);
+   const mode=existing.some(u=>/-(art|annex|rule)-/.test(u.id))?'update':'new';
+   const diff=RQImport.compare(p.units,existing);
+   const versionText=p.id.dateText?`Konsolidované znění k ${p.id.dateText}`:'';
+   const url=p.id.celex&&p.id.date?`https://eur-lex.europa.eu/legal-content/${p.id.language.toUpperCase()}/TXT/?uri=CELEX:${p.id.celex}-${p.id.date.replace(/-/g,'')}`:'';
+   const list=(arr,n=25)=>arr.length?`<ul class="imp-list">${arr.slice(0,n).map(u=>`<li>${esc(u.kind==='paragraph'?u.locator:u.label)}${u.heading?' – '+esc(u.heading.slice(0,70)):''}</li>`).join('')}${arr.length>n?`<li>… a dalších ${arr.length-n}</li>`:''}</ul>`:'';
+   prepared={p,doc,buffer,file:fl,mode,diff,versionText,url};
+   rep.innerHTML=`<div class="import-results">
+    <strong>${esc(p.id.celex||'Neznámý CELEX')} · ${esc(p.id.language.toUpperCase())}${versionText?' · '+esc(versionText):''}</strong>
+    <p>Nalezeno: ${p.info.articles} článků${p.info.inserted.length?' (vložené '+esc(p.info.inserted.join(', '))+')':''}, ${p.info.paragraphs} odstavců, ${p.info.annexes} příloh${p.info.rules?', '+p.info.rules+' klasifikačních pravidel':''}, ${Object.keys(p.amendments).length} pozměňujících aktů a oprav. Kontrola úplnosti textu: ${p.errors.some(e=>e.startsWith('Ztráta'))?'<b>neprošla</b>':'v pořádku'}.</p>
+    ${mode==='new'?`<p><strong>První import:</strong> vznikne ${diff.added.length} nových částí ve stavu „Nutno ověřit“.${diff.same.length+diff.changed.length?` ${diff.same.length+diff.changed.length} už existujících se nepřepíše, pokud jsou ověřené nebo upravené.`:''}</p>`:
+    `<p><strong>Aktualizace na nové znění</strong> (dokument už importované části má):</p>
+     <p>beze změny <b>${diff.same.length}</b> (zůstávají ověřené) · změněno <b>${diff.changed.length}</b> · nové <b>${diff.added.length}</b> · v novém znění chybí <b>${diff.removed.length}</b></p>
+     ${diff.changed.length?`<details open><summary>Změněné části – vrátí se k ověření, jejich schválené vazby a komentáře do kontroly</summary>${list(diff.changed)}</details>`:''}
+     ${diff.added.length?`<details><summary>Nové části</summary>${list(diff.added)}</details>`:''}
+     ${diff.removed.length?`<details open><summary>Části, které v novém znění nejsou – archivují se (nic se nesmaže)</summary>${list(diff.removed)}</details>`:''}`}
+    ${versionText&&doc.version!==versionText?`<label class="import-replace"><input type="checkbox" id="impVersion" checked> Nastavit verzi dokumentu na „${esc(versionText)}“ a odkaz na toto znění</label>`:''}
+    ${p.errors.map(e=>`<div class="notice">${esc(e)}</div>`).join('')}
+    ${p.warnings.map(e=>`<p class="fine">${esc(e)}</p>`).join('')}</div>`;
+   go.disabled=!!p.errors.length||(mode==='update'&&!diff.changed.length&&!diff.added.length&&!diff.removed.length);
+   if(mode==='update'&&go.disabled&&!p.errors.length)rep.insertAdjacentHTML('beforeend','<div class="notice">Soubor se shoduje s textem ve Studiu, není co importovat.</div>');
+  }catch(e){prepared=null;go.disabled=true;rep.textContent='Chyba: '+e.message}
+  finally{check.disabled=false}
+ };
+ go.onclick=async()=>{
+  if(!prepared)return;const {p,doc,buffer,file:fl,mode,diff,versionText,url}=prepared;
+  const what=mode==='update'?`Aktualizovat ${doc.family} na nové znění?\n\nZměněno ${diff.changed.length}, nové ${diff.added.length}, archivováno ${diff.removed.length}. Změněné části bude nutné znovu ověřit.`:`Importovat ${p.units.length} částí do ${doc.family}?`;
+  if(!confirm(what))return;
+  const setVersion=!!f.querySelector('#impVersion')?.checked;
+  go.disabled=check.disabled=true;
+  try{
+   rep.textContent='Ukládám originál…';
+   const sha=await RQImport.sha256(buffer),path=`${doc.id}/${p.id.date||'bez-data'}-${sha.slice(0,12)}.html`;
+   const up=await RQ.client.storage.from('originals').upload(path,new Blob([buffer],{type:'text/html'}),{contentType:'text/html',upsert:false});
+   if(up.error&&!/exist|duplicate/i.test(up.error.message))throw Error('Originál se nepodařilo uložit: '+up.error.message);
+   const units=[...p.units].sort((a,b)=>a.sort_order-b.sort_order),size=150,counts={added:0,updated:0,replaced:0,protected:0,same:0,changed:0};
+   for(let i=0;i<units.length;i+=size){
+    const part=units.slice(i,i+size);rep.textContent=`Ukládám části ${i+1}–${i+part.length} z ${units.length}…`;
+    const marks=Object.fromEntries(part.map(u=>[u.id,p.unitMarks[u.id]||[]]));
+    const r=await rpc('rq_import_units',{p_document_id:doc.id,p_units:part,p_meta:{mode,chunk:true,unit_amendments:marks},p_replace:false});
+    for(const k in counts)counts[k]+=r[k]||0;
+   }
+   rep.textContent='Dokončuji…';
+   const fin=await rpc('rq_import_finish',{p_document_id:doc.id,p_ids:units.map(u=>u.id),p_meta:{mode,filename:fl.name,sha256:sha,format:'eurlex-html',
+     storage_path:path,mime:'text/html',amendments:p.amendments,counts,warnings:p.warnings,reason:versionText?'Nové znění: '+versionText:'Nové znění předpisu'}});
+   if(setVersion)await rpc('rq_update_document',{p_id:doc.id,p:{version:versionText,url}});
+   d.close();await refresh();
+   toast(mode==='update'?`Aktualizováno: ${counts.changed} změněno, ${counts.added} nových, ${fin.removed} archivováno, ${counts.same} beze změny.`
+                       :`Import hotov: ${counts.added} nových částí${counts.protected?', '+counts.protected+' chráněných ponecháno':''}. Texty čekají na ověření.`);
+   selectDocument(doc.id);
+  }catch(e){rep.textContent='Chyba: '+e.message+' Část dat mohla být uložena; import lze bezpečně spustit znovu.';toast(e.message,true);go.disabled=check.disabled=false}
+ };
+ d.showModal();
+}
+function init(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='review')reviewDocFilter='all';if(b.dataset.page==='relations')relationDocFilter='all';if(b.dataset.page==='comments')commentDocFilter='all';setPage(b.dataset.page)});$('#filter').addEventListener('input',e=>{query=e.target.value;renderList()});$('#newDoc').onclick=$('#homeNewDoc').onclick=dialogDoc;$('#newUnit').onclick=dialogUnit;$('#importBtn').onclick=$('#homeImport').onclick=dialogImport;$('#statDocsCard').onclick=()=>{selected=activeDocId;renderReader();renderContext()};
  $('#statVerifiedCard').onclick=()=>{verifiedDocFilter=activeDocId;setPage('verified')};
  $('#statProposedCard').onclick=()=>{reviewDocFilter=activeDocId;setPage('review')};
  $('#statApprovedCard').onclick=()=>{relationStatusFilter='approved';relationDocFilter=activeDocId;setPage('relations')};
