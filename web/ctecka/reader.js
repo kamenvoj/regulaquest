@@ -313,7 +313,7 @@ function renderDoc(d){
   const units = S.data.units.filter(u => u.document_id === d.id && !u.navigation_only);
   const withNotes = units.filter(u => S.notes.has(u.id));
   $('#panelText').innerHTML = `<div class="crumbs">Dokument</div><h1>${esc(d.title)}</h1>
-    <p>${esc(d.family)} · ${esc(LANG_NAMES[d.language]||d.language)} ${d.version?' · '+esc(versionText(d.version)):''}</p>
+    <p>${esc(d.family)} · ${esc(LANG_NAMES[d.language]||d.language)}${d.version?' · '+esc(versionText(d.version)):''}</p>
     <div class="note">V aplikaci je zatím <strong>${units.length}</strong> ověřených částí tohoto dokumentu${S.draft?' (v pracovním náhledu i neověřené)':''}. Vyberte část v obsahu vlevo nebo použijte hledání.</div>
     ${withNotes.length ? `<div class="subparts"><h2>Části s odborným výkladem</h2><ul class="list-plain">${withNotes.map(u => `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(u.label)}<small>${esc(ancestors(u).map(a=>a.label).join(' › '))}</small></a></li>`).join('')}</ul></div>` : ''}
     ${(d.topics||[]).length ? `<div class="subparts"><h2>Témata</h2><div class="chips">${d.topics.map(t => `<span class="topic">${esc(t)}</span>`).join('')}</div></div>` : ''}
