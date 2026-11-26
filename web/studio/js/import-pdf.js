@@ -217,8 +217,10 @@
       if (diagram) diagramPages.add(p.n);
       const all = toLines(free).map(l => ({ ...l, page: p.n })).filter(l => !isEdge(l, p));
       // poznámky pod čarou: souvislý blok malého písma ve spodní části strany, první řádek začíná číslem
-      const notes = []; const isSmall = l => l.small && l.small < 0.93 * p.bodyH;
-      for (let i = all.length - 1; i >= 0 && isSmall(all[i]) && all[i].y < p.height * 0.35; i--) notes.unshift(all[i]);
+      // začátek poznámek: řádek ve spodní části strany, který začíná malým číslem (ne horním indexem u slova)
+      const startsNote = l => l.y < p.height * 0.35 && /^\d{1,3}$/.test(l.items[0].s.trim()) && !l.items[0].sup && l.items[0].h < 0.82 * p.bodyH;
+      const first = all.findIndex(startsNote);
+      const notes = first >= 0 ? all.slice(first) : [];
       // číslo poznámky bývá menším písmem o kousek výš než její text → samostatný řádek; spojit
       for (let i = notes.length - 2; i >= 0; i--) if (/^\d{1,3}$/.test(notes[i].text)) { notes[i + 1] = { ...notes[i + 1], text: notes[i].text + ' ' + notes[i + 1].text }; notes.splice(i, 1); }
       while (notes.length && !/^\d{1,3}\s/.test(notes[0].text)) notes.shift();
@@ -234,6 +236,13 @@
         entries.sort((a, b) => b.y - a.y);
       }
       flow.push(...entries);
+    }
+
+    // poznámka, na kterou na její straně nic neodkazuje, zůstane u části, kde stránka končí
+    const refRe = n => new RegExp(n.replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]) + '(?![⁰¹²³⁴⁵⁶⁷⁸⁹])');
+    for (const e of flow) if (e.kind === 'note') {
+      const re = refRe(e.note.n);
+      e.referenced = flow.some(x => x.page === e.page && (x.kind === 'line' ? re.test(x.line.text) : x.kind === 'table' && re.test(JSON.stringify(x.block))));
     }
 
     // nadpisy kapitol z obsahu: první výskyt od strany uvedené v obsahu
@@ -269,7 +278,7 @@
           if (fig) fig.alt = (fig.alt + ' ' + e.line.text).trim().slice(0, 1000);
           continue;
         }
-        if (e.kind === 'note') { notes.push(e.note); continue; }
+        if (e.kind === 'note') continue;   // poznámky se přiřadí podle odkazu v textu (níže)
         if (e.kind === 'line') { lines.push(e.line); continue; }
         flush();
         // pokračování tabulky z předchozí strany: stejný počet sloupců, bez záhlaví
@@ -279,6 +288,9 @@
         blocks.push({ ...e.block, page: e.page });
       }
       flush();
+      // poznámky pod čarou z týchž stran, na které tato část v textu odkazuje (horní index ¹²³)
+      const pagesIn = new Set(part.map(e => e.page)), txt = JSON.stringify(blocks);
+      for (const e of flow) if (e.kind === 'note' && (e.referenced ? pagesIn.has(e.page) && refRe(e.note.n).test(txt) : part.includes(e))) notes.push(e.note);
       if (notes.length) blocks.push({ type: 'text', html: '<b>Poznámky pod čarou</b><br>' + notes.map(n => esc(n.n.replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]) + ' ' + n.text)).join('<br>') });
       blocks.forEach(b => { if (b.type === 'table') delete b.page; });
       return blocks;
