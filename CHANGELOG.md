@@ -2,6 +2,8 @@
 
 ## 0.6.0 – návrhy výslovných odkazů
 
+- **Vazby platí pro všechny jazykové verze předpisu:** tvoří se jednou (u české verze), čtečka je ukáže i u anglické části a cíl převede na verzi ve stejném jazyce (MDR EN čl. 61 → MDR EN příloha I). Ve Studiu jsou u jiné jazykové verze vidět jako „Z jiné jazykové verze · platí i zde“. Komentáře zůstávají jazykové.
+
 - **✧ Návrhy odkazů** (celý dokument) a **✧ Návrhy** u části: v textu se najdou výslovné odkazy na články, odstavce, přílohy a pravidla téhož dokumentu, s citací místa v textu. Vybrané se uloží jako návrhy vazeb do „Ke kontrole“ (po 50, nic se neschválí samo). Výsledky jsou shodné s dřívější Python verzí (MDR CS 1382, EN 1323 nalezených odkazů); u hromadného zobrazení se odkaz z odstavce nenabízí znovu za celý článek.
 - Nenalezené cíle (rozsahy „články 38 a 39“, jiné předpisy) se zobrazí zvlášť k ruční kontrole.
 

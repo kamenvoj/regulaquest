@@ -30,6 +30,16 @@ const LIST_LINE=/^([—–•-]|[a-z]\)|\(?[ivx]+\)|\d+[.)]|\(\d+\))\s/;
 function legalLines(body){return String(body).split('\n').map(l=>{const t=l.trim();if(!t)return '<span class="ln gap"></span>';
  const lead=(l.match(/^ */)[0].length)/2,list=lead>0&&LIST_LINE.test(t);
  return `<span class="ln${list?' hang':''}" style="--lvl:${lead}">${esc(t)}</span>`}).join('')}
+function equivalentIn(u,docId){const d=getDoc(u.document_id);return d&&u.id.startsWith(d.id+'-')?getUnit(docId+u.id.slice(d.id.length))||null:null}
+function mirroredRelations(u){
+ const d=getDoc(u.document_id);if(!d)return [];const out=[];
+ for(const od of db.documents){if(od.id===d.id||(od.group_key||od.id)!==(d.group_key||d.id))continue;
+  const twin=equivalentIn(u,od.id);if(!twin)continue;
+  for(const r of db.relations){if(r.status==='archived'||r.status==='rejected'||(r.source_id!==twin.id&&r.target_id!==twin.id))continue;
+   const o=getUnit(r.source_id===twin.id?r.target_id:r.source_id);if(!o)continue;const od2=getDoc(o.document_id);
+   let other=o.id;for(const x of db.documents)if((x.group_key||x.id)===(od2.group_key||od2.id)&&x.language===d.language){const c=equivalentIn(o,x.id);if(c){other=c.id;break}}
+   out.push({r,from:twin,other});}}
+ return out}
 function documentLabel(d){return d?`${d.family} · ${d.language.toUpperCase()} · ${d.version}`:'Neznámý dokument'}
 const fullname=id=>{const u=getUnit(id);if(!u)return id;const d=getDoc(u.document_id);return `${documentLabel(d)} › ${unitPath(id)}${u.heading?' – '+u.heading:''}`};
 const tag=(s)=>`<span class="tag ${statuses[s]||''}">${esc(statusName[s]||s)}</span>`;
@@ -311,12 +321,13 @@ const v=box.querySelector('#verifyText');if(v)v.onclick=()=>{if(confirm('Potvrzu
 box.querySelectorAll('[data-unit-open]').forEach(el=>el.onclick=()=>{selected=el.dataset.unitOpen;render()});
 }
 function renderContext(){const box=$('#context');const u=getUnit(selected);if(!u){box.innerHTML='<div class="smallcaps">VÝKLAD A VAZBY</div><div class="empty-state">Vyberte ustanovení pro úpravu komentářů a propojení.</div>';return}
-const rel=db.relations.filter(r=>r.source_id===u.id||r.target_id===u.id);const comments=db.comments.filter(c=>c.unit_id===u.id);
+const rel=db.relations.filter(r=>r.source_id===u.id||r.target_id===u.id),mirror=mirroredRelations(u);const comments=db.comments.filter(c=>c.unit_id===u.id);
 const marks=(db.unit_amendments||[]).filter(x=>x.unit_id===u.id);
 const amendments=marks.map(x=>{const a=(db.amendments||[]).find(z=>z.document_id===u.document_id&&z.marker===x.marker);return {...a,marker:x.marker}});
 const origin=getDoc(u.document_id);
 box.innerHTML=`<div class="context-section"><div class="context-head"><h3>↗ Propojené pasáže <span class="tag">${rel.length}</span></h3><div class="actionrow"><button class="btn tiny" id="suggestLinks" title="Výslovné odkazy v textu této části">✧ Návrhy</button><button class="btn tiny" id="addLink">+ Propojit</button></div></div>
-${rel.length?rel.map(r=>{const other=r.source_id===u.id?r.target_id:r.source_id;return `<div class="boxnote"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">${esc(r.rationale)}</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-relation-detail="${esc(r.id)}">Detail vazby</button></div></div>`}).join(''):'<p class="fine">Zatím bez propojení. Vazby je možné vytvářet na úrovni kapitol, pravidel i jednotlivých pasáží.</p>'}</div>
+${rel.length?rel.map(r=>{const other=r.source_id===u.id?r.target_id:r.source_id;return `<div class="boxnote"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">${esc(r.rationale)}</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-relation-detail="${esc(r.id)}">Detail vazby</button></div></div>`}).join(''):'<p class="fine">Zatím bez propojení. Vazby je možné vytvářet na úrovni kapitol, pravidel i jednotlivých pasáží.</p>'}
+${mirror.length?`<div class="section-kicker">Z JINÉ JAZYKOVÉ VERZE · PLATÍ I ZDE</div>${mirror.map(({r,from,other})=>`<div class="boxnote mirrored"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">Vazba vytvořená u ${esc(documentLabel(getDoc(from.document_id)))}; upravuje a schvaluje se tam.</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-jump="${esc(from.id)}">Otevřít původní</button></div></div>`).join('')}`:''}</div>
 <div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>▤ Naše komentáře <span class="tag">${comments.length}</span></h3><button class="btn tiny" id="addNote">+ Přidat</button></div>${comments.length?comments.map(c=>`<div class="boxnote"><div class="meta"><strong>${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</strong>${tag(c.status)}</div><p>${esc(c.body)}</p><div class="helper">${esc(c.author||'RegulaQuest redakce')}</div><div class="actionrow"><button type="button" class="btn tiny" data-comment-detail="${esc(c.id)}">Detail / upravit</button></div></div>`).join(''):'<p class="fine">Zatím bez autorských komentářů.</p>'}</div><div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>◷ Změny a původ znění <span class="tag">${amendments.length}</span></h3></div>
 ${amendments.length?amendments.map(a=>`<div class="boxnote"><div class="meta"><strong>${esc(a.marker)} · ${a.kind==='corrigendum'?'Oprava':'Pozměňující akt'}</strong></div><p>${esc(a.title||'Označení změny v konsolidovaném dokumentu')}</p>${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">Přejít na původní akt ↗</a>`:`<a href="${esc(origin?.url||'#')}" target="_blank" rel="noopener noreferrer">Ověřit akt v přehledu „Ve znění“ na EUR-Lexu ↗</a>`}</div>`).join(''):'<p class="fine">U tohoto textu nejsou v importovaném konsolidovaném znění zachyceny změnové značky. Neznamená to, že text nikdy nebyl měněn.</p>'}
 <p class="fine">Zobrazené znění je informativní konsolidace k datu uvedenému u zdroje. Změnové značky se do textu nevypisují.</p></div>
@@ -782,6 +793,8 @@ function dialogImport(){
 function dialogReferences(unitId){
  const unit=unitId&&getUnit(unitId),docId=unit?unit.document_id:activeDocId,doc=getDoc(docId);
  if(!doc){toast('Nejdřív vyberte dokument.',true);return}
+ const csTwin=doc.language!=='cs'&&db.documents.find(x=>x.id!==doc.id&&(x.group_key||x.id)===(doc.group_key||doc.id)&&x.language==='cs');
+ if(csTwin){toast(`Vazby uvnitř předpisu se tvoří u české verze (${documentLabel(csTwin)}) a platí i pro tuto. Otevřete návrhy tam.`,true);return}
  const d=$('#modal'),f=$('#modalContent');let filter='new',q='',pageNo=0,results=[];const chosen=new Set();const PAGE=50;
  const key=c=>c.source_id+'|'+c.target_hint;
  const compute=()=>{const pool=unit?db.units.filter(x=>x.id===unit.id):db.units.filter(x=>x.document_id===docId);

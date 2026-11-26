@@ -80,7 +80,7 @@ function index(d){
     const seq = []; const walk = list => list.forEach(u => { if (!u.navigation_only) seq.push(u.id); walk(kids(u.id)); });
     walk(kids('doc:' + doc.id)); S.order.set(doc.id, seq);
   });
-  d.relations.forEach(r => {
+  mirrorRelations(d.relations).forEach(r => {
     [r.source_id, r.target_id].forEach(id => { if (!S.rels.has(id)) S.rels.set(id, []); S.rels.get(id).push(r); });
   });
   d.comments.forEach(c => { if (!S.notes.has(c.unit_id)) S.notes.set(c.unit_id, []); S.notes.get(c.unit_id).push(c); });
@@ -124,6 +124,29 @@ function counterpart(u){
     const c = S.units.get(other.id + rest); if (c) return {unit:c, doc:other};
   }
   return null;
+}
+
+/* Vazby se tvoří jednou (obvykle v české verzi) a platí pro všechny jazykové verze předpisu:
+   zdroj se převede na stejnou část v jiném jazyce, cíl na verzi ve stejném jazyce, pokud existuje. */
+function equivalentIn(u, docId){
+  const doc = S.docs.get(u.document_id);
+  return doc && u.id.startsWith(doc.id + '-') ? S.units.get(docId + u.id.slice(doc.id.length)) || null : null;
+}
+function mirrorRelations(list){
+  const out = [...list], seen = new Set(list.map(r => r.source_id + '>' + r.target_id + '>' + r.relation_type));
+  for (const r of list){
+    const s = S.units.get(r.source_id), t = S.units.get(r.target_id); if (!s || !t) continue;
+    const sd = S.docs.get(s.document_id), td = S.docs.get(t.document_id); if (!sd || !td) continue;
+    for (const od of S.docs.values()){
+      if (od.id === sd.id || od.group_key !== sd.group_key) continue;
+      const s2 = equivalentIn(s, od.id); if (!s2) continue;
+      let t2 = t;
+      for (const ot of S.docs.values()) if (ot.group_key === td.group_key && ot.language === od.language){ const c = equivalentIn(t, ot.id); if (c){ t2 = c; break; } }
+      const k = s2.id + '>' + t2.id + '>' + r.relation_type; if (seen.has(k)) continue; seen.add(k);
+      out.push({...r, id: r.id + '@' + od.id, source_id: s2.id, target_id: t2.id, mirrored: true});
+    }
+  }
+  return out;
 }
 
 /* ---------- Routing ---------- */
