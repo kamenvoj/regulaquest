@@ -81,7 +81,10 @@
         const body = renderContainer(content, depth + 1);
         if (prefix && body) {
           const [first, ...rest] = body.split('\n');
-          return '  '.repeat(depth) + prefix + ' ' + first.replace(/^\s+/, '') + (rest.length ? '\n' + rest.join('\n') : '');
+          // Pokračování bodu (další věta, „který…“) odsadit pod text bodu, ne pod jeho číslo.
+          const pad = '  '.repeat(depth + 1);
+          return '  '.repeat(depth) + prefix + ' ' + first.replace(/^\s+/, '') +
+            (rest.length ? '\n' + rest.map(l => /^\s/.test(l) ? l : pad + l).join('\n') : '');
         }
         return '  '.repeat(depth) + prefix + ' ' + body;
       }
