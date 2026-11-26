@@ -1,0 +1,12 @@
+.rq-login{min-height:100vh;display:grid;place-items:center;background:#142c38;padding:20px;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.rq-login-card{width:100%;max-width:380px;background:#fff;border-radius:16px;padding:28px 26px;box-shadow:0 20px 60px #0004;display:flex;flex-direction:column;gap:12px;color:#203843}
+.rq-login-brand{display:flex;align-items:center;gap:12px;background:#142c38;margin:-28px -26px 6px;padding:20px 26px;border-radius:16px 16px 0 0;color:#eef6f6}
+.rq-login-brand strong{display:block;font-size:19px}
+.rq-login-brand span{display:block;font-size:12px;color:#b7cdd1}
+.rq-login-sub{margin:0 0 4px;font-size:13.5px;color:#66797e}
+.rq-login label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:700;color:#47636b}
+.rq-login input{font:inherit;font-size:15px;font-weight:400;padding:10px 12px;border:1px solid #cbdcdd;border-radius:9px;color:#203843}
+.rq-login input:focus{outline:3px solid #9cc7c9;outline-offset:1px}
+.rq-login button{font:inherit;font-weight:700;margin-top:6px;padding:11px;border:0;border-radius:9px;background:#176f75;color:#fff;cursor:pointer}
+.rq-login button:disabled{opacity:.6;cursor:wait}
+.rq-login-msg{min-height:1.2em;margin:0;font-size:13px;color:#ab4848}

@@ -5,19 +5,45 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>RegulaQuest · Čtečka regulace zdravotnických prostředků</title>
-<style>
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:#142c38;color:#eef6f6;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-main{text-align:center;padding:24px}
-h1{font-size:28px;margin:14px 0 6px}
-p{color:#b7cdd1;margin:4px 0}
-</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23142c38'/%3E%3Cpath d='M18 6L21.5 15L30 18L21 21.5L18 30L15 21.5L6 18L15 15Z' fill='%23E9CB90'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sdilene/prihlaseni.css">
+<link rel="stylesheet" href="reader.css">
 </head>
 <body>
-<main>
-<svg width="56" height="56" viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="17" r="12.5" stroke="#E9CB90" stroke-width="1.5"/><path d="M18 5L22 15L30 18L20 22L17 30L14 20L6 17L16 14Z" fill="#E9CB90"/><circle cx="18" cy="17" r="3.3" fill="#153240" stroke="#E9CB90" stroke-width="1.3"/></svg>
-<h1>RegulaQuest</h1>
-<p>Čtečka regulace zdravotnických prostředků</p>
-<p>Připravujeme. FBMI ČVUT</p>
-</main>
+<div id="app"><div class="rq-login"></div></div>
+
+<template id="readerTpl">
+<header class="top">
+ <a class="brand" href="#/" aria-label="RegulaQuest – úvod">
+  <svg width="30" height="30" viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="17" r="12.5" stroke="#E9CB90" stroke-width="1.5"/><path d="M18 5L22 15L30 18L20 22L17 30L14 20L6 17L16 14Z" fill="#E9CB90"/><circle cx="18" cy="17" r="3.3" fill="#153240" stroke="#E9CB90" stroke-width="1.3"/></svg>
+  <span><strong>RegulaQuest</strong><small>Čtečka regulace ZP</small></span>
+ </a>
+ <div class="top-grow"></div>
+ <label class="doc-switch"><span class="sr">Dokument</span><select id="docSelect" aria-label="Vybrat dokument"></select></label>
+ <span class="user" id="userName"></span>
+ <button class="logout" id="logoutBtn" type="button">Odhlásit</button>
+</header>
+<div class="draft-banner hidden" id="draftBanner" role="note">Pracovní náhled ze Studia: obsahuje i neověřené texty a neschválené návrhy. Není určeno studentům.</div>
+<div class="layout" id="layout">
+ <nav class="panel nav" id="panelNav" aria-label="Obsah dokumentu">
+  <div class="search-box">
+   <input id="search" type="search" placeholder="Hledat v textech…" aria-label="Hledat v textech" autocomplete="off">
+  </div>
+  <div class="nav-body" id="navBody"></div>
+ </nav>
+ <main class="panel text" id="panelText" tabindex="-1"></main>
+ <aside class="panel context" id="panelContext" aria-label="Souvislosti a výklad"></aside>
+</div>
+<nav class="tabbar" aria-label="Přepínání panelů">
+ <button type="button" data-tab="nav">Obsah</button>
+ <button type="button" data-tab="text">Text</button>
+ <button type="button" data-tab="context">Souvislosti <span class="tab-count" id="tabCount"></span></button>
+</nav>
+</template>
+
+<script src="sdilene/supabase.js"></script>
+<script src="sdilene/config.js"></script>
+<script src="sdilene/prihlaseni.js"></script>
+<script src="reader.js"></script>
 </body>
 </html>
