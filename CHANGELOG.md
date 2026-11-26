@@ -1,5 +1,9 @@
 # Změny
 
+## 0.8.0 – souvislosti mezi dokumenty
+
+- **◎ Souvislosti** (celý dokument) a **◎ Souvislosti** u části: kandidáti vazeb do jiného dokumentu – shodné číslo klasifikačního pravidla předpis ↔ metodika (MDR příloha VIII ↔ MDCG 2021-24: 22 pravidel, typ „Metodický výklad“) a shoda odborných pojmů z česko-anglického slovníku (pojem musí začínat na začátku slova; obecné pojmy mají malou váhu). Ukládají se jen návrhy do „Ke kontrole“; už existující vazby (i z jiné jazykové verze) se poznají.
+
 ## 0.7.0 – import PDF (MDCG)
 
 - **Import dokumentu** přijímá i PDF (pdf.js v prohlížeči, `web/studio/vendor/pdfjs`, Apache-2.0). Kapitoly podle obsahu dokumentu (včetně nečíslovaných podkapitol), v kapitolách s pravidly dál „Rule N“.
@@ -42,7 +46,7 @@
 - Formulář dokumentu má pole Vydavatel; v „Upravit údaje a tagy“ lze změnit i název, zkratku, verzi, vydavatele a URL.
 - Lokátor a nadpis nové části nejsou předvyplněné ukázkovým textem.
 
-**Zatím chybí (další etapy):** hledání souvislostí MDR ↔ MDCG.
+**Další etapa:** zobrazení vazeb a poznámek pro studenty (ukotvené poznámky, zvýraznění, ikony).
 
 ## 0.3.0 – studentská čtečka (navazuje na 0.2.15)
 

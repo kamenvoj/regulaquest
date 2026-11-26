@@ -340,14 +340,14 @@ const rel=db.relations.filter(r=>r.source_id===u.id||r.target_id===u.id),mirror=
 const marks=(db.unit_amendments||[]).filter(x=>x.unit_id===u.id);
 const amendments=marks.map(x=>{const a=(db.amendments||[]).find(z=>z.document_id===u.document_id&&z.marker===x.marker);return {...a,marker:x.marker}});
 const origin=getDoc(u.document_id);
-box.innerHTML=`<div class="context-section"><div class="context-head"><h3>↗ Propojené pasáže <span class="tag">${rel.length}</span></h3><div class="actionrow"><button class="btn tiny" id="suggestLinks" title="Výslovné odkazy v textu této části">✧ Návrhy</button><button class="btn tiny" id="addLink">+ Propojit</button></div></div>
+box.innerHTML=`<div class="context-section"><div class="context-head"><h3>↗ Propojené pasáže <span class="tag">${rel.length}</span></h3><div class="actionrow"><button class="btn tiny" id="seekRelated" title="Souvislosti v jiném dokumentu (např. MDCG)">◎ Souvislosti</button><button class="btn tiny" id="suggestLinks" title="Výslovné odkazy v textu této části">✧ Návrhy</button><button class="btn tiny" id="addLink">+ Propojit</button></div></div>
 ${rel.length?rel.map(r=>{const other=r.source_id===u.id?r.target_id:r.source_id;return `<div class="boxnote"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">${esc(r.rationale)}</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-relation-detail="${esc(r.id)}">Detail vazby</button></div></div>`}).join(''):'<p class="fine">Zatím bez propojení. Vazby je možné vytvářet na úrovni kapitol, pravidel i jednotlivých pasáží.</p>'}
 ${mirror.length?`<div class="section-kicker">Z JINÉ JAZYKOVÉ VERZE · PLATÍ I ZDE</div>${mirror.map(({r,from,other})=>`<div class="boxnote mirrored"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">Vazba vytvořená u ${esc(documentLabel(getDoc(from.document_id)))}; upravuje a schvaluje se tam.</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-jump="${esc(from.id)}">Otevřít původní</button></div></div>`).join('')}`:''}</div>
 <div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>▤ Naše komentáře <span class="tag">${comments.length}</span></h3><button class="btn tiny" id="addNote">+ Přidat</button></div>${comments.length?comments.map(c=>`<div class="boxnote"><div class="meta"><strong>${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</strong>${tag(c.status)}${translationStale(c)?' <span class="tag warn">Originál změněn</span>':''}</div><p>${esc(c.body)}</p><div class="helper">${esc(c.author||'RegulaQuest redakce')}</div><div class="actionrow"><button type="button" class="btn tiny" data-comment-detail="${esc(c.id)}">Detail / upravit</button></div></div>`).join(''):'<p class="fine">Zatím bez autorských komentářů.</p>'}</div>${(db.amendments||[]).some(x=>x.document_id===u.document_id)?`<div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>◷ Změny a původ znění <span class="tag">${amendments.length}</span></h3></div>
 ${amendments.length?amendments.map(a=>`<div class="boxnote"><div class="meta"><strong>${esc(a.marker)} · ${a.kind==='corrigendum'?'Oprava':'Pozměňující akt'}</strong></div><p>${esc(a.title||'Označení změny v konsolidovaném dokumentu')}</p>${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">Přejít na původní akt ↗</a>`:`<a href="${esc(origin?.url||'#')}" target="_blank" rel="noopener noreferrer">Ověřit akt v přehledu „Ve znění“ na EUR-Lexu ↗</a>`}</div>`).join(''):'<p class="fine">U tohoto textu nejsou v importovaném konsolidovaném znění zachyceny změnové značky. Neznamená to, že text nikdy nebyl měněn.</p>'}
 <p class="fine">Zobrazené znění je informativní konsolidace k datu uvedenému u zdroje. Změnové značky se do textu nevypisují.</p></div>
 `:''}<div class="soft-rule"></div><div class="fine">Komentář je oddělený od oficiálního znění. Pro studentský export musí být schválený.</div>`;
-box.querySelector('#suggestLinks').onclick=()=>dialogReferences(u.id);box.querySelector('#addLink').onclick=()=>dialogRelation(u);box.querySelector('#addNote').onclick=()=>dialogComment(u);box.querySelectorAll('[data-jump]').forEach(x=>x.onclick=()=>openUnit(x.dataset.jump));box.querySelectorAll('[data-relation-detail]').forEach(x=>x.onclick=()=>dialogRelationDetail(x.dataset.relationDetail));box.querySelectorAll('[data-comment-detail]').forEach(x=>x.onclick=()=>dialogCommentDetail(x.dataset.commentDetail));
+box.querySelector('#suggestLinks').onclick=()=>dialogReferences(u.id);box.querySelector('#seekRelated').onclick=()=>dialogRelated(u.id);box.querySelector('#addLink').onclick=()=>dialogRelation(u);box.querySelector('#addNote').onclick=()=>dialogComment(u);box.querySelectorAll('[data-jump]').forEach(x=>x.onclick=()=>openUnit(x.dataset.jump));box.querySelectorAll('[data-relation-detail]').forEach(x=>x.onclick=()=>dialogRelationDetail(x.dataset.relationDetail));box.querySelectorAll('[data-comment-detail]').forEach(x=>x.onclick=()=>dialogCommentDetail(x.dataset.commentDetail));
 }
 function renderReview(){
  const filter=$('#reviewDocFilter');filter.innerHTML='<option value="all">Všechny dokumenty</option>'+db.documents.map(d=>`<option value="${esc(d.id)}">${esc(documentLabel(d))}</option>`).join('');filter.value=reviewDocFilter;
@@ -899,7 +899,60 @@ function dialogReferences(unitId){
  if(!results.length){f.querySelector('#refList').innerHTML='<p class="fine">V textu nebyl nalezen žádný výslovný odkaz.</p>'}
  draw();d.showModal();
 }
-function init(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='review')reviewDocFilter='all';if(b.dataset.page==='relations')relationDocFilter='all';if(b.dataset.page==='comments')commentDocFilter='all';setPage(b.dataset.page)});$('#filter').addEventListener('input',e=>{query=e.target.value;renderList()});$('#newDoc').onclick=$('#homeNewDoc').onclick=dialogDoc;$('#newUnit').onclick=dialogUnit;$('#refsBtn').onclick=()=>dialogReferences(null);$('#importBtn').onclick=$('#homeImport').onclick=dialogImport;$('#statDocsCard').onclick=()=>{selected=activeDocId;renderReader();renderContext()};
+
+// Souvislosti s jiným dokumentem (related-search.js): shodná čísla pravidel + odborné pojmy. Ukládají se jen návrhy.
+function dialogRelated(unitId){
+ const unit=unitId&&getUnit(unitId),docId=unit?unit.document_id:activeDocId,doc=getDoc(docId);
+ if(!doc){toast('Nejdřív vyberte dokument.',true);return}
+ const others=db.documents.filter(x=>x.id!==docId&&(x.group_key||x.id)!==(doc.group_key||doc.id));
+ if(!others.length){toast('Pro hledání souvislostí je potřeba další dokument (např. MDCG).',true);return}
+ const pref=others.find(x=>x.document_type==='guidance'||/metodick/i.test(x.kind||''))||others[0];
+ const d=$('#modal'),f=$('#modalContent');let filter='new',results=[];const chosen=new Set();
+ const key=c=>c.source_id+'|'+c.target_id;
+ f.onsubmit=e=>e.preventDefault();
+ f.innerHTML=`<h2>Souvislosti · ${esc(unit?unitPath(unit.id):documentLabel(doc))}</h2>
+ <p>Studio hledá v jiném dokumentu části, které s ${unit?'touto částí':'částmi dokumentu'} souvisejí: <strong>shodné číslo klasifikačního pravidla</strong> (předpis ↔ metodika) a <strong>shodu odborných pojmů</strong> (malý česko-anglický slovník). Nejde o AI ani o jistotu – vybrané se uloží jako <strong>návrhy vazeb</strong> do „Ke kontrole“.</p>
+ <div class="refs-bar"><label class="form-field"><span>Hledat v dokumentu</span><select class="select" id="relTarget">${others.map(x=>`<option value="${esc(x.id)}" ${x.id===pref.id?'selected':''}>${esc(documentLabel(x))}</option>`).join('')}</select></label>
+ <label class="form-field"><span>Zobrazit</span><select class="select" id="relFilter"><option value="new">Nové návrhy</option><option value="rule">Jen shodná pravidla</option><option value="existing">Už existující vazby</option><option value="all">Vše</option></select></label></div>
+ <div id="relCounts" class="fine"></div><div id="relList" class="refs-list"></div>
+ <div class="modal-actions"><button class="btn" type="button" id="relClose">Zavřít</button><button class="btn" type="button" id="relAll">Vybrat vše zobrazené</button><button class="btn accent" type="button" id="relSave" disabled>Uložit vybrané jako návrhy</button></div>`;
+ const list=f.querySelector('#relList'),save=f.querySelector('#relSave'),tsel=f.querySelector('#relTarget');
+ const compute=()=>{const docs=new Map(db.documents.map(x=>[x.id,x])),targets=db.units.filter(u=>u.document_id===tsel.value),rels=relationsSeenFrom(docId);
+  results=unit?RQRelated.related(unit,targets.filter(u=>!u.editor_archived&&String(u.body||'').trim()),rels,docs,15):RQRelated.bulk(db.units.filter(u=>u.document_id===docId),targets,rels,docs,3);chosen.clear()};
+ const visible=()=>results.filter(c=>filter==='all'||(filter==='existing'?c.existing:filter==='rule'?c.structural&&!c.existing:!c.existing)).slice(0,300);
+ const draw=()=>{
+  const n=results.filter(c=>!c.existing).length,r=results.filter(c=>c.structural&&!c.existing).length;
+  f.querySelector('#relCounts').textContent=`Nové ${n} (z toho shodná pravidla ${r}) · už existující ${results.length-n}. Vybráno ${chosen.size}.`;
+  const all=visible();
+  list.innerHTML=all.length?all.map(c=>`<div class="ref-row ${c.existing?'existing':'new'}">
+   ${c.existing?'<span></span>':`<input type="checkbox" data-rel="${esc(key(c))}" ${chosen.has(key(c))?'checked':''} aria-label="Vybrat návrh">`}
+   <div><div class="ref-head"><strong>${esc(unitPath(c.source_id))}</strong> → <strong>${esc(fullname(c.target_id))}</strong> <span class="tag ${c.structural?'good':''}">${c.structural?'shodné pravidlo':esc(relName[c.type]||c.type)}</span>${c.existing?' '+tag(c.existing):''}</div>
+   <div class="fine">${esc(c.why)}${c.common.length?` Pojmy: ${esc(c.common.join(', '))}.`:''}${c.shared.length&&!c.structural?` Slova: ${esc(c.shared.slice(0,6).join(', '))}.`:''}${c.warn.length?' ('+esc(c.warn.join(', '))+')':''}</div></div>
+   <div class="actionrow"><button class="btn tiny" type="button" data-open="${esc(c.source_id)}">Zdroj</button><button class="btn tiny" type="button" data-open="${esc(c.target_id)}">Cíl</button></div></div>`).join('')
+   :'<p class="fine">Nic neodpovídá výběru.</p>';
+  list.querySelectorAll('[data-rel]').forEach(b=>b.onchange=()=>{b.checked?chosen.add(b.dataset.rel):chosen.delete(b.dataset.rel);save.disabled=!chosen.size;f.querySelector('#relCounts').textContent=f.querySelector('#relCounts').textContent.replace(/Vybráno \d+/,'Vybráno '+chosen.size)});
+  list.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{d.close();openUnit(b.dataset.open)});
+  save.disabled=!chosen.size;
+ };
+ tsel.onchange=()=>{compute();draw()};
+ f.querySelector('#relFilter').onchange=e=>{filter=e.target.value;draw()};
+ f.querySelector('#relClose').onclick=()=>d.close();
+ f.querySelector('#relAll').onclick=()=>{list.querySelectorAll('[data-rel]').forEach(b=>{b.checked=true;chosen.add(b.dataset.rel)});draw()};
+ save.onclick=async()=>{
+  const picked=results.filter(c=>!c.existing&&chosen.has(key(c)));
+  if(!picked.length||!confirm(`Uložit ${picked.length} návrhů vazeb do schvalovací fronty?\n\nKaždý je potřeba před schválením zkontrolovat proti originálům.`))return;
+  save.disabled=true;let created=0,skipped=0;
+  try{
+   for(let i=0;i<picked.length;i+=50){
+    const links=picked.slice(i,i+50).map(c=>({source_id:c.source_id,target_id:c.target_id,relation_type:c.type,rationale:c.why,evidence:c.evidence,provenance:'cross-document-structure-lexical-v1'}));
+    const r=await rpc('rq_batch_new_relations',{p_links:links});created+=r.created;skipped+=r.skipped;
+   }
+   await refresh();compute();draw();toast(`Do „Ke kontrole“ přidáno ${created} návrhů vazeb${skipped?`, ${skipped} už existovalo`:''}.`);
+  }catch(e){toast(e.message,true);save.disabled=false}
+ };
+ compute();draw();d.showModal();
+}
+function init(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='review')reviewDocFilter='all';if(b.dataset.page==='relations')relationDocFilter='all';if(b.dataset.page==='comments')commentDocFilter='all';setPage(b.dataset.page)});$('#filter').addEventListener('input',e=>{query=e.target.value;renderList()});$('#newDoc').onclick=$('#homeNewDoc').onclick=dialogDoc;$('#newUnit').onclick=dialogUnit;$('#refsBtn').onclick=()=>dialogReferences(null);$('#relatedBtn').onclick=()=>dialogRelated(null);$('#importBtn').onclick=$('#homeImport').onclick=dialogImport;$('#statDocsCard').onclick=()=>{selected=activeDocId;renderReader();renderContext()};
  $('#statVerifiedCard').onclick=()=>{verifiedDocFilter=activeDocId;setPage('verified')};
  $('#statProposedCard').onclick=()=>{reviewDocFilter=activeDocId;setPage('review')};
  $('#statApprovedCard').onclick=()=>{relationStatusFilter='approved';relationDocFilter=activeDocId;setPage('relations')};
