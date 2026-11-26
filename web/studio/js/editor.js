@@ -277,7 +277,7 @@ function renderList(){
        }
        const b=document.createElement('button');b.type='button';
        b.className='unit-entry tree-label'+(selected===u.id?' active':'')+(u.text_status==='verified'?' verified':'');
-       b.innerHTML=`<span>${esc(u.label)}${u.kind==='section'&&u.heading?' · '+esc(u.heading).slice(0,36):''}</span>`;
+       b.innerHTML=`<span>${esc(u.label)}${u.kind==='section'&&u.heading?' · '+esc(u.heading.length>70?u.heading.slice(0,68)+'…':u.heading):''}</span>`;
        b.title=u.heading||u.label;
        if(selected===u.id)b.setAttribute('aria-current','true');
        b.onclick=()=>{

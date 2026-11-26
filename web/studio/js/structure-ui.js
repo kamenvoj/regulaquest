@@ -17,9 +17,11 @@ function rqClone(x){return JSON.parse(JSON.stringify(x))}
 function rqBlankCell(){return {text:'',header:false,align:'left',colspan:1,rowspan:1}}
 function rqBlockFallback(u){return u.content_blocks&&u.content_blocks.length?rqClone(u.content_blocks):[{type:'text',html:esc(u.body||'').replace(/\n/g,'<br>')}]}
 function rqRenderBlocks(blocks){
- return `<div class="rq-rich-view">${(blocks||[]).map(b=>b.type==='text'?`<div class="rq-rich-text">${b.html||''}</div>`:b.type==='figure'?rqFigure(b):
+ return `<div class="rq-rich-view">${(blocks||[]).map(b=>b.type==='text'?`<div class="rq-rich-text">${rqParas(b.html)}</div>`:b.type==='figure'?rqFigure(b):
  `<div class="rq-table-display">${b.caption?`<div class="rq-table-title">${esc(b.caption)}</div>`:''}<div class="rq-table-wrap"><table>${b.rows.map(row=>`<tr>${row.map(c=>`<${c.header?'th':'td'} rowspan="${Number(c.rowspan)||1}" colspan="${Number(c.colspan)||1}" style="text-align:${c.align||'left'}">${esc(c.text).replace(/\n/g,'<br>')}</${c.header?'th':'td'}>`).join('')}</tr>`).join('')}</table></div>${b.notes?`<div class="rq-table-notes">${esc(b.notes)}</div>`:''}</div>`).join('')}</div>`;
 }
+// Prázdný řádek (<br><br>) = nový odstavec; odrážky s visícím odsazením (zobrazení, ne úprava textu).
+function rqParas(html){return String(html||'').split(/(?:<br\s*\/?>\s*){2,}/).map(p=>p.trim()).filter(Boolean).map(p=>`<p${/^(?:<b>)?\s*[•▪◦●\-–—]\s/.test(p)?' class="hang"':''}>${p}</p>`).join('')}
 function rqFigure(b){return `<figure class="rq-fig"><img data-fig="${esc(b.path)}" alt="${esc(b.alt||b.caption||'')}" loading="lazy"><figcaption>${esc(b.caption||'')}${b.page?` · <span class="fine">PDF str. ${Number(b.page)}</span>`:''}</figcaption></figure>`}
 const rqFigUrls=new Map();
 function rqLoadFigures(root){root.querySelectorAll('img[data-fig]').forEach(async img=>{const p=img.dataset.fig;if(!p)return;

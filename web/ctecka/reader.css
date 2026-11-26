@@ -74,7 +74,7 @@ h1 .heading{display:block;font-size:18px;font-weight:600;color:#4a6168;letter-sp
 .legal p{margin:0 0 .85em}
 .legal .ln{display:block;padding-left:calc(var(--lvl,0) * 1.4em)}.ln.hang{padding-left:calc(var(--lvl,0) * 1.4em + 1.4em);text-indent:-1.4em}
 .legal .sub{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.6px;color:#4a6168;margin:1.4em 0 .6em}
-.rich{margin:0 0 .85em}
+.rich{margin:0 0 .85em}.rich p{margin:0 0 .7em}.rich p.hang{padding-left:1.3em;text-indent:-1.3em}
 .fig{margin:1.2em 0;font-family:var(--sans)}
 .fig img{max-width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;min-height:40px}
 .fig figcaption{font-size:12.5px;color:var(--muted);margin-top:6px}

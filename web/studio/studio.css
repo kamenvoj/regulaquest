@@ -262,3 +262,7 @@ dialog:has(#refList){width:min(980px,calc(100vw - 24px));max-width:min(980px,cal
 .rq-fig img{display:block;max-width:100%;height:auto;margin:0 auto;min-height:40px}
 .rq-fig figcaption{font-size:11.5px;color:#66797e;margin-top:6px;text-align:center}
 .rq-table-wrap td,.rq-table-wrap th{white-space:pre-line}
+.rq-rich-text p{margin:0 0 .75em}
+.rq-rich-text p.hang{padding-left:1.3em;text-indent:-1.3em}
+.explorer .work-doc-picker{margin:9px 17px 6px}
+.explorer .work-catalog-btn{width:calc(100% - 34px);margin:0 17px 11px}

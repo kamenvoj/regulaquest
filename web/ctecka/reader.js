@@ -241,6 +241,11 @@ function safeInline(html){
   }).join('');
   return root ? walk(root) : '';
 }
+/* Prázdný řádek (<br><br>) = nový odstavec; odrážky s visícím odsazením. */
+function richParas(html){
+  return html.split(/(?:<br>\s*){2,}/).map(p => p.trim()).filter(Boolean)
+    .map(p => `<p${/^(?:<b>)?\s*[•▪◦●\-–—]\s/.test(p) ? ' class="hang"' : ''}>${p}</p>`).join('');
+}
 function tableBlock(b, q){
   const cell = c => { const tag = c.header ? 'th' : 'td', al = ['left','center','right'].includes(c.align) ? c.align : 'left';
     return `<${tag} rowspan="${Math.max(1, c.rowspan|0)}" colspan="${Math.max(1, c.colspan|0)}" class="al-${al}">${marked(String(c.text||''), q).replace(/\n/g,'<br>')}</${tag}>`; };
@@ -250,7 +255,7 @@ function content(u, q){
   if (Array.isArray(u.content_blocks) && u.content_blocks.length)
     return u.content_blocks.map(b => b.type === 'table' ? tableBlock(b, q)
       : b.type === 'figure' ? `<figure class="fig"><img data-fig="${esc(b.path)}" alt="${esc(b.alt || b.caption || '')}">${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ''}</figure>`
-      : `<div class="rich">${safeInline(b.html)}</div>`).join('');
+      : `<div class="rich">${richParas(safeInline(b.html))}</div>`).join('');
   return legal(bodyOf(u), q);
 }
 function plain(text){ return String(text).trim().split(/\n{2,}/).map(p => `<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join(''); }
