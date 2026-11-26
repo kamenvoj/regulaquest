@@ -315,13 +315,13 @@ const rel=db.relations.filter(r=>r.source_id===u.id||r.target_id===u.id);const c
 const marks=(db.unit_amendments||[]).filter(x=>x.unit_id===u.id);
 const amendments=marks.map(x=>{const a=(db.amendments||[]).find(z=>z.document_id===u.document_id&&z.marker===x.marker);return {...a,marker:x.marker}});
 const origin=getDoc(u.document_id);
-box.innerHTML=`<div class="context-section"><div class="context-head"><h3>↗ Propojené pasáže <span class="tag">${rel.length}</span></h3><div class="actionrow"><button class="btn tiny" id="addLink">+ Propojit</button></div></div>
+box.innerHTML=`<div class="context-section"><div class="context-head"><h3>↗ Propojené pasáže <span class="tag">${rel.length}</span></h3><div class="actionrow"><button class="btn tiny" id="suggestLinks" title="Výslovné odkazy v textu této části">✧ Návrhy</button><button class="btn tiny" id="addLink">+ Propojit</button></div></div>
 ${rel.length?rel.map(r=>{const other=r.source_id===u.id?r.target_id:r.source_id;return `<div class="boxnote"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">${esc(r.rationale)}</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-relation-detail="${esc(r.id)}">Detail vazby</button></div></div>`}).join(''):'<p class="fine">Zatím bez propojení. Vazby je možné vytvářet na úrovni kapitol, pravidel i jednotlivých pasáží.</p>'}</div>
 <div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>▤ Naše komentáře <span class="tag">${comments.length}</span></h3><button class="btn tiny" id="addNote">+ Přidat</button></div>${comments.length?comments.map(c=>`<div class="boxnote"><div class="meta"><strong>${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</strong>${tag(c.status)}</div><p>${esc(c.body)}</p><div class="helper">${esc(c.author||'RegulaQuest redakce')}</div><div class="actionrow"><button type="button" class="btn tiny" data-comment-detail="${esc(c.id)}">Detail / upravit</button></div></div>`).join(''):'<p class="fine">Zatím bez autorských komentářů.</p>'}</div><div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>◷ Změny a původ znění <span class="tag">${amendments.length}</span></h3></div>
 ${amendments.length?amendments.map(a=>`<div class="boxnote"><div class="meta"><strong>${esc(a.marker)} · ${a.kind==='corrigendum'?'Oprava':'Pozměňující akt'}</strong></div><p>${esc(a.title||'Označení změny v konsolidovaném dokumentu')}</p>${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">Přejít na původní akt ↗</a>`:`<a href="${esc(origin?.url||'#')}" target="_blank" rel="noopener noreferrer">Ověřit akt v přehledu „Ve znění“ na EUR-Lexu ↗</a>`}</div>`).join(''):'<p class="fine">U tohoto textu nejsou v importovaném konsolidovaném znění zachyceny změnové značky. Neznamená to, že text nikdy nebyl měněn.</p>'}
 <p class="fine">Zobrazené znění je informativní konsolidace k datu uvedenému u zdroje. Změnové značky se do textu nevypisují.</p></div>
 <div class="soft-rule"></div><div class="fine">Komentář je oddělený od oficiálního znění. Pro studentský export musí být schválený.</div>`;
-box.querySelector('#addLink').onclick=()=>dialogRelation(u);box.querySelector('#addNote').onclick=()=>dialogComment(u);box.querySelectorAll('[data-jump]').forEach(x=>x.onclick=()=>openUnit(x.dataset.jump));box.querySelectorAll('[data-relation-detail]').forEach(x=>x.onclick=()=>dialogRelationDetail(x.dataset.relationDetail));box.querySelectorAll('[data-comment-detail]').forEach(x=>x.onclick=()=>dialogCommentDetail(x.dataset.commentDetail));
+box.querySelector('#suggestLinks').onclick=()=>dialogReferences(u.id);box.querySelector('#addLink').onclick=()=>dialogRelation(u);box.querySelector('#addNote').onclick=()=>dialogComment(u);box.querySelectorAll('[data-jump]').forEach(x=>x.onclick=()=>openUnit(x.dataset.jump));box.querySelectorAll('[data-relation-detail]').forEach(x=>x.onclick=()=>dialogRelationDetail(x.dataset.relationDetail));box.querySelectorAll('[data-comment-detail]').forEach(x=>x.onclick=()=>dialogCommentDetail(x.dataset.commentDetail));
 }
 function renderReview(){
  const filter=$('#reviewDocFilter');filter.innerHTML='<option value="all">Všechny dokumenty</option>'+db.documents.map(d=>`<option value="${esc(d.id)}">${esc(documentLabel(d))}</option>`).join('');filter.value=reviewDocFilter;
@@ -777,7 +777,65 @@ function dialogImport(){
  };
  d.showModal();
 }
-function init(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='review')reviewDocFilter='all';if(b.dataset.page==='relations')relationDocFilter='all';if(b.dataset.page==='comments')commentDocFilter='all';setPage(b.dataset.page)});$('#filter').addEventListener('input',e=>{query=e.target.value;renderList()});$('#newDoc').onclick=$('#homeNewDoc').onclick=dialogDoc;$('#newUnit').onclick=dialogUnit;$('#importBtn').onclick=$('#homeImport').onclick=dialogImport;$('#statDocsCard').onclick=()=>{selected=activeDocId;renderReader();renderContext()};
+
+// Návrhy výslovných odkazů (reference-suggest.js): zobrazí kandidáty, uložení vytvoří jen NÁVRHY vazeb ke schválení.
+function dialogReferences(unitId){
+ const unit=unitId&&getUnit(unitId),docId=unit?unit.document_id:activeDocId,doc=getDoc(docId);
+ if(!doc){toast('Nejdřív vyberte dokument.',true);return}
+ const d=$('#modal'),f=$('#modalContent');let filter='new',q='',pageNo=0,results=[];const chosen=new Set();const PAGE=50;
+ const key=c=>c.source_id+'|'+c.target_hint;
+ const compute=()=>{const pool=unit?db.units.filter(x=>x.id===unit.id):db.units.filter(x=>x.document_id===docId);
+  results=RQRefs.scan(db.units,pool,db.relations,new Map(db.documents.map(x=>[x.id,x])));};
+ f.onsubmit=e=>e.preventDefault();
+ f.innerHTML=`<h2>Návrhy výslovných odkazů · ${esc(unit?unitPath(unit.id):documentLabel(doc))}</h2>
+ <p>Studio našlo v textu místa, kde ${unit?'tato část':'dokument'} výslovně odkazuje na jiný článek, odstavec, přílohu nebo pravidlo <strong>téhož dokumentu</strong>. Vybrané se uloží jako <strong>návrhy vazeb</strong> do „Ke kontrole“; nic se neschválí samo. Odkazy na jiné předpisy (např. směrnice, nařízení ES) se zatím nehledají.</p>
+ <div class="refs-bar"><label class="form-field"><span>Zobrazit</span><select class="select" id="refFilter"><option value="new">Nové návrhy</option><option value="existing">Už existující vazby</option><option value="unresolved">Nenalezený cíl</option><option value="all">Vše</option></select></label>
+ <label class="form-field"><span>Hledat</span><input class="input" id="refSearch" type="search" placeholder="Např. článek 61, příloha XIV"></label></div>
+ <div id="refCounts" class="fine"></div><div id="refList" class="refs-list"></div>
+ <div class="modal-actions"><button class="btn" type="button" id="refClose">Zavřít</button><button class="btn" type="button" id="refPageAll">Vybrat vše na stránce</button><button class="btn accent" type="button" id="refSave" disabled>Uložit vybrané jako návrhy</button></div>`;
+ const list=f.querySelector('#refList'),save=f.querySelector('#refSave');
+ const visible=()=>results.filter(c=>(filter==='all'||c.category===filter)&&(!q||[unitPath(c.source_id),c.target_hint,c.matched_text,c.excerpt].join(' ').toLocaleLowerCase('cs').includes(q)));
+ const draw=()=>{
+  const all=visible(),pages=Math.max(1,Math.ceil(all.length/PAGE));pageNo=Math.min(pageNo,pages-1);
+  const counts=results.reduce((a,c)=>(a[c.category]++,a),{new:0,existing:0,unresolved:0});
+  f.querySelector('#refCounts').textContent=`Nové ${counts.new} · už existující ${counts.existing} · nenalezený cíl ${counts.unresolved}. Vybráno ${chosen.size}.`;
+  list.innerHTML=all.length?all.slice(pageNo*PAGE,(pageNo+1)*PAGE).map(c=>`<div class="ref-row ${c.category}">
+   ${c.category==='new'?`<input type="checkbox" data-ref="${esc(key(c))}" ${chosen.has(key(c))?'checked':''} aria-label="Vybrat návrh">`:'<span></span>'}
+   <div><div class="ref-head"><strong>${esc(unitPath(c.source_id))}</strong> → ${c.target_id?`<strong>${esc(unitPath(c.target_id))}</strong>`:`<span class="tag bad">nenalezeno: ${esc(c.matched_text)}</span>`}
+   ${c.category==='existing'?` ${tag(c.existing_status)}`:''}</div>
+   <div class="ref-quote">„${esc(c.excerpt).replace(esc(c.matched_text),'<mark>'+esc(c.matched_text)+'</mark>')}“</div>
+   ${c.category==='unresolved'?'<small class="fine">Cíl v dokumentu není (jiný předpis, rozsah „články 52 až 56“, nebo chyba v osnově). Případně vytvořte vazbu ručně.</small>':''}</div>
+   <button class="btn tiny" type="button" data-open="${esc(c.source_id)}">Otevřít</button></div>`).join('')+
+   (pages>1?`<div class="ref-pages"><button class="btn tiny" type="button" id="refPrev" ${pageNo?'':'disabled'}>← Předchozí</button> strana ${pageNo+1} z ${pages} <button class="btn tiny" type="button" id="refNext" ${pageNo<pages-1?'':'disabled'}>Další →</button></div>`:'')
+   :'<p class="fine">Nic neodpovídá výběru.</p>';
+  list.querySelectorAll('[data-ref]').forEach(b=>b.onchange=()=>{b.checked?chosen.add(b.dataset.ref):chosen.delete(b.dataset.ref);save.disabled=!chosen.size;f.querySelector('#refCounts').textContent=f.querySelector('#refCounts').textContent.replace(/Vybráno \d+/,'Vybráno '+chosen.size)});
+  list.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{d.close();openUnit(b.dataset.open)});
+  const pv=f.querySelector('#refPrev'),nx=f.querySelector('#refNext');if(pv)pv.onclick=()=>{pageNo--;draw()};if(nx)nx.onclick=()=>{pageNo++;draw()};
+  save.disabled=!chosen.size;
+ };
+ f.querySelector('#refFilter').onchange=e=>{filter=e.target.value;pageNo=0;draw()};
+ f.querySelector('#refSearch').oninput=e=>{q=e.target.value.trim().toLocaleLowerCase('cs');pageNo=0;draw()};
+ f.querySelector('#refClose').onclick=()=>d.close();
+ f.querySelector('#refPageAll').onclick=()=>{list.querySelectorAll('[data-ref]').forEach(b=>{b.checked=true;chosen.add(b.dataset.ref)});draw()};
+ save.onclick=async()=>{
+  const picked=results.filter(c=>c.category==='new'&&chosen.has(key(c)));
+  if(!picked.length||!confirm(`Uložit ${picked.length} návrhů vazeb do schvalovací fronty?\n\nKaždý je potřeba před schválením zkontrolovat proti originálu.`))return;
+  save.disabled=true;let created=0,skipped=0;
+  try{
+   for(let i=0;i<picked.length;i+=50){
+    const links=picked.slice(i,i+50).map(c=>{const t=getUnit(c.target_id);return {source_id:c.source_id,target_id:c.target_id,relation_type:'references',
+     rationale:`Výslovný odkaz rozpoznaný v textu zdrojového ustanovení (${c.matched_text}). Cílové ustanovení: ${t.locator||t.label}. Redakční návrh – ověřit přesný význam a rozsah odkazu proti originálu.`,
+     evidence:c.evidence,provenance:'explicit-citation-batch-v1'}});
+    const r=await rpc('rq_batch_new_relations',{p_links:links});created+=r.created;skipped+=r.skipped;
+   }
+   chosen.clear();await refresh();compute();draw();toast(`Do „Ke kontrole“ přidáno ${created} návrhů vazeb${skipped?`, ${skipped} už existovalo`:''}.`);
+  }catch(e){toast(e.message,true);save.disabled=false}
+ };
+ compute();
+ if(!results.length){f.querySelector('#refList').innerHTML='<p class="fine">V textu nebyl nalezen žádný výslovný odkaz.</p>'}
+ draw();d.showModal();
+}
+function init(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='review')reviewDocFilter='all';if(b.dataset.page==='relations')relationDocFilter='all';if(b.dataset.page==='comments')commentDocFilter='all';setPage(b.dataset.page)});$('#filter').addEventListener('input',e=>{query=e.target.value;renderList()});$('#newDoc').onclick=$('#homeNewDoc').onclick=dialogDoc;$('#newUnit').onclick=dialogUnit;$('#refsBtn').onclick=()=>dialogReferences(null);$('#importBtn').onclick=$('#homeImport').onclick=dialogImport;$('#statDocsCard').onclick=()=>{selected=activeDocId;renderReader();renderContext()};
  $('#statVerifiedCard').onclick=()=>{verifiedDocFilter=activeDocId;setPage('verified')};
  $('#statProposedCard').onclick=()=>{reviewDocFilter=activeDocId;setPage('review')};
  $('#statApprovedCard').onclick=()=>{relationStatusFilter='approved';relationDocFilter=activeDocId;setPage('relations')};

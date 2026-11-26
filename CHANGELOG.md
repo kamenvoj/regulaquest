@@ -1,5 +1,10 @@
 # Změny
 
+## 0.6.0 – návrhy výslovných odkazů
+
+- **✧ Návrhy odkazů** (celý dokument) a **✧ Návrhy** u části: v textu se najdou výslovné odkazy na články, odstavce, přílohy a pravidla téhož dokumentu, s citací místa v textu. Vybrané se uloží jako návrhy vazeb do „Ke kontrole“ (po 50, nic se neschválí samo). Výsledky jsou shodné s dřívější Python verzí (MDR CS 1382, EN 1323 nalezených odkazů); u hromadného zobrazení se odkaz z odstavce nenabízí znovu za celý článek.
+- Nenalezené cíle (rozsahy „články 38 a 39“, jiné předpisy) se zobrazí zvlášť k ruční kontrole.
+
 ## 0.5.0 – import z EUR-Lexu v prohlížeči
 
 - **Import z EUR-Lexu** ve Studiu: uložené HTML konsolidovaného znění se převede v prohlížeči na články, odstavce, přílohy a klasifikační pravidla (stejný výsledek jako dřívější Python import, včetně kontroly úplnosti textu a seznamu změnových aktů). Originál se uloží do Supabase Storage.
@@ -24,7 +29,7 @@
 - Formulář dokumentu má pole Vydavatel; v „Upravit údaje a tagy“ lze změnit i název, zkratku, verzi, vydavatele a URL.
 - Lokátor a nadpis nové části nejsou předvyplněné ukázkovým textem.
 
-**Zatím chybí (další etapy):** import PDF (MDCG), automatické návrhy výslovných odkazů a souvislostí.
+**Zatím chybí (další etapy):** import PDF (MDCG), hledání souvislostí MDR ↔ MDCG.
 
 ## 0.3.0 – studentská čtečka (navazuje na 0.2.15)
 
