@@ -45,6 +45,22 @@ function password(): string {
   return chars.join("");
 }
 
+// Administrátorský klíč: starší projekty mají SUPABASE_SERVICE_ROLE_KEY, novější SUPABASE_SECRET_KEYS
+// (JSON se jmény klíčů). Jako záloha lze v Edge Functions → Secrets nastavit RQ_SECRET_KEY.
+function secretKey(): string {
+  const direct = Deno.env.get("RQ_SECRET_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (direct) return direct;
+  const keys = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (keys) {
+    try {
+      const parsed = JSON.parse(keys);
+      const first = typeof parsed === "string" ? parsed : (parsed.default ?? Object.values(parsed)[0]);
+      if (typeof first === "string" && first) return first;
+    } catch { if (keys.startsWith("sb_secret_")) return keys; }
+  }
+  throw new HttpError(500, "Chybí administrátorský klíč. V Edge Functions → Secrets nastavte RQ_SECRET_KEY (secret key z Project Settings → API Keys).");
+}
+
 class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 
 Deno.serve(async (req) => {
@@ -53,7 +69,7 @@ Deno.serve(async (req) => {
   const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers });
   try {
     if (req.method !== "POST") throw new HttpError(405, "Nepodporovaná metoda");
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, secretKey(), {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     // Kdo volá: ověřit token a roli v profilu.
