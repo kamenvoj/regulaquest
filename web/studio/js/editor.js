@@ -721,7 +721,8 @@ function dialogImport(){
    const existing=db.units.filter(u=>u.document_id===doc.id);
    const mode=existing.some(u=>/-(art|annex|rule)-/.test(u.id))?'update':'new';
    const diff=RQImport.compare(p.units,existing);
-   const versionText=p.id.dateText?`Konsolidované znění k ${p.id.dateText}`:'';
+   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'],[yy,mm,dd]=(p.id.date||'--').split('-');
+   const versionText=!p.id.dateText?'':p.id.language==='en'?`Consolidated text of ${Number(dd)} ${MONTHS[Number(mm)-1]} ${yy}`:`Konsolidované znění k ${p.id.dateText}`;
    const url=p.id.celex&&p.id.date?`https://eur-lex.europa.eu/legal-content/${p.id.language.toUpperCase()}/TXT/?uri=CELEX:${p.id.celex}-${p.id.date.replace(/-/g,'')}`:'';
    const list=(arr,n=25)=>arr.length?`<ul class="imp-list">${arr.slice(0,n).map(u=>`<li>${esc(u.kind==='paragraph'?u.locator:u.label)}${u.heading?' – '+esc(u.heading.slice(0,70)):''}</li>`).join('')}${arr.length>n?`<li>… a dalších ${arr.length-n}</li>`:''}</ul>`:'';
    prepared={p,doc,buffer,file:fl,mode,diff,versionText,url};
