@@ -512,6 +512,9 @@ begin
   perform rq_private.require_admin();
   if p_status not in ('approved', 'rejected') then raise exception 'Neplatný stav'; end if;
   if c.status <> 'draft' then raise exception 'Schválit či zamítnout lze jen nový koncept'; end if;
+  if p_status = 'approved' and exists (select 1 from public.units where id = c.unit_id and archived) then
+    raise exception 'Komentář patří k archivované části; schválit ho nelze (zamítněte nebo archivujte).';
+  end if;
   update public.comments set status = p_status, updated_at = clock_timestamp(), updated_by = auth.uid() where id = p_id;
   perform rq_private.log_comment(p_id, 'status_' || p_status, to_jsonb(c), to_jsonb(rq_private.comment_row(p_id)));
 end $$;
@@ -653,6 +656,9 @@ begin
   perform rq_private.require_admin();
   if p_status not in ('approved', 'rejected') then raise exception 'Neplatný stav'; end if;
   if r.status <> 'proposed' then raise exception 'Přímo lze rozhodovat pouze o nově navržené vazbě'; end if;
+  if p_status = 'approved' and exists (select 1 from public.units where id in (r.source_id, r.target_id) and archived) then
+    raise exception 'Vazba vede k archivované části; schválit ji nelze (zamítněte ji).';
+  end if;
   update public.relations set status = p_status, updated_at = clock_timestamp(), updated_by = auth.uid() where id = p_id;
   perform rq_private.log_relation(p_id, 'status_' || p_status, to_jsonb(r), to_jsonb(rq_private.relation_row(p_id)));
 end $$;
