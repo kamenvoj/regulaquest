@@ -10,6 +10,11 @@
 - Noční záloha databáze, účtů a souborů do soukromého repozitáře (`zalohy/`).
 - Lokální zkouška Studia v prohlížeči proti PostgreSQL (`tests/web_e2e/`).
 
+**Opravy (0.4.1)**
+- Text vložený do editoru neztrácí odstavce (migrace `05_odstavce.sql`).
+- Formulář dokumentu má pole Vydavatel; v „Upravit údaje a tagy“ lze změnit i název, zkratku, verzi, vydavatele a URL.
+- Lokátor a nadpis nové části nejsou předvyplněné ukázkovým textem.
+
 **Zatím chybí (další etapy):** import dokumentů v prohlížeči, automatické návrhy výslovných odkazů a souvislostí.
 
 ## 0.3.0 – studentská čtečka (navazuje na 0.2.15)

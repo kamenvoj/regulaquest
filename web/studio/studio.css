@@ -238,3 +238,4 @@ table.list{width:100%;border-collapse:collapse;font-size:13px}
   .slip p{margin:0 0 1.5mm;font-size:9.5pt}
   .slip .cred{font-family:"Courier New",monospace;font-size:12.5pt;font-weight:bold}
 }
+.rq-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}

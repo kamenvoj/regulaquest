@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
 
 DSN = os.environ.get('RQ_PG_DSN')
 ROOT = Path(__file__).resolve().parents[1]
-FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[1-3]_*.sql'))
+FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[1235]_*.sql'))
 
 OWNER, ADMIN, STUDENT, STUDENT2 = (str(uuid.UUID(int=i)) for i in (1, 2, 3, 4))
 
@@ -258,6 +258,9 @@ class DatabaseTest(unittest.TestCase):
         cb, body = self.sql("select content_blocks, body from units where id='mdr-cs-rule-11'")[0]
         self.assertEqual(cb[0]['html'], 'Text <b>tučně</b> <i>ok</i><br>řádek')
         self.assertIn('IIa', body)
+        # odstavce vložené prohlížečem jako <div> zůstanou oddělené
+        self.assertEqual(self.sql("select rq_private.clean_html('Úvod<div>1) první</div><div><br></div><div class=\"x\">2) druhý</div>')")[0][0],
+                         'Úvod<br>1) první<br><br>2) druhý')
         self.fails('tabulku nebo obrázek', 'rq_split_unit', 'mdr-cs-rule-11', 3, 'X', '', '', self.updated_at('mdr-cs-rule-11'), True, 'x')
 
     # ------------------------------------------------------------ srovnání s lokálním Studiem
