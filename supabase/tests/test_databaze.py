@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
 
 DSN = os.environ.get('RQ_PG_DSN')
 ROOT = Path(__file__).resolve().parents[1]
-FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[12356789]_*.sql'))
+FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('[01][0-9]_*.sql'))
 
 OWNER, ADMIN, STUDENT, STUDENT2 = (str(uuid.UUID(int=i)) for i in (1, 2, 3, 4))
 
@@ -304,6 +304,22 @@ class DatabaseTest(unittest.TestCase):
         u[0]['content_blocks'][0]['html'] = 'Změněný úvod'
         res = self.call('rq_import_units', 'mdr-cs', u, {'mode': 'update', 'chunk': True}, False)
         self.assertEqual(res['changed'], 1)
+
+    def test_anchored_comments_and_key_passages(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        c = self.call('rq_new_comment', 'mdr-cs-rule-11', 'explanation', 'cs', 'Výklad', 'R', '', 'Software', 1)
+        self.assertEqual(self.sql("select anchor_text, anchor_occurrence from comments where id=%s", c)[0], ('Software', 1))
+        k = self.call('rq_new_comment', 'mdr-cs-rule-11', 'key', 'cs', '', 'R', '', 'Software', 1)
+        self.assertEqual(self.sql("select body from comments where id=%s", k)[0][0], 'Klíčová pasáž')
+        self.fails('nebyl nalezen', 'rq_new_comment', 'mdr-cs-rule-11', 'explanation', 'cs', 'x', 'R', '', 'Neexistující text', 1)
+        self.fails('vybraný text', 'rq_new_comment', 'mdr-cs-rule-11', 'key', 'cs', '', 'R', '', '', 1)
+        self.call('rq_comment_status', c, 'approved')
+        self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
+        self.call('rq_publish', 'x')
+        self.as_user(STUDENT)
+        pub = self.call('rq_current_publication')
+        self.assertEqual(pub['comments'][0]['anchor_text'], 'Software')
 
     def test_structure_editor(self):
         self.setup_doc()

@@ -7,7 +7,8 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const REL_NAMES = {guidance:'Metodický výklad',references:'Výslovný odkaz',related:'Tematická souvislost',supplements:'Doplňuje',amends:'Mění / nahrazuje'};
-const NOTE_NAMES = {explanation:'Výklad',warning:'Na co si dát pozor',example:'Praktický příklad',definition:'Definice pojmu',reference:'Poznámka ke zdroji'};
+const NOTE_NAMES = {explanation:'Výklad',warning:'Na co si dát pozor',example:'Praktický příklad',definition:'Definice pojmu',reference:'Poznámka ke zdroji',key:'Klíčová pasáž'};
+const ICON = k => (window.RQNotes?.ICON[k]) || '';
 const LANG_NAMES = {cs:'čeština',en:'English'};
 
 const S = {
@@ -95,6 +96,8 @@ function index(d){
   let timer;
   $('#search').oninput = e => { clearTimeout(timer); timer = setTimeout(() => { S.query = e.target.value.trim(); renderNav(); }, 140); };
   document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  document.querySelectorAll('#legendPanel .lg').forEach(e => e.innerHTML = ICON(e.dataset.i));
+  $('#legendBtn').onclick = () => { const p = $('#legendPanel'), open = p.classList.toggle('hidden'); $('#legendBtn').setAttribute('aria-expanded', String(!open)); };
 }
 
 const kids = id => S.children.get(id) || [];
@@ -258,6 +261,23 @@ function content(u, q){
       : `<div class="rich">${richParas(safeInline(b.html))}</div>`).join('');
   return legal(bodyOf(u), q);
 }
+/* Zvýraznění hledaného výrazu v již vykresleném textu (formátované bloky, např. MDCG). */
+function markDom(root, q){
+  const ts = terms(q); if (!ts.length) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), nodes = [];
+  let n; while ((n = w.nextNode())) nodes.push(n);
+  nodes.forEach(node => {
+    const t = node.nodeValue, f = fold(t), hit = new Array(t.length).fill(false);
+    ts.forEach(x => { let j = 0; while ((j = f.indexOf(x, j)) !== -1){ for (let k = j; k < j + x.length; k++) hit[k] = true; j += x.length; } });
+    if (!hit.includes(true)) return;
+    const frag = document.createDocumentFragment(); let i = 0;
+    while (i < t.length){ let j = i; while (j < t.length && hit[j] === hit[i]) j++;
+      const part = document.createTextNode(t.slice(i, j));
+      if (hit[i]){ const m = document.createElement('mark'); m.appendChild(part); frag.appendChild(m); } else frag.appendChild(part);
+      i = j; }
+    node.replaceWith(frag);
+  });
+}
 function plain(text){ return String(text).trim().split(/\n{2,}/).map(p => `<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join(''); }
 function snippet(text, q){
   const f = fold(text), i = Math.min(...terms(q).map(t => f.indexOf(t)).filter(x => x >= 0)); if (!isFinite(i)) return '';
@@ -281,12 +301,26 @@ function renderNav(){
 function tree(list){
   return `<ul class="tree">${list.map(u => {
     const ch = kids(u.id), open = S.expanded.has(u.id) || S.unitId === u.id;
-    const marks = (S.notes.get(u.id)?.length) ? '<span class="dot" title="Má výklad"></span>' : '';
+    const marks = outlineMarks(u);
     const heading = headingOf(u) ? `<span class="h">${esc(trim(headingOf(u),60))}</span>` : '';
     return `<li><div class="node">${ch.length ? `<button class="caret" data-id="${esc(u.id)}" aria-label="${open?'Sbalit':'Rozbalit'}" aria-expanded="${open}">${open?'▼':'▶'}</button>` : '<span class="caret-space"></span>'}
       <a href="#/u/${encodeURIComponent(u.id)}" class="${u.id===S.unitId?'current':''} ${u.navigation_only?'locked':''}">${esc(u.label)}${marks}${heading}</a></div>
       ${ch.length && open ? tree(ch) : ''}</li>`;
   }).join('')}</ul>`;
+}
+function outlineMarks(u){
+  const ns = S.notes.get(u.id) || [], rs = S.rels.get(u.id) || [];
+  const out = [];
+  if (ns.some(n => n.kind === 'key')) out.push(['key','Obsahuje klíčovou pasáž']);
+  if (ns.some(n => n.kind === 'warning')) out.push(['warning','Na co si dát pozor']);
+  if (ns.some(n => n.kind !== 'key' && n.kind !== 'warning')) out.push(['comment','Má výklad nebo poznámku']);
+  if (rs.some(r => isGuidanceLink(u, r))) out.push(['guidance','Má metodický výklad (MDCG)']);
+  return out.length ? `<span class="marks">${out.map(([k,t]) => `<span class="m m-${k}" title="${t}">${ICON(k)}</span>`).join('')}</span>` : '';
+}
+function isGuidanceLink(u, r){
+  const o = S.units.get(r.source_id === u.id ? r.target_id : r.source_id);
+  const t = id => S.docs.get(S.units.get(id)?.document_id)?.document_type;
+  return o && (t(u.id) === 'guidance') !== (t(o.id) === 'guidance');
 }
 const trim = (s,n) => s.length > n ? s.slice(0,n-1) + '…' : s;
 
@@ -300,7 +334,7 @@ function renderResults(box){
   box.innerHTML = `<div class="results-head">${hits.length ? `Nalezeno ${hits.length}${hits.length>80?' (zobrazeno 80)':''}` : 'Nic nenalezeno. Zkuste jiný výraz nebo jiný jazyk dokumentu.'}</div>` +
     shown.map(u => { const d=S.docs.get(u.document_id);
       return `<a class="result" href="#/u/${encodeURIComponent(u.id)}" data-hl="1"><strong>${esc(u.label)}${headingOf(u)?' – '+esc(trim(headingOf(u),50)):''}</strong><small>${esc(docShort(d))}${ancestors(u).length?' › '+esc(ancestors(u).map(a=>a.label).join(' › ')):''}</small><small>${snippet(u.body,q)}</small></a>`; }).join('');
-  box.querySelectorAll('.result').forEach(a => a.addEventListener('click', () => { S.highlight = S.query; }));
+  box.querySelectorAll('.result').forEach(a => a.addEventListener('click', e => { S.highlight = S.query; if (a.getAttribute('href') === location.hash){ e.preventDefault(); route(); } }));
 }
 
 /* ---------- Center panel ---------- */
@@ -320,17 +354,38 @@ function renderUnit(u){
     ${cp ? `<a class="lang-btn" href="#/u/${encodeURIComponent(cp.unit.id)}" title="Stejné ustanovení v jazyce ${esc(LANG_NAMES[cp.doc.language]||cp.doc.language)}">${esc(cp.doc.language.toUpperCase())}</a>` : ''}</div>`;
   const ch = kids(u.id);
   if (hasText(u)){
-    html += `<div class="legal">${content(u, q)}</div>`;
+    html += `<div class="legal" data-unit="${esc(u.id)}">${content(u, q)}</div>`;
     if (ch.length) html += `<div class="subparts"><h2>Členění</h2><div class="chips">${ch.map(c => `<a href="#/u/${encodeURIComponent(c.id)}">${esc(c.label)}</a>`).join('')}</div></div>`;
   } else {
     const parts = descendantsWithText(u.id);
     html += `<div class="note">${parts.length ? 'V aplikaci jsou zatím ověřené jen části uvedené níže.' : 'Text této části zatím v aplikaci není ověřen.'} Celé znění najdete v ${d.url?`<a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">oficiálním zdroji ↗</a>`:'oficiálním zdroji'}.</div>`;
-    html += parts.map(p => `<section class="part"><h3><a href="#/u/${encodeURIComponent(p.id)}">${esc(p.label)}</a></h3><div class="legal">${content(p, q)}</div></section>`).join('');
+    html += parts.map(p => `<section class="part"><h3><a href="#/u/${encodeURIComponent(p.id)}">${esc(p.label)}</a></h3><div class="legal" data-unit="${esc(p.id)}">${content(p, q)}</div></section>`).join('');
   }
   html += pager(u) + sourceLine(d);
   $('#panelText').innerHTML = html;
+  if (q) document.querySelectorAll('#panelText .rich').forEach(el => markDom(el, q));
+  anchorNotes();
   resolveFigures();
   document.title = `${u.label} · ${docShort(d)} · RegulaQuest`;
+}
+
+/* Poznámky ukotvené k textu: podtržení + ikonka; klepnutím se poznámka rozbalí přímo pod řádkem. */
+function anchorNotes(){
+  if (!window.RQNotes) return;
+  document.querySelectorAll('#panelText .legal').forEach(box => {
+    const id = box.dataset.unit; if (!id) return;
+    RQNotes.applyAnchors(box, S.notes.get(id) || [], toggleNote);
+  });
+}
+function toggleNote(c, mk){
+  const open = document.querySelector(`.rq-pop[data-cid="${CSS.escape(c.id)}"]`);
+  document.querySelectorAll('.rq-pop').forEach(p => p.remove());
+  if (open) return;
+  const pop = document.createElement('span');
+  pop.className = 'rq-pop' + (c.kind === 'warning' ? ' warn' : ''); pop.dataset.cid = c.id; pop.dataset.noAnchor = '1';
+  pop.innerHTML = `<span class="rq-pop-h">${ICON(c.kind)} ${esc(NOTE_NAMES[c.kind]||c.kind)}${S.draft&&c.status!=='approved'?' · koncept':''}</span>${esc(c.body).replace(/\n/g,'<br>')}`;
+  const block = mk.closest('p, .ln, li, td, .legal') || mk.parentElement;
+  block.after(pop);
 }
 
 function pager(u){
@@ -372,7 +427,9 @@ function renderContext(){
   const box = $('#panelContext'); const u = S.units.get(S.unitId);
   if (!u){ box.innerHTML = `<div class="ctx-title">Souvislosti</div><div class="ctx-empty">Po výběru ustanovení se zde zobrazí odborný výklad, související články a metodiky.</div>${disclaimer()}`; $('#tabCount').textContent=''; return; }
   const notes = S.notes.get(u.id) || [], rels = S.rels.get(u.id) || [];
-  const explain = notes.filter(n => n.kind !== 'example'), examples = notes.filter(n => n.kind === 'example');
+  const byKind = (a,b) => (RQNotes.ORDER[a.kind]??5) - (RQNotes.ORDER[b.kind]??5);
+  const warnings = notes.filter(n => n.kind === 'warning'), keys = notes.filter(n => n.kind === 'key');
+  const explain = notes.filter(n => !['example','warning','key'].includes(n.kind)).sort(byKind), examples = notes.filter(n => n.kind === 'example');
   const other = r => S.units.get(r.source_id === u.id ? r.target_id : r.source_id);
   const typeOf = id => S.docs.get(S.units.get(id)?.document_id)?.document_type;
   const here = S.docs.get(u.document_id)?.document_type;
@@ -382,19 +439,28 @@ function renderContext(){
   const childInfo = descendantsWithText(u.id).concat(kids(u.id).filter(hasText)).filter((x,i,a)=>a.indexOf(x)===i)
     .map(c => ({c, n:(S.notes.get(c.id)||[]).length, r:(S.rels.get(c.id)||[]).length})).filter(x => x.n || x.r);
   const section = (title, items, fn) => items.length ? `<div class="ctx-section"><h3>${title} <span class="count">${items.length}</span></h3>${items.map(fn).join('')}</div>` : '';
-  const noteCard = n => `<div class="ctx-card ${n.kind==='warning'?'warning':''}"><div class="meta"><span>${esc(NOTE_NAMES[n.kind]||n.kind)}${n.language!==S.docs.get(u.document_id)?.language?' · '+esc(n.language.toUpperCase()):''}</span>${S.draft&&n.status!=='approved'?'<span class="chip warn">Koncept</span>':''}</div><div class="body">${plain(n.body)}</div></div>`;
+  const quote = n => n.anchor_text ? `<button type="button" class="anchor-q" data-cid="${esc(n.id)}" title="Ukázat v textu">„${esc(trim(n.anchor_text, 90))}“</button>` : '';
+  const noteCard = n => `<div class="ctx-card ${n.kind==='warning'?'warning':''}"><div class="meta"><span class="k">${ICON(n.kind)} ${esc(NOTE_NAMES[n.kind]||n.kind)}${n.language!==S.docs.get(u.document_id)?.language?' · '+esc(n.language.toUpperCase()):''}</span>${S.draft&&n.status!=='approved'?'<span class="chip warn">Koncept</span>':''}</div>${quote(n)}${n.kind==='key'?'':`<div class="body">${plain(n.body)}</div>`}</div>`;
   const relCard = r => { const o = other(r); if (!o) return ''; const d = S.docs.get(o.document_id);
-    return `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(o.id)}"><div class="meta"><span>${esc(REL_NAMES[r.relation_type]||r.relation_type)}</span>${S.draft&&r.status!=='approved'?'<span class="chip warn">Návrh</span>':''}</div><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),70)):''}</strong><small>${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${r.rationale?`<div class="why">${esc(r.rationale)}</div>`:''}</div>`; };
+    return `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(o.id)}"><div class="meta"><span class="k">${ICON(guidance.includes(r)||legalBasis.includes(r)?'guidance':r.relation_type)} ${esc(REL_NAMES[r.relation_type]||r.relation_type)}</span>${S.draft&&r.status!=='approved'?'<span class="chip warn">Návrh</span>':''}</div><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),70)):''}</strong><small>${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${r.rationale?`<div class="why">${esc(r.rationale)}</div>`:''}</div>`; };
   const total = notes.length + rels.length;
   box.innerHTML = `<div class="ctx-title">Souvislosti · ${esc(u.label)}</div>` +
+    section('Na co si dát pozor', warnings, noteCard) +
     section('Výklad', explain, noteCard) +
-    section('Metodika', guidance, relCard) +
+    section('Metodika (výklad MDCG)', guidance, relCard) +
     section('Vykládané ustanovení předpisu', legalBasis, relCard) +
     section('Související ustanovení', related, relCard) +
     section('Příklady', examples, noteCard) +
+    section('Klíčové pasáže', keys, noteCard) +
     (childInfo.length ? `<div class="ctx-section"><h3>V jednotlivých částech</h3>${childInfo.map(x => `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(x.c.id)}"><strong>${esc(x.c.label)}</strong><small>${[x.n?`${x.n}× výklad`:'',x.r?`${x.r}× souvislost`:''].filter(Boolean).join(' · ')}</small></a></div>`).join('')}</div>` : '') +
     (total || childInfo.length ? '' : '<div class="ctx-empty">K tomuto ustanovení zatím nejsou zveřejněné výklady ani vazby.</div>') + disclaimer();
   $('#tabCount').textContent = total ? String(total) : '';
+  box.querySelectorAll('.anchor-q').forEach(b => b.onclick = () => {
+    const el = document.querySelector(`#panelText [data-cid="${CSS.escape(b.dataset.cid)}"]`);
+    if (!el) return;
+    setTab('text', false); el.scrollIntoView({block:'center', behavior:'smooth'});
+    document.querySelectorAll(`#panelText [data-cid="${CSS.escape(b.dataset.cid)}"]`).forEach(x => { x.classList.remove('rq-flash'); void x.offsetWidth; x.classList.add('rq-flash'); });
+  });
 }
 function disclaimer(){ return '<div class="disclaimer">Výklady připravuje redakce RegulaQuest pro výuku. Nejsou právním stanoviskem; rozhodující je vždy oficiální znění předpisu.</div>'; }
 

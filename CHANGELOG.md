@@ -1,5 +1,14 @@
 # Změny
 
+## 0.9.0 – 2026-11-26 · Poznámky k vybranému textu
+- Studio: po označení textu myší se nabídne lišta **Zvýraznit · Poznámka · Pozor**. Kotva = přesné znění výběru + pořadí výskytu v části.
+- Nový druh komentáře „Klíčová pasáž“ (zvýraznění), prochází stejným schvalováním jako ostatní komentáře.
+- Po novém znění se poznámky, jejichž text už v části není, označí „Kotva nenalezena“.
+- Jednotné ikony (sdilene/anotace.js) ve Studiu i čtečce; drobné značky v osnově (klíčová pasáž / pozor / komentář / vazba).
+- Čtečka: podtržení + ikonka u poznámky, klepnutím se rozbalí pod řádkem; panel Souvislosti v pořadí pozor → výklad → MDCG → odkazy → příklady; legenda „Značky“.
+- Hledaný výraz se zvýrazní modře (odlišně od klíčových pasáží) i ve formátovaném textu metodik; funguje i u právě otevřené části.
+- Migrace 10_anotace.sql.
+
 ## 0.8.0 – souvislosti mezi dokumenty
 
 - **◎ Souvislosti** (celý dokument) a **◎ Souvislosti** u části: kandidáti vazeb do jiného dokumentu – shodné číslo klasifikačního pravidla předpis ↔ metodika (MDR příloha VIII ↔ MDCG 2021-24: 22 pravidel, typ „Metodický výklad“) a shoda odborných pojmů z česko-anglického slovníku (pojem musí začínat na začátku slova; obecné pojmy mají malou váhu). Ukládají se jen návrhy do „Ke kontrole“; už existující vazby (i z jiné jazykové verze) se poznají.

@@ -57,7 +57,7 @@ body.has-banner .layout{height:calc(100vh - var(--top) - 37px)}
 .result:hover{background:#dde9e7}
 .result strong{display:block}
 .result small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-mark{background:#f6e3b4;color:inherit;border-radius:3px;padding:0 1px}
+mark{background:#d4e8fb;color:inherit;border-radius:3px;padding:0 1px;box-shadow:inset 0 -2px 0 #6f9fcf}
 
 /* Reading area */
 .crumbs{font-size:12.5px;color:var(--muted);margin-bottom:6px}
@@ -170,3 +170,19 @@ h1 .heading{display:block;font-size:18px;font-weight:600;color:#4a6168;letter-sp
  .tab-count:not(:empty){background:var(--teal);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:3px}
 }
 @media print{.top,.nav,.context,.tabbar,.pager{display:none!important}.layout{display:block;height:auto}.text{padding:0}}
+
+/* Značky a legenda (0.9) */
+.legend-btn{background:transparent;color:#e6eef0;border:1px solid #4d6c76;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
+.legend-btn[aria-expanded="true"]{background:#234653}
+.legend-panel{background:#fff;border-bottom:1px solid var(--line);padding:10px 18px}
+.legend-panel .rq-ico{width:14px;height:14px;color:#1d7d83}
+.tree .marks{display:inline-flex;gap:2px;margin-left:6px;vertical-align:-2px}
+.tree .m{display:inline-flex;color:#7c9095}
+.tree .m .rq-ico{width:12px;height:12px}
+.tree .m-key{color:#b8902a}.tree .m-warning{color:#b5761c}.tree .m-guidance{color:#1d7d83}
+.ctx-card .meta .k{display:inline-flex;align-items:center;gap:5px}
+.ctx-card .meta .rq-ico{width:14px;height:14px;color:#1d7d83}
+.ctx-card.warning .meta .rq-ico{color:#b5761c}
+.anchor-q{display:block;width:100%;text-align:left;border:0;background:#f6f4ee;border-radius:6px;padding:5px 8px;margin:0 0 6px;font:inherit;font-size:12.5px;font-style:italic;color:#4b6168;cursor:pointer}
+.anchor-q:hover{background:#efe7cf}
+.ctx-card.warning{border-left-color:#b5761c}

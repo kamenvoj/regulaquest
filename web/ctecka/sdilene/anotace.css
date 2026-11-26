@@ -1,0 +1,18 @@
+/* RegulaQuest – značky v textu (Studio i čtečka). Jedna barva pro poznámky, oranžová jen pro „pozor“. */
+.rq-ico{display:inline-block;vertical-align:-3px;flex-shrink:0}
+.rq-key{background:#fbedc6;box-shadow:0 0 0 1px #fbedc6;border-radius:2px}
+.rq-anc{border-bottom:1.5px dotted #1d7d83;cursor:pointer}
+.rq-anc.warn{border-bottom-color:#b5761c}
+.rq-mk{display:inline-flex;align-items:center;justify-content:center;border:0;background:none;padding:0 1px;margin:0 1px;color:#1d7d83;cursor:pointer;vertical-align:super;line-height:1;font:inherit}
+.rq-mk .rq-ico{width:13px;height:13px}
+.rq-mk.warn{color:#b5761c}
+.rq-mk:hover,.rq-anc:hover{color:#10595d;background:#e6f1f0}
+.rq-pop{display:block;font-family:Inter,-apple-system,"Segoe UI",sans-serif;font-size:13.5px;line-height:1.55;text-indent:0;margin:8px 0 10px;padding:10px 13px;border:1px solid #c9dcdb;border-left:3px solid #1d7d83;border-radius:0;background:#f7fbfa;color:#2b4148}
+.rq-pop.warn{border-left-color:#b5761c;background:#fdf8ee}
+.rq-pop .rq-pop-h{display:flex;gap:6px;align-items:center;font-size:11.5px;font-weight:700;color:#4b6168;margin-bottom:3px}
+.rq-flash{animation:rqflash 1.6s ease-out}
+@keyframes rqflash{0%{background:#ffe08a}100%{background:transparent}}
+mark{background:#d4e8fb;color:inherit;border-radius:2px;padding:0 1px;box-shadow:inset 0 -2px 0 #6f9fcf}
+.rq-legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:#4b6168;align-items:center}
+.rq-legend span{display:inline-flex;gap:6px;align-items:center}
+mark .rq-key{background:transparent;box-shadow:none}

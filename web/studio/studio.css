@@ -266,3 +266,20 @@ dialog:has(#refList){width:min(980px,calc(100vw - 24px));max-width:min(980px,cal
 .rq-rich-text p.hang{padding-left:1.3em;text-indent:-1.3em}
 .explorer .work-doc-picker{margin:9px 17px 6px}
 .explorer .work-catalog-btn{width:calc(100% - 34px);margin:0 17px 11px}
+
+/* 0.9 poznámky k vybranému textu */
+.rq-selbar{position:absolute;z-index:60;display:none;gap:2px;background:#16313c;border-radius:9px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.rq-selbar button{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:#eef4f5;font:600 12.5px/1 inherit;padding:7px 9px;border-radius:6px;cursor:pointer}
+.rq-selbar button:hover{background:#2a4e5b}
+.rq-selbar .rq-ico{width:14px;height:14px}
+[data-anchor-root]{cursor:text}
+.tree-marks{display:inline-flex;gap:2px;margin-left:6px;vertical-align:-2px}
+.tree-marks .m{display:inline-flex;color:#7c9095}.tree-marks .rq-ico{width:12px;height:12px}
+.tree-marks .m-key{color:#b8902a}.tree-marks .m-warning{color:#b5761c}
+.boxnote .kind{display:inline-flex;align-items:center;gap:5px}.boxnote .kind .rq-ico{width:14px;height:14px;color:#1d7d83}
+.boxnote.warnnote{border-left:3px solid #b5761c}.boxnote.warnnote .kind .rq-ico{color:#b5761c}
+.anchor-q{display:block;width:100%;text-align:left;border:0;background:#f6f4ee;border-radius:6px;padding:5px 8px;margin:4px 0 6px;font:italic 12.5px/1.45 inherit;color:#4b6168;cursor:pointer}
+.anchor-q:hover{background:#efe7cf}
+.anchor-preview{margin:8px 0 12px;padding:8px 10px;background:#f7f6f1;border-radius:8px;line-height:1.5}
+.anchor-preview .smallcaps{display:block;margin-bottom:3px}
+.notice.anchor-missing{margin-bottom:10px}

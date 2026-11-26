@@ -13,7 +13,8 @@ const statuses={missing:'warn',needs_review:'warn',verified:'good',draft:'propos
 const relName={guidance:'Metodický výklad',references:'Výslovný odkaz',related:'Tematická souvislost',supplements:'Doplňuje',amends:'Mění / nahrazuje'};
 const jurisdictions={eu:'Evropská unie',cz:'Česká republika',international:'Mezinárodní',other:'Nezařazeno'};
 const docTypes={regulation:'Nařízení',directive:'Směrnice',law:'Zákon',decree:'Vyhláška',guidance:'Metodický dokument',standard:'Technická norma',other:'Ostatní'};
-const noteName={explanation:'Vysvětlení',warning:'Na co si dát pozor',example:'Praktický příklad',definition:'Definice pojmu',reference:'Komentář ke zdroji'};
+const noteName={explanation:'Vysvětlení',warning:'Na co si dát pozor',example:'Praktický příklad',definition:'Definice pojmu',reference:'Komentář ke zdroji',key:'Klíčová pasáž'};
+const rqIco=k=>(window.RQNotes&&RQNotes.ICON[k])||'';
 const getUnit=id=>db.units.find(u=>u.id===id);
 const getDoc=id=>db.documents.find(d=>d.id===id);
 // Jednoznacne cesty pro kontrolu vazeb (bez ohledu na rozbaleni stromu).
@@ -75,7 +76,7 @@ const ACTIONS={
  split_unit:d=>['rq_split_unit',{p_unit_id:d.unit_id,p_index:d.index,p_new_label:d.new_label,p_new_heading:d.new_heading,p_new_locator:d.new_locator,p_expected:d.expected_updated_at,p_confirm_flatten:!!d.confirm_flatten_rich,p_reason:d.reason||undefined}],
  move_unit_text:d=>['rq_move_unit_text',{p_unit_id:d.unit_id,p_target_id:d.target_id,p_fragment:d.fragment,p_expected:d.expected_updated_at,p_target_expected:d.target_updated_at,p_confirm_flatten:!!d.confirm_flatten_rich,p_reason:d.reason||undefined}],
  merge_units:d=>['rq_merge_units',{p_unit_id:d.unit_id,p_target_id:d.target_id,p_expected:d.expected_updated_at,p_target_expected:d.target_updated_at,p_confirm_flatten:!!d.confirm_flatten_rich,p_reason:d.reason||undefined}],
- new_comment:d=>['rq_new_comment',{p_unit_id:d.unit_id,p_kind:d.kind,p_language:d.language,p_body:d.body,p_author:d.author||'',...(d.translated_from?{p_translated_from:d.translated_from}:{})}],
+ new_comment:d=>['rq_new_comment',{p_unit_id:d.unit_id,p_kind:d.kind,p_language:d.language,p_body:d.body,p_author:d.author||'',...(d.translated_from?{p_translated_from:d.translated_from}:{}),...(d.anchor_text?{p_anchor_text:d.anchor_text,p_anchor_occurrence:Number(d.anchor_occurrence)||1}:{})}],
  comment_status:d=>['rq_comment_status',{p_id:d.id,p_status:d.status}],
  edit_comment_draft:d=>['rq_edit_comment_draft',{p_id:d.comment_id,p_kind:d.kind,p_language:d.language,p_body:d.body,p_author:d.author||''}],
  archive_unit:d=>['rq_archive_unit',{p_unit_id:d.unit_id,p_expected:getUnit(d.unit_id)?.updated_at||null,p_reason:d.reason||undefined}],
@@ -277,7 +278,7 @@ function renderList(){
        }
        const b=document.createElement('button');b.type='button';
        b.className='unit-entry tree-label'+(selected===u.id?' active':'')+(u.text_status==='verified'?' verified':'');
-       b.innerHTML=`<span>${esc(u.label)}${u.kind==='section'&&u.heading?' · '+esc(u.heading.length>70?u.heading.slice(0,68)+'…':u.heading):''}</span>`;
+       b.innerHTML=`<span>${esc(u.label)}${u.kind==='section'&&u.heading?' · '+esc(u.heading.length>70?u.heading.slice(0,68)+'…':u.heading):''}</span>${rqTreeMarks(u)}`;
        b.title=u.heading||u.label;
        if(selected===u.id)b.setAttribute('aria-current','true');
        b.onclick=()=>{
@@ -311,13 +312,14 @@ box.innerHTML=`<div class="hero-line"><span class="crumb">${esc(d.family)} / ${e
 ${u.editor_archived?`<div class="notice archived-note"><strong>Archivovaná část.</strong> Není v osnově ani ve čtečce${u.merged_into?' (sloučena do '+esc(unitPath(u.merged_into))+')':''}. Zůstává jen pro dohledání historie.${u.merged_into?'':' <button class="btn tiny" type="button" id="rqRestore">Obnovit</button>'}</div>`:''}
 <h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>
 <div class="sourcebox"><strong>Zdroj:</strong> ${esc(d.title)}<br><strong>Verze:</strong> ${esc(d.version)} · ${esc(d.language.toUpperCase())}<br><strong>Umístění:</strong> ${esc(u.locator||u.label)}<br><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Porovnat s originálem ↗</a></div>
-${u.content_blocks&&u.content_blocks.length?`<div class="rq-prepared-content"><div class="section-kicker">REDAKČNĚ STRUKTUROVANÝ OBSAH A TABULKY · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>${rqRenderBlocks(u.content_blocks)}</div>`:''}
+${u.content_blocks&&u.content_blocks.length?`<div class="rq-prepared-content" data-anchor-root><div class="section-kicker">REDAKČNĚ STRUKTUROVANÝ OBSAH A TABULKY · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>${rqRenderBlocks(u.content_blocks)}</div>`:''}
 ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚNÍ ZDROJE · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>
-  ${u.body?`<div class="legal">${legalLines(u.body)}</div>`:`<div class="unloaded"><strong>Text zatím není vložen.</strong>Otevřete „Editor textu a tabulek“ a vložte doslovné znění z oficiálního zdroje.</div>`}`}
+  ${u.body?`<div class="legal" data-anchor-root>${legalLines(u.body)}</div>`:`<div class="unloaded"><strong>Text zatím není vložen.</strong>Otevřete „Editor textu a tabulek“ a vložte doslovné znění z oficiálního zdroje.</div>`}`}
 
 <div class="read-actions rq-structure-actions"><button class="btn accent" id="rqEditContent">▦ Editor textu a tabulek</button><button class="btn" id="rqEditStructure">Struktura</button><button class="btn" id="rqSplit" ${!u.body?'disabled':''}>Rozdělit</button><button class="btn" id="rqMove" ${!u.body?'disabled':''}>Přesunout text</button><button class="btn" id="rqMerge" ${!u.body?'disabled':''}>Sloučit</button><button class="btn" id="rqHistory">Historie změn</button><button class="btn danger" id="rqArchive">Archivovat</button>${u.body&&u.text_status!=='verified'?'<button class="btn accent" id="verifyText">Ověřil(a) jsem proti zdroji</button>':''}</div>
 ${u.source_note?`<p class="fine">Původ importu: ${esc(u.source_note)}</p>`:''}
 ${related.length?`<div class="soft-rule"></div><div class="section-kicker">PODŘAZENÉ ČÁSTI</div><div class="doc-outline">${related.map(x=>`<button class="outline-row" data-unit-open="${esc(x.id)}" style="text-align:left;cursor:pointer"><strong>${esc(x.label)} · ${esc(x.heading)}</strong><small>${esc(statusName[x.text_status])}</small></button>`).join('')}</div>`:''}`;
+rqAnchors(box,u);
 box.querySelector('#rqEditContent').onclick=()=>rqContentEditor(u);
 box.querySelector('#rqEditStructure').onclick=()=>rqStructureEditor(u);
 box.querySelector('#rqSplit').onclick=()=>rqSplit(u);
@@ -343,11 +345,12 @@ const origin=getDoc(u.document_id);
 box.innerHTML=`<div class="context-section"><div class="context-head"><h3>↗ Propojené pasáže <span class="tag">${rel.length}</span></h3><div class="actionrow"><button class="btn tiny" id="seekRelated" title="Souvislosti v jiném dokumentu (např. MDCG)">◎ Souvislosti</button><button class="btn tiny" id="suggestLinks" title="Výslovné odkazy v textu této části">✧ Návrhy</button><button class="btn tiny" id="addLink">+ Propojit</button></div></div>
 ${rel.length?rel.map(r=>{const other=r.source_id===u.id?r.target_id:r.source_id;return `<div class="boxnote"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">${esc(r.rationale)}</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-relation-detail="${esc(r.id)}">Detail vazby</button></div></div>`}).join(''):'<p class="fine">Zatím bez propojení. Vazby je možné vytvářet na úrovni kapitol, pravidel i jednotlivých pasáží.</p>'}
 ${mirror.length?`<div class="section-kicker">Z JINÉ JAZYKOVÉ VERZE · PLATÍ I ZDE</div>${mirror.map(({r,from,other})=>`<div class="boxnote mirrored"><div class="meta"><strong>${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(other))}</p><div class="helper">Vazba vytvořená u ${esc(documentLabel(getDoc(from.document_id)))}; upravuje a schvaluje se tam.</div><div class="actionrow"><button class="btn tiny" data-jump="${esc(other)}">Přejít na pasáž ↗</button><button class="btn tiny" data-jump="${esc(from.id)}">Otevřít původní</button></div></div>`).join('')}`:''}</div>
-<div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>▤ Naše komentáře <span class="tag">${comments.length}</span></h3><button class="btn tiny" id="addNote">+ Přidat</button></div>${comments.length?comments.map(c=>`<div class="boxnote"><div class="meta"><strong>${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</strong>${tag(c.status)}${translationStale(c)?' <span class="tag warn">Originál změněn</span>':''}</div><p>${esc(c.body)}</p><div class="helper">${esc(c.author||'RegulaQuest redakce')}</div><div class="actionrow"><button type="button" class="btn tiny" data-comment-detail="${esc(c.id)}">Detail / upravit</button></div></div>`).join(''):'<p class="fine">Zatím bez autorských komentářů.</p>'}</div>${(db.amendments||[]).some(x=>x.document_id===u.document_id)?`<div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>◷ Změny a původ znění <span class="tag">${amendments.length}</span></h3></div>
+<div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>▤ Naše komentáře <span class="tag">${comments.length}</span></h3><button class="btn tiny" id="addNote">+ Přidat</button></div>${comments.length?comments.slice().sort((a,b)=>(RQNotes.ORDER[a.kind]??5)-(RQNotes.ORDER[b.kind]??5)).map(c=>`<div class="boxnote${c.kind==='warning'?' warnnote':''}"><div class="meta"><strong class="kind">${rqIco(c.kind)} ${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</strong>${tag(c.status)}${translationStale(c)?' <span class="tag warn">Originál změněn</span>':''}${rqMissing.has(c.id)?' <span class="tag bad" title="Vybraný text už v ustanovení není (nové znění?). Otevřete detail a ukotvěte znovu, nebo archivujte.">Kotva nenalezena</span>':''}</div>${c.anchor_text?`<button type="button" class="anchor-q" data-anchor-jump="${esc(c.id)}" title="Ukázat v textu">„${esc(c.anchor_text.length>90?c.anchor_text.slice(0,88)+'…':c.anchor_text)}“</button>`:''}${c.kind==='key'?'':`<p>${esc(c.body)}</p>`}<div class="helper">${esc(c.author||'RegulaQuest redakce')}</div><div class="actionrow"><button type="button" class="btn tiny" data-comment-detail="${esc(c.id)}">Detail / upravit</button></div></div>`).join(''):'<p class="fine">Zatím bez autorských komentářů.</p>'}</div>${(db.amendments||[]).some(x=>x.document_id===u.document_id)?`<div class="soft-rule"></div><div class="context-section"><div class="context-head"><h3>◷ Změny a původ znění <span class="tag">${amendments.length}</span></h3></div>
 ${amendments.length?amendments.map(a=>`<div class="boxnote"><div class="meta"><strong>${esc(a.marker)} · ${a.kind==='corrigendum'?'Oprava':'Pozměňující akt'}</strong></div><p>${esc(a.title||'Označení změny v konsolidovaném dokumentu')}</p>${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">Přejít na původní akt ↗</a>`:`<a href="${esc(origin?.url||'#')}" target="_blank" rel="noopener noreferrer">Ověřit akt v přehledu „Ve znění“ na EUR-Lexu ↗</a>`}</div>`).join(''):'<p class="fine">U tohoto textu nejsou v importovaném konsolidovaném znění zachyceny změnové značky. Neznamená to, že text nikdy nebyl měněn.</p>'}
 <p class="fine">Zobrazené znění je informativní konsolidace k datu uvedenému u zdroje. Změnové značky se do textu nevypisují.</p></div>
 `:''}<div class="soft-rule"></div><div class="fine">Komentář je oddělený od oficiálního znění. Pro studentský export musí být schválený.</div>`;
 box.querySelector('#suggestLinks').onclick=()=>dialogReferences(u.id);box.querySelector('#seekRelated').onclick=()=>dialogRelated(u.id);box.querySelector('#addLink').onclick=()=>dialogRelation(u);box.querySelector('#addNote').onclick=()=>dialogComment(u);box.querySelectorAll('[data-jump]').forEach(x=>x.onclick=()=>openUnit(x.dataset.jump));box.querySelectorAll('[data-relation-detail]').forEach(x=>x.onclick=()=>dialogRelationDetail(x.dataset.relationDetail));box.querySelectorAll('[data-comment-detail]').forEach(x=>x.onclick=()=>dialogCommentDetail(x.dataset.commentDetail));
+box.querySelectorAll('[data-anchor-jump]').forEach(x=>x.onclick=()=>{const els=document.querySelectorAll(`#reader [data-cid="${CSS.escape(x.dataset.anchorJump)}"]`);if(!els.length){toast('Vybraný text se v ustanovení nenašel.',true);return}els[0].scrollIntoView({block:'center',behavior:'smooth'});els.forEach(e=>{e.classList.remove('rq-flash');void e.offsetWidth;e.classList.add('rq-flash')})});
 }
 function renderReview(){
  const filter=$('#reviewDocFilter');filter.innerHTML='<option value="all">Všechny dokumenty</option>'+db.documents.map(d=>`<option value="${esc(d.id)}">${esc(documentLabel(d))}</option>`).join('');filter.value=reviewDocFilter;
@@ -530,6 +533,7 @@ function dialogCommentDetail(id){
  const d=$('#modal'),f=$('#modalContent');f.onsubmit=null;
  f.innerHTML=`<h2>Detail odborného komentáře</h2><p>${esc(fullname(c.unit_id))}</p>
  <div class="comment-detail-meta">${tag(c.status)} <span class="tag">${esc(noteName[c.kind]||c.kind)} · ${esc(c.language.toUpperCase())}</span> <span>${esc(c.author||'Redakce RegulaQuest')}</span></div>
+ ${c.anchor_text?`<div class="anchor-preview"><span class="smallcaps">Ukotveno k textu${c.anchor_occurrence>1?' ('+c.anchor_occurrence+'. výskyt)':''}</span><span class="${c.kind==='key'?'rq-key':'rq-anc'}">„${esc(c.anchor_text)}“</span>${rqMissing.has(c.id)?'<br><span class="tag bad">V aktuálním znění nenalezeno</span> – archivujte a vytvořte poznámku znovu k novému textu.':''}</div>`:''}
  <div class="revision-text"><p>${esc(c.body)}</p></div>
  ${pending?`<div class="notice">Čeká návrh ${pending.change_type==='edit'?'úpravy':pending.change_type==='archive'?'archivace':'obnovení'}: ${esc(pending.change_reason)}. Dosavadní schválená verze zůstává beze změny.</div>`:''}
  ${translationSource(c)?`<div class="notice"><strong>Převzato z ${esc(translationSource(c).language.toUpperCase())} komentáře</strong> u ${esc(fullname(translationSource(c).unit_id))}.
@@ -723,15 +727,15 @@ function dialogRelation(u,preset=null){
  d.showModal();
 }
 
-function dialogComment(u){
+function dialogComment(u,anchor,kind){
  // Komentář je jazykový; z jiné jazykové verze lze převzít text jako podklad k překladu.
  const doc=getDoc(u.document_id),lang=doc?.language||'cs';
  const twins=db.documents.filter(x=>doc&&x.id!==doc.id&&(x.group_key||x.id)===(doc.group_key||doc.id)).map(x=>equivalentIn(u,x.id)).filter(Boolean);
  const others=db.comments.filter(c=>twins.some(t=>t.id===c.unit_id)&&['approved','draft'].includes(c.status));
  const html=`<p>Komentář není součástí právního předpisu. Nejprve se uloží jako koncept.</p>
  ${others.length?`<div class="notice"><strong>Komentáře u jiné jazykové verze</strong> – lze převzít jako podklad a upravit (přeložit):${others.map(c=>`<div class="take-row"><span>${esc(getDoc(getUnit(c.unit_id).document_id).language.toUpperCase())} · ${esc(noteName[c.kind]||c.kind)} · ${tag(c.status)} ${esc(c.body.slice(0,140))}${c.body.length>140?'…':''}</span><button type="button" class="btn tiny" data-take="${esc(c.id)}">Převzít</button></div>`).join('')}</div>`:''}
- ${select('Typ komentáře','kind',Object.entries(noteName))}${select('Jazyk','language',[['cs','Čeština'],['en','English']],lang)}${field('Autor / garant','author','Redakce RegulaQuest')}${field('Obsah komentáře','body','','textarea')}<input type="hidden" name="translated_from" value="">`;
- dialog('Nový komentář · '+u.label,html,vals=>safeAct({action:'new_comment',unit_id:u.id,...vals}));
+ ${anchor?`<div class="anchor-preview"><span class="smallcaps">K vybranému textu</span><span class="${kind==='key'?'rq-key':'rq-anc'}">„${esc(anchor.text)}“</span>${anchor.occurrence>1?` <small>(${anchor.occurrence}. výskyt)</small>`:''}</div>`:''}${select('Typ komentáře','kind',Object.entries(noteName).filter(([k])=>anchor||k!=='key'),kind||'explanation')}<input type="hidden" name="anchor_text" value="${anchor?esc(anchor.text):''}"><input type="hidden" name="anchor_occurrence" value="${anchor?anchor.occurrence:1}">${select('Jazyk','language',[['cs','Čeština'],['en','English']],lang)}${field('Autor / garant','author','Redakce RegulaQuest')}${field('Obsah komentáře','body','','textarea')}<input type="hidden" name="translated_from" value="">`;
+ dialog((anchor?'Poznámka k výběru · ':'Nový komentář · ')+u.label,html,vals=>safeAct({action:'new_comment',unit_id:u.id,...vals}));
  const f=$('#modalContent');
  f.querySelectorAll('[data-take]').forEach(b=>b.onclick=()=>{const c=db.comments.find(x=>x.id===b.dataset.take);
   f.querySelector('[name=kind]').value=c.kind;f.querySelector('[name=author]').value=c.author||'Redakce RegulaQuest';
@@ -951,6 +955,47 @@ function dialogRelated(unitId){
   }catch(e){toast(e.message,true);save.disabled=false}
  };
  compute();draw();d.showModal();
+}
+
+/* ---- 0.9 Poznámky k vybranému textu ----
+   Kotva = přesné znění výběru + kolikátý výskyt v části. Po novém znění se nenalezené kotvy označí. */
+let rqMissing=new Set();
+function rqUnitComments(u){return db.comments.filter(c=>c.unit_id===u.id&&!['archived','rejected'].includes(c.status))}
+function rqTreeMarks(u){
+ const cs=rqUnitComments(u);
+ const rel=db.relations.some(r=>(r.source_id===u.id||r.target_id===u.id)&&r.status!=='rejected'&&r.status!=='archived');
+ const m=[];
+ if(cs.some(c=>c.kind==='key'))m.push(['key','Klíčová pasáž']);
+ if(cs.some(c=>c.kind==='warning'))m.push(['warning','Na co si dát pozor']);
+ if(cs.some(c=>!['key','warning'].includes(c.kind)))m.push(['comment','Komentář']);
+ if(rel)m.push(['references','Vazba']);
+ return m.length?`<span class="tree-marks">${m.map(([k,t])=>`<span class="m m-${k}" title="${t}">${rqIco(k)}</span>`).join('')}</span>`:'';
+}
+function rqAnchors(box,u){
+ if(!window.RQNotes)return;
+ const roots=[...box.querySelectorAll('[data-anchor-root]')];
+ let missing=rqUnitComments(u).filter(c=>c.anchor_text);
+ roots.forEach(r=>{missing=RQNotes.applyAnchors(r,missing,c=>dialogCommentDetail(c.id))});
+ const before=rqMissing.size;rqMissing=new Set(missing.map(c=>c.id));
+ if(missing.length&&roots.length){const n=document.createElement('div');n.className='notice anchor-missing';n.innerHTML=`<strong>${missing.length}× poznámka bez kotvy.</strong> Vybraný text už v ustanovení není (pravděpodobně nové znění). Najdete je vpravo se štítkem „Kotva nenalezena“.`;roots[0].before(n)}
+ if(before!==rqMissing.size)renderContext();
+ roots.forEach(r=>r.addEventListener('mouseup',()=>setTimeout(()=>rqSelBar(r,u),0)));
+}
+function rqSelBar(root,u){
+ let bar=document.getElementById('rqSelBar');
+ if(!bar){bar=document.createElement('div');bar.id='rqSelBar';bar.className='rq-selbar';document.body.appendChild(bar);
+  document.addEventListener('mousedown',e=>{if(!bar.contains(e.target))bar.style.display='none'});}
+ const a=RQNotes.selectionAnchor(root);
+ if(!a||u.editor_archived){bar.style.display='none';return}
+ const rect=window.getSelection().getRangeAt(0).getBoundingClientRect();
+ bar.innerHTML=`<button type="button" data-k="key">${rqIco('key')} Zvýraznit</button><button type="button" data-k="explanation">${rqIco('comment')} Poznámka</button><button type="button" data-k="warning">${rqIco('warning')} Pozor</button>`;
+ bar.style.display='flex';
+ bar.style.top=(window.scrollY+rect.top-bar.offsetHeight-8)+'px';
+ bar.style.left=Math.max(8,window.scrollX+rect.left+rect.width/2-bar.offsetWidth/2)+'px';
+ bar.querySelectorAll('button').forEach(b=>b.onmousedown=e=>e.preventDefault());
+ bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{bar.style.display='none';const k=b.dataset.k;
+  if(k==='key'){const doc=getDoc(u.document_id);safeAct({action:'new_comment',unit_id:u.id,kind:'key',language:doc?.language||'cs',body:'',author:'Redakce RegulaQuest',anchor_text:a.text,anchor_occurrence:a.occurrence});window.getSelection().removeAllRanges()}
+  else dialogComment(u,a,k)});
 }
 function init(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='review')reviewDocFilter='all';if(b.dataset.page==='relations')relationDocFilter='all';if(b.dataset.page==='comments')commentDocFilter='all';setPage(b.dataset.page)});$('#filter').addEventListener('input',e=>{query=e.target.value;renderList()});$('#newDoc').onclick=$('#homeNewDoc').onclick=dialogDoc;$('#newUnit').onclick=dialogUnit;$('#refsBtn').onclick=()=>dialogReferences(null);$('#relatedBtn').onclick=()=>dialogRelated(null);$('#importBtn').onclick=$('#homeImport').onclick=dialogImport;$('#statDocsCard').onclick=()=>{selected=activeDocId;renderReader();renderContext()};
  $('#statVerifiedCard').onclick=()=>{verifiedDocFilter=activeDocId;setPage('verified')};

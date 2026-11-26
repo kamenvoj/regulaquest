@@ -4,11 +4,12 @@ Studio běží proti lokálnímu PostgreSQL se všemi migracemi a RLS; `supabase
 Funkce `ucty` ani Storage se zde nezkouší.
 
 ```bash
-# databáze rqe2e: 00_lokalni_napodobeni_supabase.sql + migrace 01–03, 05 a 06 + profily vojta (owner) a ondra (admin), id UUID 1 a 2
-cp -r web /tmp/e2e-web && cp tests/web_e2e/supabase-mock.js /tmp/e2e-web/studio/sdilene/supabase.js
-sed -i "s#supabaseUrl:'[^']*'#supabaseUrl:'http://127.0.0.1:8765'#" /tmp/e2e-web/studio/sdilene/config.js
+# databáze rqe2e: 00_lokalni_napodobeni_supabase.sql + všechny migrace 01–10 + profily vojta (owner) a ondra (admin), id UUID 1 a 2
+cp -r web /tmp/e2e-web && for a in studio ctecka; do cp tests/web_e2e/supabase-mock.js /tmp/e2e-web/$a/sdilene/supabase.js
+  sed -i "s#supabaseUrl:'[^']*'#supabaseUrl:'http://127.0.0.1:8765'#" /tmp/e2e-web/$a/sdilene/config.js; done
 python3 tests/web_e2e/server.py "host=/tmp/pg port=5544 user=postgres dbname=rqe2e" /tmp/e2e-web &
 python3 tests/web_e2e/test_ui.py      # heslo v testu: Heslo12345AB
+python3 tests/web_e2e/test_anotace.py # poznámky k výběru, zvýraznění, čtečka (pracovní náhled)
 ```
 
 `test_import.py` naimportuje celé MDR (soubor `podklady/MDR_CS_20260719.html`, v gitu není) a pak upravenou kopii
