@@ -321,6 +321,28 @@ class DatabaseTest(unittest.TestCase):
         pub = self.call('rq_current_publication')
         self.assertEqual(pub['comments'][0]['anchor_text'], 'Software')
 
+    def test_terms_and_layers(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        n = self.call('rq_import_terms', 'mdr-cs-rule-11', [{'number': 1, 'source_label': 'softwarem', 'name': 'software', 'forms': 'software*'},
+                                                           {'number': 2, 'source_label': 'x', 'name': 'x', 'forms': ''}])
+        self.assertEqual(n, 2)
+        self.assertEqual(self.call('rq_import_terms', 'mdr-cs-rule-11', [{'number': 1, 'source_label': 'softwarem', 'name': 'jiné', 'forms': ''}]), 0)
+        tid = self.sql("select id from terms where number=1")[0][0]
+        self.assertEqual(self.sql("select name from terms where id=%s", tid)[0][0], 'software')
+        self.call('rq_edit_term', tid, 'software (SW)', 'software*\nSW')
+        self.assertEqual(self.call('rq_term_status', [tid], 'approved'), 1)
+        d = self.call('rq_new_comment', 'mdr-cs-rule-11', 'duty', 'cs', '', 'R', '', 'Software', 1)
+        self.assertEqual(self.sql("select body from comments where id=%s", d)[0][0], 'Povinnost')
+        self.fails('vybraný text', 'rq_new_comment', 'mdr-cs-rule-11', 'deadline', 'cs', '', 'R', '', '', 1)
+        self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
+        self.call('rq_publish', 'x')
+        self.assertIn('terms', self.call('rq_backup'))
+        self.as_user(STUDENT)
+        pub = self.call('rq_current_publication')
+        self.assertEqual([t['name'] for t in pub['terms']], ['software (SW)'])
+        self.fails('', 'rq_import_terms', 'mdr-cs-rule-11', [])
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)

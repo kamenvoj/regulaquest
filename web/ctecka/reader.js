@@ -7,7 +7,8 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const REL_NAMES = {guidance:'Metodický výklad',references:'Výslovný odkaz',related:'Tematická souvislost',supplements:'Doplňuje',amends:'Mění / nahrazuje'};
-const NOTE_NAMES = {explanation:'Výklad',warning:'Na co si dát pozor',example:'Praktický příklad',definition:'Definice pojmu',reference:'Poznámka ke zdroji',key:'Klíčová pasáž'};
+const NOTE_NAMES = {explanation:'Výklad',warning:'Na co si dát pozor',example:'Praktický příklad',definition:'Definice pojmu',reference:'Poznámka ke zdroji',key:'Klíčová pasáž',duty:'Povinnost',deadline:'Lhůta / číslo',exception:'Výjimka / podmínka'};
+const HL = ['duty','deadline','exception'];
 const ICON = k => (window.RQNotes?.ICON[k]) || '';
 const LANG_NAMES = {cs:'čeština',en:'English'};
 
@@ -15,10 +16,13 @@ const S = {
   data:null, draft:false,
   units:new Map(), docs:new Map(), children:new Map(),
   rels:new Map(), notes:new Map(), order:new Map(),
+  terms:[], off:loadOff(),
   docId:null, unitId:null, query:'', highlight:'', expanded:new Set(), tab:'text'
 };
 
 /* ---------- Data ---------- */
+function loadOff(){ try { const v = JSON.parse(localStorage.getItem('rq-vrstvy-skryte')); if (Array.isArray(v)) return new Set(v); } catch {} return new Set(['duty','deadline','exception']); }
+function saveOff(){ try { localStorage.setItem('rq-vrstvy-skryte', JSON.stringify([...S.off])); } catch {} }
 let RQ = null;
 const wantsDraft = () => new URLSearchParams(location.search).get('nahled') === 'pracovni';
 
@@ -84,6 +88,7 @@ function index(d){
   mirrorRelations(d.relations).forEach(r => {
     [r.source_id, r.target_id].forEach(id => { if (!S.rels.has(id)) S.rels.set(id, []); S.rels.get(id).push(r); });
   });
+  S.terms = d.terms || [];
   d.comments.forEach(c => { if (!S.notes.has(c.unit_id)) S.notes.set(c.unit_id, []); S.notes.get(c.unit_id).push(c); });
 
   // Odkaz na pracovní náhled otevřel student: vysvětlit, proč vidí jen publikovaný obsah.
@@ -313,7 +318,7 @@ function outlineMarks(u){
   const out = [];
   if (ns.some(n => n.kind === 'key')) out.push(['key','Obsahuje klíčovou pasáž']);
   if (ns.some(n => n.kind === 'warning')) out.push(['warning','Na co si dát pozor']);
-  if (ns.some(n => n.kind !== 'key' && n.kind !== 'warning')) out.push(['comment','Má výklad nebo poznámku']);
+  if (ns.some(n => !['key','warning',...HL].includes(n.kind))) out.push(['comment','Má výklad nebo poznámku']);
   if (rs.some(r => isGuidanceLink(u, r))) out.push(['guidance','Má metodický výklad (MDCG)']);
   return out.length ? `<span class="marks">${out.map(([k,t]) => `<span class="m m-${k}" title="${t}">${ICON(k)}</span>`).join('')}</span>` : '';
 }
@@ -364,7 +369,9 @@ function renderUnit(u){
   html += pager(u) + sourceLine(d);
   $('#panelText').innerHTML = html;
   if (q) document.querySelectorAll('#panelText .rich').forEach(el => markDom(el, q));
+  const nTerms = markTerms(d);
   anchorNotes();
+  layerBar(u, nTerms);
   resolveFigures();
   document.title = `${u.label} · ${docShort(d)} · RegulaQuest`;
 }
@@ -376,6 +383,44 @@ function anchorNotes(){
     const id = box.dataset.unit; if (!id) return;
     RQNotes.applyAnchors(box, S.notes.get(id) || [], toggleNote);
   });
+}
+/* Pojmy z definic: první výskyt v každé části, klepnutím definice pod řádkem. */
+function markTerms(d){
+  if (!window.RQNotes || !S.terms.length) return 0;
+  let n = 0;
+  document.querySelectorAll('#panelText .legal').forEach(box => {
+    const id = box.dataset.unit;
+    const ts = S.terms.filter(t => t.language === d.language && t.unit_id !== id);
+    n += RQNotes.applyTerms(box, ts, toggleTerm);
+  });
+  return n;
+}
+function toggleTerm(t, el){
+  const open = document.querySelector(`.rq-pop[data-term="${CSS.escape(t.id)}"]`);
+  document.querySelectorAll('.rq-pop').forEach(p => p.remove());
+  if (open) return;
+  const du = S.units.get(t.unit_id), text = du ? RQNotes.definitionText(bodyOf(du), t.number) : '';
+  const pop = document.createElement('span');
+  pop.className = 'rq-pop term'; pop.dataset.term = t.id; pop.dataset.noAnchor = '1';
+  pop.innerHTML = `<span class="rq-pop-h">${ICON('term')} Definice · ${du ? `<a href="#/u/${encodeURIComponent(du.id)}">${esc(du.label)}, bod ${t.number}</a>` : ''}</span>${esc(text || t.name).replace(/\n/g,'<br>')}`;
+  (el.closest('p, .ln, li, td, .legal') || el.parentElement).after(pop);
+}
+/* Vrstvy nad textem: jen ty, které v části opravdu jsou; klepnutím zapnout / vypnout. */
+function layerBar(u, nTerms){
+  const ids = [...document.querySelectorAll('#panelText .legal')].map(b => b.dataset.unit);
+  const cnt = k => ids.reduce((s, id) => s + (S.notes.get(id) || []).filter(c => c.kind === k && c.anchor_text).length, 0);
+  const items = [...RQNotes.LAYERS.map(k => [k, cnt(k)]), ['term', nTerms]].filter(x => x[1]);
+  const panel = $('#panelText');
+  ['key',...HL,'term'].forEach(k => panel.classList.toggle('off-' + k, S.off.has(k)));
+  if (!items.length) return;
+  const bar = document.createElement('div'); bar.className = 'layer-bar'; bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zvýraznění v textu');
+  bar.innerHTML = '<span class="lb-label">Zobrazit:</span>' + items.map(([k, n]) =>
+    `<button type="button" class="lb lb-${k}" data-layer="${k}" aria-pressed="${!S.off.has(k)}"><span class="sw"></span>${esc(RQNotes.LAYER_NAMES[k])} <small>${n}</small></button>`).join('');
+  bar.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const k = b.dataset.layer; S.off.has(k) ? S.off.delete(k) : S.off.add(k); saveOff();
+    b.setAttribute('aria-pressed', String(!S.off.has(k))); panel.classList.toggle('off-' + k, S.off.has(k));
+  });
+  const first = panel.querySelector('.legal'); first.before(bar);
 }
 function toggleNote(c, mk){
   const open = document.querySelector(`.rq-pop[data-cid="${CSS.escape(c.id)}"]`);
@@ -426,7 +471,7 @@ function fmtDate(s){ const d = new Date(s); return isNaN(d) ? '' : d.toLocaleDat
 function renderContext(){
   const box = $('#panelContext'); const u = S.units.get(S.unitId);
   if (!u){ box.innerHTML = `<div class="ctx-title">Souvislosti</div><div class="ctx-empty">Po výběru ustanovení se zde zobrazí odborný výklad, související články a metodiky.</div>${disclaimer()}`; $('#tabCount').textContent=''; return; }
-  const notes = S.notes.get(u.id) || [], rels = S.rels.get(u.id) || [];
+  const notes = (S.notes.get(u.id) || []).filter(n => !HL.includes(n.kind)), rels = S.rels.get(u.id) || [];
   const byKind = (a,b) => (RQNotes.ORDER[a.kind]??5) - (RQNotes.ORDER[b.kind]??5);
   const warnings = notes.filter(n => n.kind === 'warning'), keys = notes.filter(n => n.kind === 'key');
   const explain = notes.filter(n => !['example','warning','key'].includes(n.kind)).sort(byKind), examples = notes.filter(n => n.kind === 'example');
@@ -437,7 +482,7 @@ function renderContext(){
   const legalBasis = rels.filter(r => here === 'guidance' && typeOf(other(r)?.id) !== 'guidance');
   const related = rels.filter(r => !guidance.includes(r) && !legalBasis.includes(r));
   const childInfo = descendantsWithText(u.id).concat(kids(u.id).filter(hasText)).filter((x,i,a)=>a.indexOf(x)===i)
-    .map(c => ({c, n:(S.notes.get(c.id)||[]).length, r:(S.rels.get(c.id)||[]).length})).filter(x => x.n || x.r);
+    .map(c => ({c, n:(S.notes.get(c.id)||[]).filter(n => !HL.includes(n.kind)).length, r:(S.rels.get(c.id)||[]).length})).filter(x => x.n || x.r);
   const section = (title, items, fn) => items.length ? `<div class="ctx-section"><h3>${title} <span class="count">${items.length}</span></h3>${items.map(fn).join('')}</div>` : '';
   const quote = n => n.anchor_text ? `<button type="button" class="anchor-q" data-cid="${esc(n.id)}" title="Ukázat v textu">„${esc(trim(n.anchor_text, 90))}“</button>` : '';
   const noteCard = n => `<div class="ctx-card ${n.kind==='warning'?'warning':''}"><div class="meta"><span class="k">${ICON(n.kind)} ${esc(NOTE_NAMES[n.kind]||n.kind)}${n.language!==S.docs.get(u.document_id)?.language?' · '+esc(n.language.toUpperCase()):''}</span>${S.draft&&n.status!=='approved'?'<span class="chip warn">Koncept</span>':''}</div>${quote(n)}${n.kind==='key'?'':`<div class="body">${plain(n.body)}</div>`}</div>`;

@@ -1,5 +1,14 @@
 # Změny
 
+## 0.10.0 – 2026-11-26 · Pojmy z definic a vrstvy zvýraznění
+- Vrstvy zvýraznění: **Klíčové** (žlutá), **Povinnost** (zelená), **Lhůta / číslo** (fialová), **Výjimka / podmínka** (růžová). Ve Studiu z lišty po výběru textu.
+- Čtečka: nad textem přepínače vrstev, které v části jsou (s počtem). Výchozí: klíčové a pojmy zapnuté, ostatní vypnuté; volba se pamatuje v prohlížeči.
+- Pojmy z definic: u definičního článku (např. čl. 2) tlačítko „Pojmy z definic“ – načte body jako koncept s návrhem vzorů pro české tvary
+  (např. `zdravotnick* prostred*`), ukáže počet výskytů, umožní upravit vzory a hromadně schválit / vyřadit.
+- Ve čtečce je první výskyt pojmu v části plně podtržený; po klepnutí se ukáže definice z aktuálního znění článku.
+- Zvýraznění se nepočítají mezi výklady v panelu Souvislosti.
+- Migrace 11_pojmy.sql (tabulka terms, nové druhy zvýraznění, záloha včetně pojmů).
+
 ## 0.9.0 – 2026-11-26 · Poznámky k vybranému textu
 - Studio: po označení textu myší se nabídne lišta **Zvýraznit · Poznámka · Pozor**. Kotva = přesné znění výběru + pořadí výskytu v části.
 - Nový druh komentáře „Klíčová pasáž“ (zvýraznění), prochází stejným schvalováním jako ostatní komentáře.
