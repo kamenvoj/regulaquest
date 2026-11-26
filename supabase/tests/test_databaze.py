@@ -237,7 +237,7 @@ class DatabaseTest(unittest.TestCase):
             self.call('rq_verify_unit', uid, None)
         rel = self.call('rq_new_relation', 'mdr-cs-rule-11', 'mdr-cs-rule-12', 'related', 'souvisí', '', 'manual')
         self.call('rq_relation_status', rel, 'approved')
-        new = [{'id': 'mdr-cs-annex-viii', 'parent_id': None, 'kind': 'annex', 'label': 'Příloha VIII', 'body': 'Celá  příloha',
+        new = [{'id': 'mdr-cs-annex-viii', 'parent_id': None, 'kind': 'annex', 'label': 'Příloha VIII', 'body': 'Celá příloha  ',
                 'source_note': 'nové znění; automatický import', 'sort_order': 1},
                {'id': 'mdr-cs-rule-11', 'parent_id': 'mdr-cs-annex-viii', 'kind': 'rule', 'label': 'Pravidlo 11', 'body': 'Software (změněno)',
                 'source_note': 'nové znění; automatický import', 'sort_order': 2},

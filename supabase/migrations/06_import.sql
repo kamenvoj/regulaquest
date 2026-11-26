@@ -8,7 +8,9 @@
 
 create or replace function rq_private.same_text(a text, b text) returns boolean
 language sql immutable as $$
-  select regexp_replace(btrim(coalesce(a, '')), '\s+', ' ', 'g') = regexp_replace(btrim(coalesce(b, '')), '\s+', ' ', 'g')
+  -- shoda včetně odsazení a zalomení; ignorují se jen mezery na konci řádků a na okrajích
+  select btrim(regexp_replace(replace(coalesce(a, ''), E'\r', ''), '[ \t]+(\n|$)', '\1', 'g'), E' \t\n')
+       = btrim(regexp_replace(replace(coalesce(b, ''), E'\r', ''), '[ \t]+(\n|$)', '\1', 'g'), E' \t\n')
 $$;
 
 create or replace function public.rq_import_units(p_document_id text, p_units jsonb, p_meta jsonb,

@@ -266,7 +266,8 @@
   }
 
   // Porovnání s tím, co už je v databázi (aktualizace na nové znění).
-  const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
+  // Porovnává se i odsazení a zalomení (formát textu), jen bez koncových mezer na řádcích.
+  const norm = s => String(s || '').replace(/\r/g, '').replace(/[ \t]+$/gm, '').trim();
   function compare(units, existing) {
     const byId = new Map(existing.map(u => [u.id, u])), incoming = new Set(units.map(u => u.id));
     const out = { added: [], changed: [], same: [], removed: [] };
