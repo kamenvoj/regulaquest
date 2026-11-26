@@ -1,5 +1,13 @@
 # Změny
 
+## 0.13.0 – 2026-11-26 · Přepínače vrstev ve Studiu, více položek na jednom místě
+- Studio má nad textem stejnou řadu přepínačů jako čtečka: Klíčové, Povinnosti, Lhůty, Výjimky, Poznámky, Pozor, Odkazy, Pojmy
+  (jen ty, které v části jsou, s počtem). Volba se pamatuje v prohlížeči; ve Studiu je výchozí vše zapnuté.
+- Čtečka nově přepíná i Poznámky, Pozor a Odkazy.
+- Když na stejném místě končí víc položek (např. výklad + pozor + odkaz), je v textu jedna společná značka s ikonami a počtem.
+  Po klepnutí se ukážou všechny v pevném pořadí: pozor → definice → výklad → příklad → odkazy (ve Studiu přehled s tlačítky na detail).
+- Spolehlivější hledání kotev v textu, který už obsahuje jiné značky.
+
 ## 0.12.0 – 2026-11-26 · Pojmy CS ↔ EN, úpravy pojmů, přichycená lišta
 - Pojmy se s jinou jazykovou verzí párují samy podle čísla bodu definice; v seznamu i v definici se ukazuje protějšek („EN: medical device“).
 - V okně Pojmy z definic tlačítko „Přepnout na EN/CS“ a „Smazat vybrané“ (koncepty a vyřazené; migrace 13_pojmy_mazani.sql).

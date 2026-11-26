@@ -48,3 +48,15 @@ mark .rq-hl{background:transparent;box-shadow:none}
 .rq-pop .why{display:block;font-size:12.5px;color:#4f646a;margin:0 0 6px}
 .rq-pop .tw{margin-left:auto;font-weight:600;color:#3f6f73}
 .rq-pop .rq-pop-h .tm-edit{margin-left:auto}
+.rq-mk.multi{gap:1px;background:#eef6f5;border-radius:8px;padding:0 4px 0 3px}
+.rq-mk.multi.warn{background:#fbf1e2}
+.rq-mk.multi b{font:700 10px/1 Inter,-apple-system,sans-serif;margin-left:2px}
+.rq-mk.multi .rq-ico{width:11px;height:11px}
+.layer-bar .lb .sw .rq-ico{width:12px;height:12px;color:#1d7d83}
+.layer-bar .lb-warning .sw .rq-ico{color:#b5761c}
+.lb-note .sw,.lb-warning .sw,.lb-link .sw{width:auto;height:auto;background:none}
+.rq-pop .grp{display:block;padding:6px 0;border-top:1px solid #dfe9e8}
+.rq-pop .grp:first-of-type{border-top:0;padding-top:0}
+.layer-bar .lb .sw{display:inline-flex;align-items:center;justify-content:center}
+.layer-bar .lb .sw .rq-ico{vertical-align:0;display:block}
+.rq-mk .rq-ico{vertical-align:0}

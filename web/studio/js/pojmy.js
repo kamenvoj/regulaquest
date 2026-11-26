@@ -17,7 +17,7 @@ window.RQTerms = (function () {
   function mark(root, u) {
     const doc = getDoc(u.document_id); if (!doc) return;
     const ts = live().filter(t => t.language === doc.language && t.unit_id !== u.id);
-    if (ts.length) RQNotes.applyTerms(root, ts, pop);
+    return ts.length ? RQNotes.applyTerms(root, ts, pop) : 0;
   }
   function pop(t, el) {
     const open = document.querySelector(`.rq-pop[data-term="${CSS.escape(t.id)}"]`);

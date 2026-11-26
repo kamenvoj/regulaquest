@@ -24,27 +24,29 @@
   };
   // Zvýraznění (vrstvy) – bez vlastního textu, jen označují pasáž.
   const LAYERS = ['key', 'duty', 'deadline', 'exception'];
-  const LAYER_NAMES = { key: 'Klíčové', duty: 'Povinnosti', deadline: 'Lhůty a čísla', exception: 'Výjimky a podmínky', term: 'Pojmy' };
+  const LAYER_NAMES = { key: 'Klíčové', duty: 'Povinnosti', deadline: 'Lhůty a čísla', exception: 'Výjimky a podmínky', term: 'Pojmy', note: 'Poznámky', warning: 'Pozor', link: 'Odkazy' };
+  const CSS_LAYERS = ['key', 'duty', 'deadline', 'exception', 'term'];
   // Pořadí v panelu Souvislosti: nejdřív upozornění, pak výklad, odkazy a příklady.
   const ORDER = { warning: 0, key: 1, duty: 1, deadline: 1, exception: 1, definition: 2, explanation: 3, guidance: 4, references: 5, supplements: 6, related: 7, amends: 8, example: 9, reference: 10 };
 
   // Text kontejneru se sloučenými mezerami + mapa na textové uzly (pro nalezení kotvy).
+  // Hranice bloků (odstavce, řádky, buňky) se počítají jako mezera – nezávisle na tom, zda je text už obalený značkou.
+  const BLOCK = 'p, div, li, td, th, span.ln, figcaption';
   function textMap(root) {
     const nodes = [], walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: n => n.parentElement.closest('[data-no-anchor], .rq-mk, script, style') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
     let s = '', map = [], prevSpace = true, n;
-    while ((n = walker.nextNode())) {
-      nodes.push(n);
+    while ((n = walker.nextNode())) nodes.push(n);
+    const blocks = nodes.map(x => x.parentElement.closest(BLOCK));
+    nodes.forEach((n, j) => {
       const t = n.nodeValue;
       for (let i = 0; i < t.length; i++) {
         const sp = /\s/.test(t[i]);
         if (sp && prevSpace) continue;
         s += sp ? ' ' : t[i]; map.push([n, i]); prevSpace = sp;
       }
-      // hranice bloků (odstavce, řádky) chápat jako mezeru
-      const blk = n.parentElement.closest('p, div, li, td, th, br, span.ln');
-      if (blk && n === blk.lastChild && !prevSpace) { s += ' '; map.push([n, t.length]); prevSpace = true; }
-    }
+      if (j < nodes.length - 1 && blocks[j + 1] !== blocks[j] && !prevSpace) { s += ' '; map.push([n, t.length]); prevSpace = true; }
+    });
     return { s, map };
   }
   const normSel = s => String(s || '').replace(/\s+/g, ' ').trim();
@@ -62,29 +64,61 @@
   }
 
   // Ukotví komentáře (anchor_text, anchor_occurrence) do textu v root. Vrací komentáře, jejichž kotva nebyla nalezena.
+  // Druh → vrstva pro přepínače (poznámky, pozor a vazby mají ikonku; zvýraznění jen barvu).
+  const layerOf = k => LAYERS.includes(k) ? k : k === 'warning' ? 'warning' : k === 'link' ? 'link' : 'note';
+  const ANCHOR_ORDER = { warning: 0, definition: 1, explanation: 2, example: 3, reference: 4, link: 5 };
+
+  /* Ukotví položky (anchor_text, anchor_occurrence) do textu v root.
+     Položky končící na stejném místě sdílejí jednu značku (např. pozor + výklad + odkaz):
+     onOpen dostane buď položku, nebo { kind: 'group', items } seřazené pozor → definice → výklad → příklad → odkazy.
+     Vrací položky, jejichž text nebyl nalezen. */
   function applyAnchors(root, comments, onOpen) {
-    const missing = [];
-    const list = comments.filter(c => c.anchor_text).sort((x, y) => (LAYERS.includes(x.kind) ? 0 : 1) - (LAYERS.includes(y.kind) ? 0 : 1));
-    for (const c of list) {
-      const tm = textMap(root), q = normSel(c.anchor_text);
-      let at = -1, from = 0;
-      for (let k = 0; k < (c.anchor_occurrence || 1); k++) { at = tm.s.indexOf(q, from); if (at < 0) break; from = at + 1; }
-      if (at < 0) { missing.push(c); continue; }
-      const spans = wrap(tm, at, at + q.length, () => {
+    const missing = [], placed = [], tm0 = textMap(root);
+    for (const c of comments.filter(c => c.anchor_text)) {
+      const q = normSel(c.anchor_text); let at = -1, from = 0;
+      for (let k = 0; k < (c.anchor_occurrence || 1); k++) { at = tm0.s.indexOf(q, from); if (at < 0) break; from = at + 1; }
+      if (at < 0) missing.push(c); else placed.push({ c, a: at, b: at + q.length });
+    }
+    // delší úseky první, kratší se vnoří dovnitř
+    placed.sort((x, y) => (y.b - y.a) - (x.b - x.a) || x.a - y.a);
+    for (const p of placed) {
+      const c = p.c;
+      p.spans = wrap(textMap(root), p.a, p.b, () => {
         const el = document.createElement('span');
         el.className = LAYERS.includes(c.kind) ? 'rq-hl hl-' + c.kind + (c.kind === 'key' ? ' rq-key' : '') : 'rq-anc' + (c.kind === 'warning' ? ' warn' : c.kind === 'link' ? ' link' : '');
         el.dataset.cid = c.id; if (c.status && c.status !== 'approved') el.classList.add('draft');
         return el;
       });
-      if (!LAYERS.includes(c.kind) && spans.length) {
-        const mk = document.createElement('button');
-        mk.type = 'button'; mk.className = 'rq-mk' + (c.kind === 'warning' ? ' warn' : ''); mk.dataset.cid = c.id;
-        mk.setAttribute('aria-label', c.kind === 'link' ? 'Zobrazit propojení' : 'Zobrazit poznámku'); if (c.kind === 'link') mk.classList.add('link'); mk.innerHTML = ICON[c.kind] || ICON.comment;
-        spans[spans.length - 1].after(mk);
-        [...spans, mk].forEach(e => e.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); onOpen && onOpen(c, mk); }));
-      }
+    }
+    const groups = new Map();
+    placed.filter(p => !LAYERS.includes(p.c.kind) && p.spans.length).forEach(p => { if (!groups.has(p.b)) groups.set(p.b, []); groups.get(p.b).push(p); });
+    for (const g of groups.values()) {
+      const items = g.map(p => p.c).sort((x, y) => (ANCHOR_ORDER[x.kind] ?? 3) - (ANCHOR_ORDER[y.kind] ?? 3));
+      const one = items.length === 1, c = items[0], warn = items.some(x => x.kind === 'warning');
+      const mk = document.createElement('button');
+      mk.type = 'button'; mk.className = 'rq-mk' + (warn ? ' warn' : '') + (one && c.kind === 'link' ? ' link' : '') + (one ? '' : ' multi');
+      mk.dataset.cid = one ? c.id : 'G' + c.id;
+      const kinds = [...new Set(items.map(x => x.kind))];
+      mk.setAttribute('aria-label', one ? (c.kind === 'link' ? 'Zobrazit propojení' : 'Zobrazit poznámku') : `Zobrazit ${items.length} položky na tomto místě`);
+      mk.innerHTML = one ? (ICON[c.kind] || ICON.comment) : kinds.slice(0, 3).map(k => ICON[k] || ICON.comment).join('') + `<b>${items.length}</b>`;
+      g[0].spans[g[0].spans.length - 1].after(mk);
+      const target = one ? c : { kind: 'group', id: 'G' + c.id, items };
+      [...g.flatMap(p => p.spans), mk].forEach(e => e.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); onOpen && onOpen(target, mk); }));
     }
     return missing;
+  }
+
+  /* Řada přepínačů vrstev. items = [[vrstva, počet]], off = Set skrytých; onToggle(vrstva) po změně. */
+  function layerBar(items, off, onToggle) {
+    const bar = document.createElement('div'); bar.className = 'layer-bar'; bar.dataset.noAnchor = '1';
+    bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zobrazení v textu');
+    bar.innerHTML = '<span class="lb-label">Zobrazit:</span>' + items.map(([k, n]) =>
+      `<button type="button" class="lb lb-${k}" data-layer="${k}" aria-pressed="${!off.has(k)}"><span class="sw">${['note', 'warning', 'link'].includes(k) ? ICON[k === 'note' ? 'explanation' : k] : ''}</span>${LAYER_NAMES[k]} <small>${n}</small></button>`).join('');
+    bar.querySelectorAll('button').forEach(b => b.onclick = () => {
+      const k = b.dataset.layer; off.has(k) ? off.delete(k) : off.add(k);
+      b.setAttribute('aria-pressed', String(!off.has(k))); onToggle(k);
+    });
+    return bar;
   }
 
   // Výběr myší uvnitř root → { text, occurrence } pro uložení kotvy.
@@ -190,6 +224,6 @@
       g.get(k).rels.push(r); });
     return [...g.values()];
   }
-  window.RQNotes = { linkGroups, ICON, ORDER, LAYERS, LAYER_NAMES, applyAnchors, selectionAnchor,
+  window.RQNotes = { linkGroups, layerOf, layerBar, CSS_LAYERS, ANCHOR_ORDER, ICON, ORDER, LAYERS, LAYER_NAMES, applyAnchors, selectionAnchor,
     suggestForms, parseDefinitions, definitionText, applyTerms, countTerm, tokens, fold };
 })();

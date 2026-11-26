@@ -377,12 +377,15 @@ function renderUnit(u){
 }
 
 /* Poznámky ukotvené k textu: podtržení + ikonka; klepnutím se poznámka rozbalí přímo pod řádkem. */
+function anchorItems(id){
+  const links = RQNotes.linkGroups((S.rels.get(id) || []).filter(r => r.source_id === id && !r.mirrored));
+  return (S.notes.get(id) || []).filter(c => c.anchor_text).concat(links);
+}
 function anchorNotes(){
   if (!window.RQNotes) return;
   document.querySelectorAll('#panelText .legal').forEach(box => {
     const id = box.dataset.unit; if (!id) return;
-    const links = RQNotes.linkGroups((S.rels.get(id) || []).filter(r => r.source_id === id && !r.mirrored));
-    RQNotes.applyAnchors(box, (S.notes.get(id) || []).concat(links), toggleNote);
+    RQNotes.applyAnchors(box, anchorItems(id).filter(c => !S.off.has(RQNotes.layerOf(c.kind))), toggleNote);
   });
 }
 /* Pojmy z definic: první výskyt v každé části, klepnutím definice pod řádkem. */
@@ -411,29 +414,31 @@ function toggleTerm(t, el){
 /* Vrstvy nad textem: jen ty, které v části opravdu jsou; klepnutím zapnout / vypnout. */
 function layerBar(u, nTerms){
   const ids = [...document.querySelectorAll('#panelText .legal')].map(b => b.dataset.unit);
-  const cnt = k => ids.reduce((s, id) => s + (S.notes.get(id) || []).filter(c => c.kind === k && c.anchor_text).length, 0);
-  const items = [...RQNotes.LAYERS.map(k => [k, cnt(k)]), ['term', nTerms]].filter(x => x[1]);
+  const all = ids.flatMap(anchorItems), cnt = k => all.filter(c => RQNotes.layerOf(c.kind) === k).length;
+  const items = [...RQNotes.LAYERS, 'note', 'warning', 'link'].map(k => [k, cnt(k)]).concat([['term', nTerms]]).filter(x => x[1]);
   const panel = $('#panelText');
-  ['key',...HL,'term'].forEach(k => panel.classList.toggle('off-' + k, S.off.has(k)));
+  RQNotes.CSS_LAYERS.forEach(k => panel.classList.toggle('off-' + k, S.off.has(k)));
   if (!items.length) return;
-  const bar = document.createElement('div'); bar.className = 'layer-bar'; bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zvýraznění v textu');
-  bar.innerHTML = '<span class="lb-label">Zobrazit:</span>' + items.map(([k, n]) =>
-    `<button type="button" class="lb lb-${k}" data-layer="${k}" aria-pressed="${!S.off.has(k)}"><span class="sw"></span>${esc(RQNotes.LAYER_NAMES[k])} <small>${n}</small></button>`).join('');
-  bar.querySelectorAll('button').forEach(b => b.onclick = () => {
-    const k = b.dataset.layer; S.off.has(k) ? S.off.delete(k) : S.off.add(k); saveOff();
-    b.setAttribute('aria-pressed', String(!S.off.has(k))); panel.classList.toggle('off-' + k, S.off.has(k));
+  const bar = RQNotes.layerBar(items, S.off, k => {
+    saveOff();
+    if (RQNotes.CSS_LAYERS.includes(k)) { panel.classList.toggle('off-' + k, S.off.has(k)); return; }
+    const y = window.scrollY, py = panel.scrollTop; renderUnit(u); window.scrollTo(0, y); panel.scrollTop = py;
   });
-  const first = panel.querySelector('.legal'); first.before(bar);
+  panel.querySelector('.legal').before(bar);
+}
+function noteHtml(c){
+  if (c.kind === 'link') return `<span class="rq-pop-h">${ICON('link')} Propojeno</span>` + c.rels.map(r => { const o = S.units.get(r.target_id); if (!o) return ''; const d = S.docs.get(o.document_id);
+      return `<a class="lk" href="#/u/${encodeURIComponent(o.id)}"><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),60)):''}</strong><small>${esc(REL_NAMES[r.relation_type]||'')} · ${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${r.rationale?`<span class="why">${esc(r.rationale)}</span>`:''}`; }).join('');
+  return `<span class="rq-pop-h">${ICON(c.kind)} ${esc(NOTE_NAMES[c.kind]||c.kind)}${S.draft&&c.status!=='approved'?' · koncept':''}</span>${esc(c.body).replace(/\n/g,'<br>')}`;
 }
 function toggleNote(c, mk){
   const open = document.querySelector(`.rq-pop[data-cid="${CSS.escape(c.id)}"]`);
   document.querySelectorAll('.rq-pop').forEach(p => p.remove());
   if (open) return;
   const pop = document.createElement('span');
-  pop.className = 'rq-pop' + (c.kind === 'warning' ? ' warn' : ''); pop.dataset.cid = c.id; pop.dataset.noAnchor = '1';
-  if (c.kind === 'link') pop.innerHTML = `<span class="rq-pop-h">${ICON('link')} Propojeno</span>` + c.rels.map(r => { const o = S.units.get(r.target_id); if (!o) return ''; const d = S.docs.get(o.document_id);
-      return `<a class="lk" href="#/u/${encodeURIComponent(o.id)}"><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),60)):''}</strong><small>${esc(REL_NAMES[r.relation_type]||'')} · ${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${r.rationale?`<span class="why">${esc(r.rationale)}</span>`:''}`; }).join('');
-  else pop.innerHTML = `<span class="rq-pop-h">${ICON(c.kind)} ${esc(NOTE_NAMES[c.kind]||c.kind)}${S.draft&&c.status!=='approved'?' · koncept':''}</span>${esc(c.body).replace(/\n/g,'<br>')}`;
+  const items = c.kind === 'group' ? c.items : [c];
+  pop.className = 'rq-pop' + (items.some(x => x.kind === 'warning') ? ' warn' : ''); pop.dataset.cid = c.id; pop.dataset.noAnchor = '1';
+  pop.innerHTML = items.length > 1 ? items.map(x => `<span class="grp">${noteHtml(x)}</span>`).join('') : noteHtml(c);
   const block = mk.closest('p, .ln, li, td, .legal') || mk.parentElement;
   block.after(pop);
 }

@@ -973,7 +973,22 @@ function dialogRelated(unitId){
    Kotva = přesné znění výběru + kolikátý výskyt v části. Po novém znění se nenalezené kotvy označí. */
 let rqMissing=new Set();
 function rqUnitComments(u){return db.comments.filter(c=>c.unit_id===u.id&&!['archived','rejected'].includes(c.status))}
-function rqLinkAnchors(u){
+let rqOff=(()=>{try{const v=JSON.parse(localStorage.getItem('rq-studio-vrstvy-skryte'));if(Array.isArray(v))return new Set(v)}catch{}return new Set()})();
+function rqOpenAnchor(c){
+ if(c.kind==='link')return rqLinkOpen(c);
+ if(c.kind!=='group')return dialogCommentDetail(c.id);
+ const d=$('#modal'),f=$('#modalContent');f.onsubmit=e=>e.preventDefault();
+ f.innerHTML=`<h2>Na tomto místě: ${c.items.length} položky</h2>${c.items.map((x,i)=>x.kind==='link'
+  ?x.rels.map(r=>`<div class="boxnote"><div class="meta"><strong class="kind">${rqIco('link')} ${esc(relName[r.relation_type]||r.relation_type)}</strong>${tag(r.status)}</div><p>${esc(fullname(r.target_id))}</p><div class="actionrow"><button class="btn tiny" data-rd="${esc(r.id)}">Detail vazby</button></div></div>`).join('')
+  :`<div class="boxnote${x.kind==='warning'?' warnnote':''}"><div class="meta"><strong class="kind">${rqIco(x.kind)} ${esc(noteName[x.kind]||x.kind)}</strong>${tag(x.status)}</div><p>${esc(x.body)}</p><div class="actionrow"><button class="btn tiny" data-cd="${esc(x.id)}">Detail / upravit</button></div></div>`).join('')}
+  <div class="modal-actions"><button class="btn" type="button" id="grClose">Zavřít</button></div>`;
+ f.querySelector('#grClose').onclick=()=>d.close();
+ f.querySelectorAll('[data-rd]').forEach(b=>b.onclick=()=>{d.close();dialogRelationDetail(b.dataset.rd)});
+ f.querySelectorAll('[data-cd]').forEach(b=>b.onclick=()=>{d.close();dialogCommentDetail(b.dataset.cd)});
+ d.showModal();
+}
+function rqLinkAnchors(u){return RQNotes.linkGroups(db.relations.filter(r=>r.source_id===u.id&&!['rejected','archived'].includes(r.status)))}
+function rqLinkAnchorsOld(u){
  const g=new Map();
  db.relations.filter(r=>r.source_id===u.id&&r.anchor_text&&!['rejected','archived'].includes(r.status)).forEach(r=>{
   const k=r.anchor_occurrence+'|'+r.anchor_text;if(!g.has(k))g.set(k,{id:'L'+r.id,kind:'link',anchor_text:r.anchor_text,anchor_occurrence:r.anchor_occurrence,status:r.status,rels:[]});g.get(k).rels.push(r)});
@@ -997,10 +1012,18 @@ function rqTreeMarks(u){
 function rqAnchors(box,u){
  if(!window.RQNotes)return;
  const roots=[...box.querySelectorAll('[data-anchor-root]')];
- let missing=rqUnitComments(u).filter(c=>c.anchor_text).concat(rqLinkAnchors(u));
- if(window.RQTerms)roots.forEach(r=>RQTerms.mark(r,u));
- roots.forEach(r=>{missing=RQNotes.applyAnchors(r,missing,c=>c.kind==='link'?rqLinkOpen(c):dialogCommentDetail(c.id))});
- const before=rqMissing.size;rqMissing=new Set(missing.flatMap(c=>c.rels?c.rels.map(r=>r.id):[c.id]));
+ const all=rqUnitComments(u).filter(c=>c.anchor_text).concat(rqLinkAnchors(u));
+ const shown=all.filter(c=>!rqOff.has(RQNotes.layerOf(c.kind))),ids=c=>c.rels?c.rels.map(r=>r.id):[c.id];
+ let missing=shown,nTerms=0;
+ if(window.RQTerms)roots.forEach(r=>nTerms+=RQTerms.mark(r,u));
+ roots.forEach(r=>{missing=RQNotes.applyAnchors(r,missing,rqOpenAnchor)});
+ const before=rqMissing.size,hiddenIds=new Set(all.filter(c=>!shown.includes(c)).flatMap(ids));
+ rqMissing=new Set([...[...rqMissing].filter(id=>hiddenIds.has(id)),...missing.flatMap(ids)]);
+ RQNotes.CSS_LAYERS.forEach(k=>box.classList.toggle('off-'+k,rqOff.has(k)));
+ const cnt=k=>all.filter(c=>RQNotes.layerOf(c.kind)===k).length;
+ const items=[...RQNotes.LAYERS,'note','warning','link'].map(k=>[k,cnt(k)]).concat([['term',nTerms]]).filter(x=>x[1]);
+ if(items.length&&roots.length)roots[0].before(RQNotes.layerBar(items,rqOff,k=>{try{localStorage.setItem('rq-studio-vrstvy-skryte',JSON.stringify([...rqOff]))}catch{}
+  if(RQNotes.CSS_LAYERS.includes(k))box.classList.toggle('off-'+k,rqOff.has(k));else{const y=box.scrollTop;renderReader();box.scrollTop=y}}));
  if(missing.length&&roots.length){const n=document.createElement('div');n.className='notice anchor-missing';n.innerHTML=`<strong>${missing.length}× poznámka nebo vazba bez kotvy.</strong> Vybraný text už v ustanovení není (pravděpodobně nové znění). Najdete je vpravo se štítkem „Kotva nenalezena“.`;roots[0].before(n)}
  if(before!==rqMissing.size)renderContext();
  roots.forEach(r=>r.addEventListener('mouseup',()=>setTimeout(()=>rqSelBar(r,u),0)));
