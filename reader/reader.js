@@ -1,0 +1,343 @@
+'use strict';
+/* RegulaQuest – studentská čtečka.
+   Čte pouze exportovaný JSON (regulaquest-education-v1). Nic neukládá a nic neposílá.
+   Zdroj dat: data/regulaquest-student-data.json, nebo ?data=/cesta na stejném webu
+   (Studio tak zobrazuje publikovaná data i pracovní náhled). */
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const REL_NAMES = {guidance:'Metodický výklad',references:'Výslovný odkaz',related:'Tematická souvislost',supplements:'Doplňuje',amends:'Mění / nahrazuje'};
+const NOTE_NAMES = {explanation:'Výklad',warning:'Na co si dát pozor',example:'Praktický příklad',definition:'Definice pojmu',reference:'Poznámka ke zdroji'};
+const LANG_NAMES = {cs:'čeština',en:'English'};
+
+const S = {
+  data:null, draft:false,
+  units:new Map(), docs:new Map(), children:new Map(),
+  rels:new Map(), notes:new Map(), order:new Map(),
+  docId:null, unitId:null, query:'', highlight:'', expanded:new Set(), tab:'text'
+};
+
+/* ---------- Data ---------- */
+function dataUrl(){
+  const p = new URLSearchParams(location.search).get('data');
+  // Jen cesty na stejném webu – čtečku nelze podvrhnout cizím obsahem.
+  if (p && p.startsWith('/') && !p.startsWith('//')) return p;
+  return 'data/regulaquest-student-data.json';
+}
+
+async function load(){
+  try{
+    const r = await fetch(dataUrl(), {cache:'no-store'});
+    if (!r.ok) throw new Error('Data se nepodařilo načíst (HTTP ' + r.status + ').');
+    const d = await r.json();
+    if (!String(d.format||'').startsWith('regulaquest-education')) throw new Error('Neznámý formát dat.');
+    index(d);
+  }catch(e){
+    $('#layout').innerHTML = `<div class="error"><h1>Čtečku nelze otevřít</h1><p>${esc(e.message)}</p><p>Pokud čtečku otevíráte jako soubor z disku, spusťte ji přes Studio nebo z webu (GitHub Pages).</p></div>`;
+    return;
+  }
+  route();
+  window.addEventListener('hashchange', route);
+}
+
+function index(d){
+  S.data = d; S.draft = d.mode === 'draft';
+  d.documents.forEach(x => S.docs.set(x.id, x));
+  d.units.forEach(u => S.units.set(u.id, u));
+  const byOrder = (a,b) => (a.sort_order??0)-(b.sort_order??0) || a.label.localeCompare(b.label,'cs',{numeric:true});
+  d.units.forEach(u => {
+    const k = u.parent_id && S.units.has(u.parent_id) ? u.parent_id : 'doc:' + u.document_id;
+    if (!S.children.has(k)) S.children.set(k, []);
+    S.children.get(k).push(u);
+  });
+  S.children.forEach(list => list.sort(byOrder));
+  // Pořadí čtení v rámci dokumentu (do hloubky) pro tlačítka Předchozí / Další.
+  d.documents.forEach(doc => {
+    const seq = []; const walk = list => list.forEach(u => { if (!u.navigation_only) seq.push(u.id); walk(kids(u.id)); });
+    walk(kids('doc:' + doc.id)); S.order.set(doc.id, seq);
+  });
+  d.relations.forEach(r => {
+    [r.source_id, r.target_id].forEach(id => { if (!S.rels.has(id)) S.rels.set(id, []); S.rels.get(id).push(r); });
+  });
+  d.comments.forEach(c => { if (!S.notes.has(c.unit_id)) S.notes.set(c.unit_id, []); S.notes.get(c.unit_id).push(c); });
+
+  document.body.classList.toggle('has-banner', S.draft);
+  $('#draftBanner').classList.toggle('hidden', !S.draft);
+  $('#docSelect').innerHTML = d.documents.map(x => `<option value="${esc(x.id)}">${esc(docShort(x))}</option>`).join('');
+  $('#docSelect').onchange = e => go('#/d/' + e.target.value);
+  let timer;
+  $('#search').oninput = e => { clearTimeout(timer); timer = setTimeout(() => { S.query = e.target.value.trim(); renderNav(); }, 140); };
+  document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+}
+
+const kids = id => S.children.get(id) || [];
+const docShort = d => `${d.family} · ${LANG_NAMES[d.language] || d.language.toUpperCase()}`;
+/* Nadpis bez opakovaného označení („Rule 11 – …“ → „…“, „6.3. Pravidlo 11“ → nic). */
+function headingOf(u){
+  let h = (u.heading || '').trim(); if (!h) return '';
+  const f = fold(h), l = fold(u.label);
+  if (f.replace(/^[\d.\s]+/, '') === l) return '';
+  if (f.startsWith(l)) h = h.slice(u.label.length).replace(/^[\s–—:-]+/, '');
+  return h;
+}
+/* Úvodní řádky textu, které jen opakují označení a nadpis, se nezobrazují dvakrát. */
+function bodyOf(u){
+  const paras = u.body.trim().split(/\n{2,}/), skip = new Set([fold(u.label), fold(u.heading || '')]);
+  while (paras.length > 1 && skip.has(fold(paras[0].trim()))) paras.shift();
+  return paras.join('\n\n');
+}
+const hasText = u => u && !u.navigation_only && u.body && u.body.trim();
+function ancestors(u){ const out=[]; const seen=new Set(); let p=S.units.get(u.parent_id); while(p && !seen.has(p.id)){ out.unshift(p); seen.add(p.id); p=S.units.get(p.parent_id); } return out; }
+function descendantsWithText(id){ const out=[]; const walk=l=>l.forEach(u=>{ if(hasText(u)) out.push(u); else walk(kids(u.id)); }); walk(kids(id)); return out; }
+function go(hash){ if (location.hash === hash) route(); else location.hash = hash; }
+
+/* Stejné znění v jiném jazyce: stejná skupina dokumentu a stejná přípona identifikátoru. */
+function counterpart(u){
+  const doc = S.docs.get(u.document_id); if (!doc || !u.id.startsWith(doc.id + '-')) return null;
+  const rest = u.id.slice(doc.id.length);
+  for (const other of S.docs.values()){
+    if (other.id === doc.id || other.group_key !== doc.group_key) continue;
+    const c = S.units.get(other.id + rest); if (c) return {unit:c, doc:other};
+  }
+  return null;
+}
+
+/* ---------- Routing ---------- */
+function route(){
+  const h = decodeURIComponent(location.hash.slice(1));
+  const m = h.match(/^\/(u|d)\/(.+)$/);
+  S.unitId = null;
+  if (m && m[1] === 'u' && S.units.has(m[2])){ S.unitId = m[2]; S.docId = S.units.get(m[2]).document_id; }
+  else if (m && m[1] === 'd' && S.docs.has(m[2])){ S.docId = m[2]; }
+  else S.docId = S.docId || S.data.documents[0]?.id || null;
+  if (S.unitId){ ancestors(S.units.get(S.unitId)).forEach(a => S.expanded.add(a.id)); }
+  if (S.docId) $('#docSelect').value = S.docId;
+  const home = !m;
+  render(home);
+  if (S.unitId || (m && m[1]==='d')) setTab('text', false);
+}
+
+function setTab(t, scroll=true){
+  S.tab = t; document.body.dataset.tab = t;
+  document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  if (scroll) window.scrollTo(0,0);
+}
+
+function render(home){
+  renderNav();
+  if (home) renderHome();
+  else if (S.unitId) renderUnit(S.units.get(S.unitId));
+  else renderDoc(S.docs.get(S.docId));
+  renderContext();
+  $('#panelText').scrollTop = 0;
+  const cur = document.querySelector('.node a.current');
+  if (cur) cur.scrollIntoView({block:'nearest'});
+}
+
+/* ---------- Text formatting & search ---------- */
+function fold(s){ let o=''; for (const ch of s){ const f = ch.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase(); o += f ? f[0] : ch; } return o; }
+const terms = q => fold(q).split(/\s+/).filter(t => t.length >= 2);
+function marked(text, q){
+  const ts = q ? terms(q) : []; if (!ts.length) return esc(text);
+  const f = fold(text), hit = new Array(text.length).fill(false);
+  ts.forEach(t => { let j = 0; while ((j = f.indexOf(t, j)) !== -1){ for (let k = j; k < j + t.length; k++) hit[k] = true; j += t.length; } });
+  let out = '', open = false;
+  for (let i = 0; i < text.length; i++){
+    if (hit[i] !== open){ out += hit[i] ? '<mark>' : '</mark>'; open = hit[i]; }
+    out += esc(text[i]);
+  }
+  return out + (open ? '</mark>' : '');
+}
+const LIST_LINE = /^([—–•-]|[a-z]\)|\(?[ivx]+\)|\d+[.)]|\(\d+\))\s/;
+const RUNNING_HEADER = /^Medical Devices\s*\nMedical Device Coordination Group Document/; // záhlaví stránek PDF MDCG
+/* Řádky zalomené jen kvůli šířce stránky (typicky PDF) spojí do jednoho odstavce; výčty zachová. */
+function joinLines(par){
+  return par.split('\n').reduce((acc, line) => {
+    const t = line.trim(); if (!t) return acc;
+    const prev = acc[acc.length - 1];
+    if (prev !== undefined && !LIST_LINE.test(t) && !/[:;]$/.test(prev)) acc[acc.length - 1] = prev + ' ' + t;
+    else acc.push(t);
+    return acc;
+  }, []);
+}
+function legal(text, q=''){
+  return String(text).trim().split(/\n{2,}/).map(par => {
+    if (RUNNING_HEADER.test(par.trim())) return '';
+    const page = par.trim().match(/^\[PDF strana (\d+)\]$/);
+    if (page) return `<span class="pdfpage">PDF str. ${esc(page[1])}</span>`;
+    const head = par.trim().match(/^\[PDF strana (\d+)\]\n([\s\S]*)$/);
+    if (head) return `<span class="pdfpage">PDF str. ${esc(head[1])}</span>` + legal(head[2], q);
+    const lines = joinLines(par).map(l => {
+      const t = l.trim(); const ind = LIST_LINE.test(t) && !/^\d+\.\s/.test(t);
+      return ind ? `<span class="ind">${marked(t,q)}</span>` : marked(t,q);
+    });
+    const flat = par.trim();
+    if (flat.length < 90 && !flat.includes('\n') && /\p{Lu}{3}/u.test(flat) && flat === flat.toLocaleUpperCase('cs')) return `<p class="sub">${marked(flat,q)}</p>`;
+    return `<p>${lines.join('<br>')}</p>`;
+  }).join('');
+}
+/* Strukturovaný obsah z editoru Studia (text s formátováním a tabulky).
+   Formátování se znovu čistí i zde: povolené jsou jen b, strong, i, em, u, br. */
+const INLINE_OK = new Set(['B','STRONG','I','EM','U']);
+function safeInline(html){
+  const root = new DOMParser().parseFromString('<div>' + String(html || '') + '</div>', 'text/html').body.firstChild;
+  const walk = n => [...n.childNodes].map(c => {
+    if (c.nodeType === 3) return esc(c.textContent);
+    if (c.nodeType !== 1) return '';
+    if (c.tagName === 'BR') return '<br>';
+    const inner = walk(c), t = c.tagName.toLowerCase();
+    return INLINE_OK.has(c.tagName) ? `<${t}>${inner}</${t}>` : inner;
+  }).join('');
+  return root ? walk(root) : '';
+}
+function tableBlock(b, q){
+  const cell = c => { const tag = c.header ? 'th' : 'td', al = ['left','center','right'].includes(c.align) ? c.align : 'left';
+    return `<${tag} rowspan="${Math.max(1, c.rowspan|0)}" colspan="${Math.max(1, c.colspan|0)}" class="al-${al}">${marked(String(c.text||''), q).replace(/\n/g,'<br>')}</${tag}>`; };
+  return `<figure class="tbl">${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ''}<div class="tbl-wrap"><table>${(b.rows||[]).map(r => `<tr>${r.map(cell).join('')}</tr>`).join('')}</table></div>${b.notes ? `<div class="tbl-notes">${plain(b.notes)}</div>` : ''}</figure>`;
+}
+function content(u, q){
+  if (Array.isArray(u.content_blocks) && u.content_blocks.length)
+    return u.content_blocks.map(b => b.type === 'table' ? tableBlock(b, q) : `<div class="rich">${safeInline(b.html)}</div>`).join('');
+  return legal(bodyOf(u), q);
+}
+function plain(text){ return String(text).trim().split(/\n{2,}/).map(p => `<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join(''); }
+function snippet(text, q){
+  const f = fold(text), i = Math.min(...terms(q).map(t => f.indexOf(t)).filter(x => x >= 0)); if (!isFinite(i)) return '';
+  const a = Math.max(0, i - 60), b = Math.min(text.length, i + 120);
+  return (a ? '…' : '') + marked(text.slice(a,b).replace(/\s+/g,' '), q) + (b < text.length ? '…' : '');
+}
+
+/* ---------- Left panel ---------- */
+function renderNav(){
+  const box = $('#navBody');
+  if (S.query.length >= 2) return renderResults(box);
+  const doc = S.docs.get(S.docId);
+  if (!doc){ box.innerHTML = ''; return; }
+  const top = kids('doc:' + doc.id);
+  const groups = doc.document_type === 'regulation'
+    ? [['Články', top.filter(u => u.kind === 'article')], ['Přílohy', top.filter(u => u.kind === 'annex')], ['Ostatní', top.filter(u => !['article','annex'].includes(u.kind))]]
+    : [['Obsah', top]];
+  box.innerHTML = groups.filter(g => g[1].length).map(([name, list]) => `<div class="nav-group">${esc(name)}</div>${tree(list)}`).join('');
+  box.querySelectorAll('.caret').forEach(b => b.onclick = () => { const id=b.dataset.id; S.expanded.has(id) ? S.expanded.delete(id) : S.expanded.add(id); renderNav(); });
+}
+function tree(list){
+  return `<ul class="tree">${list.map(u => {
+    const ch = kids(u.id), open = S.expanded.has(u.id) || S.unitId === u.id;
+    const marks = (S.notes.get(u.id)?.length) ? '<span class="dot" title="Má výklad"></span>' : '';
+    const heading = headingOf(u) ? `<span class="h">${esc(trim(headingOf(u),60))}</span>` : '';
+    return `<li><div class="node">${ch.length ? `<button class="caret" data-id="${esc(u.id)}" aria-label="${open?'Sbalit':'Rozbalit'}" aria-expanded="${open}">${open?'▼':'▶'}</button>` : '<span class="caret-space"></span>'}
+      <a href="#/u/${encodeURIComponent(u.id)}" class="${u.id===S.unitId?'current':''} ${u.navigation_only?'locked':''}">${esc(u.label)}${marks}${heading}</a></div>
+      ${ch.length && open ? tree(ch) : ''}</li>`;
+  }).join('')}</ul>`;
+}
+const trim = (s,n) => s.length > n ? s.slice(0,n-1) + '…' : s;
+
+function renderResults(box){
+  const q = S.query, ts = terms(q);
+  const hits = ts.length ? S.data.units.filter(u => { if (u.navigation_only) return false; const f = fold([u.label,u.heading,u.locator,u.body].join(' ')); return ts.every(t => f.includes(t)); }) : [];
+  // Přednost mají nejmenší části (odstavec před celým článkem).
+  hits.sort((a,b) => (a.document_id===S.docId?0:1)-(b.document_id===S.docId?0:1) || (kids(a.id).length?1:0)-(kids(b.id).length?1:0));
+  const shown = hits.slice(0, 80);
+  $('#panelNav').scrollTop = 0;
+  box.innerHTML = `<div class="results-head">${hits.length ? `Nalezeno ${hits.length}${hits.length>80?' (zobrazeno 80)':''}` : 'Nic nenalezeno. Zkuste jiný výraz nebo jiný jazyk dokumentu.'}</div>` +
+    shown.map(u => { const d=S.docs.get(u.document_id);
+      return `<a class="result" href="#/u/${encodeURIComponent(u.id)}" data-hl="1"><strong>${esc(u.label)}${headingOf(u)?' – '+esc(trim(headingOf(u),50)):''}</strong><small>${esc(docShort(d))}${ancestors(u).length?' › '+esc(ancestors(u).map(a=>a.label).join(' › ')):''}</small><small>${snippet(u.body,q)}</small></a>`; }).join('');
+  box.querySelectorAll('.result').forEach(a => a.addEventListener('click', () => { S.highlight = S.query; }));
+}
+
+/* ---------- Center panel ---------- */
+function crumbs(u){
+  const d = S.docs.get(u.document_id);
+  return `<div class="crumbs"><a href="#/d/${encodeURIComponent(d.id)}">${esc(docShort(d))}</a>${ancestors(u).map(a => ` › <a href="#/u/${encodeURIComponent(a.id)}">${esc(a.label)}</a>`).join('')}</div>`;
+}
+function sourceLine(d){
+  return `<div class="source">Zdroj: ${esc(d.title)}, znění ${esc(d.version)}${d.publisher?' · '+esc(d.publisher):''}. ${d.url?`<a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Oficiální znění ↗</a>`:''}<br>${esc(S.data.notice||'')}</div>`;
+}
+
+function renderUnit(u){
+  const d = S.docs.get(u.document_id), q = S.highlight; S.highlight = '';
+  const cp = counterpart(u);
+  const status = S.draft && u.text_status !== 'verified' && !u.navigation_only ? ' <span class="chip warn">Neověřený text</span>' : '';
+  let html = crumbs(u) + `<div class="title-row"><h1>${esc(u.label)}${status}${headingOf(u) ? `<span class="heading">${esc(headingOf(u))}</span>` : ''}</h1>
+    ${cp ? `<a class="lang-btn" href="#/u/${encodeURIComponent(cp.unit.id)}" title="Stejné ustanovení v jazyce ${esc(LANG_NAMES[cp.doc.language]||cp.doc.language)}">${esc(cp.doc.language.toUpperCase())}</a>` : ''}</div>`;
+  const ch = kids(u.id);
+  if (hasText(u)){
+    html += `<div class="legal">${content(u, q)}</div>`;
+    if (ch.length) html += `<div class="subparts"><h2>Členění</h2><div class="chips">${ch.map(c => `<a href="#/u/${encodeURIComponent(c.id)}">${esc(c.label)}</a>`).join('')}</div></div>`;
+  } else {
+    const parts = descendantsWithText(u.id);
+    html += `<div class="note">${parts.length ? 'V aplikaci jsou zatím ověřené jen části uvedené níže.' : 'Text této části zatím v aplikaci není ověřen.'} Celé znění najdete v ${d.url?`<a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">oficiálním zdroji ↗</a>`:'oficiálním zdroji'}.</div>`;
+    html += parts.map(p => `<section class="part"><h3><a href="#/u/${encodeURIComponent(p.id)}">${esc(p.label)}</a></h3><div class="legal">${content(p, q)}</div></section>`).join('');
+  }
+  html += pager(u) + sourceLine(d);
+  $('#panelText').innerHTML = html;
+  document.title = `${u.label} · ${docShort(d)} · RegulaQuest`;
+}
+
+function pager(u){
+  const seq = S.order.get(u.document_id) || [], i = seq.indexOf(u.id);
+  if (i < 0) return '';
+  const link = (id, cls, word) => { const x = S.units.get(id); return x ? `<a class="${cls}" href="#/u/${encodeURIComponent(id)}"><small>${word}</small>${esc(x.label)}${ancestors(x).length?' · '+esc(ancestors(x).at(-1).label):''}</a>` : '<span></span>'; };
+  return `<div class="pager">${i>0?link(seq[i-1],'prev','← Předchozí'):'<span></span>'}${i<seq.length-1?link(seq[i+1],'next','Další →'):'<span></span>'}</div>`;
+}
+
+function renderDoc(d){
+  if (!d){ renderHome(); return; }
+  const units = S.data.units.filter(u => u.document_id === d.id && !u.navigation_only);
+  const withNotes = units.filter(u => S.notes.has(u.id));
+  $('#panelText').innerHTML = `<div class="crumbs">Dokument</div><h1>${esc(d.title)}</h1>
+    <p>${esc(d.family)} · ${esc(LANG_NAMES[d.language]||d.language)} · znění ${esc(d.version)}</p>
+    <div class="note">V aplikaci je zatím <strong>${units.length}</strong> ověřených částí tohoto dokumentu${S.draft?' (v pracovním náhledu i neověřené)':''}. Vyberte část v obsahu vlevo nebo použijte hledání.</div>
+    ${withNotes.length ? `<div class="subparts"><h2>Části s odborným výkladem</h2><ul class="list-plain">${withNotes.map(u => `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(u.label)}<small>${esc(ancestors(u).map(a=>a.label).join(' › '))}</small></a></li>`).join('')}</ul></div>` : ''}
+    ${(d.topics||[]).length ? `<div class="subparts"><h2>Témata</h2><div class="chips">${d.topics.map(t => `<span class="topic">${esc(t)}</span>`).join('')}</div></div>` : ''}
+    ${sourceLine(d)}`;
+  document.title = `${docShort(d)} · RegulaQuest`;
+}
+
+function renderHome(){
+  const docs = S.data.documents;
+  const annotated = S.data.units.filter(u => S.notes.has(u.id));
+  $('#panelText').innerHTML = `<div class="hero"><div class="kicker">Výuková čtečka · FBMI ČVUT</div>
+    <h1>Evropská regulace zdravotnických prostředků</h1>
+    <p>Ověřené texty nařízení MDR a metodik MDCG, doplněné odbornými výklady a vazbami mezi ustanoveními. Aplikace je studijní pomůckou, ne oficiálním zdrojem práva.</p>
+    <div class="cards">${docs.map(d => { const n = S.data.units.filter(u => u.document_id===d.id && !u.navigation_only).length;
+      return `<a class="card" href="#/d/${encodeURIComponent(d.id)}"><strong>${esc(docShort(d))}</strong><span>${esc(d.title)}</span><em>${n} ${n===1?'část':n<5?'části':'částí'} k dispozici →</em></a>`; }).join('')}</div>
+    ${annotated.length ? `<h2 class="block-title">S odborným výkladem</h2><ul class="list-plain">${annotated.map(u => { const d=S.docs.get(u.document_id); return `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(docShort(d))} › ${esc(ancestors(u).map(a=>a.label).concat(u.label).join(' › '))}<small>${esc(trim(S.notes.get(u.id)[0].body.replace(/\s+/g,' '),140))}</small></a></li>`; }).join('')}</ul>` : ''}
+    <div class="source">${esc(S.data.notice||'')} Data k ${esc(fmtDate(S.data.published_at))}.</div></div>`;
+  document.title = 'RegulaQuest · Čtečka regulace zdravotnických prostředků';
+}
+function fmtDate(s){ const d = new Date(s); return isNaN(d) ? '' : d.toLocaleDateString('cs-CZ'); }
+
+/* ---------- Right panel ---------- */
+function renderContext(){
+  const box = $('#panelContext'); const u = S.units.get(S.unitId);
+  if (!u){ box.innerHTML = `<div class="ctx-title">Souvislosti</div><div class="ctx-empty">Po výběru ustanovení se zde zobrazí odborný výklad, související články a metodiky.</div>${disclaimer()}`; $('#tabCount').textContent=''; return; }
+  const notes = S.notes.get(u.id) || [], rels = S.rels.get(u.id) || [];
+  const explain = notes.filter(n => n.kind !== 'example'), examples = notes.filter(n => n.kind === 'example');
+  const other = r => S.units.get(r.source_id === u.id ? r.target_id : r.source_id);
+  const typeOf = id => S.docs.get(S.units.get(id)?.document_id)?.document_type;
+  const here = S.docs.get(u.document_id)?.document_type;
+  const guidance = rels.filter(r => here !== 'guidance' && typeOf(other(r)?.id) === 'guidance');
+  const legalBasis = rels.filter(r => here === 'guidance' && typeOf(other(r)?.id) !== 'guidance');
+  const related = rels.filter(r => !guidance.includes(r) && !legalBasis.includes(r));
+  const childInfo = descendantsWithText(u.id).concat(kids(u.id).filter(hasText)).filter((x,i,a)=>a.indexOf(x)===i)
+    .map(c => ({c, n:(S.notes.get(c.id)||[]).length, r:(S.rels.get(c.id)||[]).length})).filter(x => x.n || x.r);
+  const section = (title, items, fn) => items.length ? `<div class="ctx-section"><h3>${title} <span class="count">${items.length}</span></h3>${items.map(fn).join('')}</div>` : '';
+  const noteCard = n => `<div class="ctx-card ${n.kind==='warning'?'warning':''}"><div class="meta"><span>${esc(NOTE_NAMES[n.kind]||n.kind)}${n.language!==S.docs.get(u.document_id)?.language?' · '+esc(n.language.toUpperCase()):''}</span>${S.draft&&n.status!=='approved'?'<span class="chip warn">Koncept</span>':''}</div><div class="body">${plain(n.body)}</div></div>`;
+  const relCard = r => { const o = other(r); if (!o) return ''; const d = S.docs.get(o.document_id);
+    return `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(o.id)}"><div class="meta"><span>${esc(REL_NAMES[r.relation_type]||r.relation_type)}</span>${S.draft&&r.status!=='approved'?'<span class="chip warn">Návrh</span>':''}</div><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),70)):''}</strong><small>${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${r.rationale?`<div class="why">${esc(r.rationale)}</div>`:''}</div>`; };
+  const total = notes.length + rels.length;
+  box.innerHTML = `<div class="ctx-title">Souvislosti · ${esc(u.label)}</div>` +
+    section('Výklad', explain, noteCard) +
+    section('Metodika', guidance, relCard) +
+    section('Vykládané ustanovení předpisu', legalBasis, relCard) +
+    section('Související ustanovení', related, relCard) +
+    section('Příklady', examples, noteCard) +
+    (childInfo.length ? `<div class="ctx-section"><h3>V jednotlivých částech</h3>${childInfo.map(x => `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(x.c.id)}"><strong>${esc(x.c.label)}</strong><small>${[x.n?`${x.n}× výklad`:'',x.r?`${x.r}× souvislost`:''].filter(Boolean).join(' · ')}</small></a></div>`).join('')}</div>` : '') +
+    (total || childInfo.length ? '' : '<div class="ctx-empty">K tomuto ustanovení zatím nejsou zveřejněné výklady ani vazby.</div>') + disclaimer();
+  $('#tabCount').textContent = total ? String(total) : '';
+}
+function disclaimer(){ return '<div class="disclaimer">Výklady připravuje redakce RegulaQuest pro výuku. Nejsou právním stanoviskem; rozhodující je vždy oficiální znění předpisu.</div>'; }
+
+load();

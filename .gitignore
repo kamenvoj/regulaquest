@@ -1,0 +1,14 @@
+# Pracovní databáze, originály a zálohy zůstávají jen na tomto počítači
+data/*
+!data/.zde-se-vytvori-databaze
+podklady/*
+!podklady/.zde-ulozit-zdrojove-dokumenty
+*.sqlite3
+*.sqlite3-journal
+regulaquest-studio-backup*.json
+
+# Python a systém
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
