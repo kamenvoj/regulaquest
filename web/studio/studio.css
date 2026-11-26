@@ -257,3 +257,4 @@ dialog:has(#refList){width:min(980px,calc(100vw - 24px));max-width:min(980px,cal
 .ref-quote{margin-top:4px;color:#4b6168;font-family:Georgia,serif;font-size:13px;line-height:1.55}
 .ref-quote mark{background:#fbeec8;padding:0 2px;border-radius:3px}
 .ref-pages{text-align:center;font-size:12px;margin-top:6px}
+.take-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:6px;font-size:12px}

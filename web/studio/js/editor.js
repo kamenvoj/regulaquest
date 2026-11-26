@@ -40,6 +40,15 @@ function mirroredRelations(u){
    let other=o.id;for(const x of db.documents)if((x.group_key||x.id)===(od2.group_key||od2.id)&&x.language===d.language){const c=equivalentIn(o,x.id);if(c){other=c.id;break}}
    out.push({r,from:twin,other});}}
  return out}
+// Všechny vazby převedené do jazyka dokumentu docId (pro kontrolu duplicit a návrhy).
+function relationsSeenFrom(docId){
+ const doc=getDoc(docId),out=[...db.relations];if(!doc)return out;
+ for(const r of db.relations){const s=getUnit(r.source_id),t=getUnit(r.target_id);if(!s||!t)continue;
+  const sd=getDoc(s.document_id),td=getDoc(t.document_id);if(!sd||!td||sd.id===docId||(sd.group_key||sd.id)!==(doc.group_key||doc.id))continue;
+  const s2=equivalentIn(s,docId);if(!s2)continue;let t2=t;
+  for(const x of db.documents)if((x.group_key||x.id)===(td.group_key||td.id)&&x.language===doc.language){const c=equivalentIn(t,x.id);if(c){t2=c;break}}
+  out.push({...r,source_id:s2.id,target_id:t2.id,mirrored:true})}
+ return out}
 function documentLabel(d){return d?`${d.family} · ${d.language.toUpperCase()} · ${d.version}`:'Neznámý dokument'}
 const fullname=id=>{const u=getUnit(id);if(!u)return id;const d=getDoc(u.document_id);return `${documentLabel(d)} › ${unitPath(id)}${u.heading?' – '+u.heading:''}`};
 const tag=(s)=>`<span class="tag ${statuses[s]||''}">${esc(statusName[s]||s)}</span>`;
@@ -694,7 +703,7 @@ function dialogRelation(u,preset=null){
   if(!chosen || chosen.document_id!==docSelect.value){toast('Vyberte konkrétní cílové ustanovení.',true);return}
   if(chosen.id===u.id){toast('Nelze propojit ustanovení samo se sebou.',true);return}
   if(!type.value || !rationale.value.trim()){toast('Doplňte typ a zdůvodnění vazby.',true);return}
-  if(db.relations.some(r=>r.source_id===u.id&&r.target_id===chosen.id&&r.relation_type===type.value&&r.status!=='rejected')){toast('Tato vazba již existuje.',true);return}
+  if(relationsSeenFrom(u.document_id).some(r=>r.source_id===u.id&&r.target_id===chosen.id&&r.relation_type===type.value&&r.status!=='rejected')){toast('Tato vazba již existuje (případně u jiné jazykové verze, kde platí i pro tuto).',true);return}
   if(!confirm(`Opravdu uložit návrh propojení?\n\nOD: ${fullname(u.id)}\n\nNA: ${fullname(chosen.id)}\n\nTYP: ${relName[type.value]}`))return;
   const save=form.querySelector('#relationSave');save.disabled=true;
   try{await act({action:'new_relation',source_id:u.id,target_id:chosen.id,relation_type:type.value,rationale:rationale.value.trim(),evidence:evidence.value.trim(),provenance:preset?(preset.kind==='related'?'cross-document-structure-lexical-v1; editor-reviewed':'explicit-citation-v1; editor-reviewed'):'manual'});d.close()}
@@ -703,7 +712,20 @@ function dialogRelation(u,preset=null){
  d.showModal();
 }
 
-function dialogComment(u){const html=`<p>Komentář není součástí právního předpisu. Nejprve se uloží jako koncept.</p>${select('Typ komentáře','kind',Object.entries(noteName))}${select('Jazyk','language',[['cs','Čeština'],['en','English']])}${field('Autor / garant','author','Redakce RegulaQuest')}${field('Obsah komentáře','body','','textarea')}`;dialog('Nový komentář · '+u.label,html,vals=>safeAct({action:'new_comment',unit_id:u.id,...vals}))}
+function dialogComment(u){
+ // Komentář je jazykový; z jiné jazykové verze lze převzít text jako podklad k překladu.
+ const doc=getDoc(u.document_id),lang=doc?.language||'cs';
+ const twins=db.documents.filter(x=>doc&&x.id!==doc.id&&(x.group_key||x.id)===(doc.group_key||doc.id)).map(x=>equivalentIn(u,x.id)).filter(Boolean);
+ const others=db.comments.filter(c=>twins.some(t=>t.id===c.unit_id)&&['approved','draft'].includes(c.status));
+ const html=`<p>Komentář není součástí právního předpisu. Nejprve se uloží jako koncept.</p>
+ ${others.length?`<div class="notice"><strong>Komentáře u jiné jazykové verze</strong> – lze převzít jako podklad a upravit (přeložit):${others.map(c=>`<div class="take-row"><span>${esc(getDoc(getUnit(c.unit_id).document_id).language.toUpperCase())} · ${esc(noteName[c.kind]||c.kind)} · ${tag(c.status)} ${esc(c.body.slice(0,140))}${c.body.length>140?'…':''}</span><button type="button" class="btn tiny" data-take="${esc(c.id)}">Převzít</button></div>`).join('')}</div>`:''}
+ ${select('Typ komentáře','kind',Object.entries(noteName))}${select('Jazyk','language',[['cs','Čeština'],['en','English']],lang)}${field('Autor / garant','author','Redakce RegulaQuest')}${field('Obsah komentáře','body','','textarea')}`;
+ dialog('Nový komentář · '+u.label,html,vals=>safeAct({action:'new_comment',unit_id:u.id,...vals}));
+ const f=$('#modalContent');
+ f.querySelectorAll('[data-take]').forEach(b=>b.onclick=()=>{const c=db.comments.find(x=>x.id===b.dataset.take);
+  f.querySelector('[name=kind]').value=c.kind;f.querySelector('[name=author]').value=c.author||'Redakce RegulaQuest';
+  const body=f.querySelector('[name=body]');body.value=c.body;body.focus();toast('Text převzat – upravte ho (přeložte) a uložte.')});
+}
 function dialogDoc(){const html=`<p>Nový dokument bude mít vlastní verzi, jazyk a původ. Po vytvoření do něj můžete přidávat kapitoly a konkrétní pasáže.</p>${field('Název','title')}${field('Zkratka / rodina','family')}${select('Typ','kind',[['Právní předpis','Právní předpis'],['Metodický dokument','Metodický dokument'],['Doplňující dokument','Doplňující dokument']])}${select('Jazyk','language',[['cs','Čeština'],['en','English']])}${field('Revize / časová verze','version')}${db.documents.length?select('Jiná jazyková verze téhož předpisu (nepovinné)','group_key',[['','— samostatný dokument —'],...db.documents.map(x=>[x.group_key||x.id,documentLabel(x)])]):''}<label class="form-field"><span>Vydavatel (nepovinné)</span><input class="input" name="publisher" type="text" placeholder="Např. Evropský parlament a Rada"></label><label class="form-field"><span>Oficiální URL (nepovinné)</span><input class="input" name="url" type="url" placeholder="https://…"></label>`;dialog('Nový zdrojový dokument',html,vals=>{
  // jiná jazyková verze: převzít zařazení a tagy skupiny
  const g=vals.group_key&&db.documents.find(x=>(x.group_key||x.id)===vals.group_key);
@@ -793,12 +815,10 @@ function dialogImport(){
 function dialogReferences(unitId){
  const unit=unitId&&getUnit(unitId),docId=unit?unit.document_id:activeDocId,doc=getDoc(docId);
  if(!doc){toast('Nejdřív vyberte dokument.',true);return}
- const csTwin=doc.language!=='cs'&&db.documents.find(x=>x.id!==doc.id&&(x.group_key||x.id)===(doc.group_key||doc.id)&&x.language==='cs');
- if(csTwin){toast(`Vazby uvnitř předpisu se tvoří u české verze (${documentLabel(csTwin)}) a platí i pro tuto. Otevřete návrhy tam.`,true);return}
  const d=$('#modal'),f=$('#modalContent');let filter='new',q='',pageNo=0,results=[];const chosen=new Set();const PAGE=50;
  const key=c=>c.source_id+'|'+c.target_hint;
  const compute=()=>{const pool=unit?db.units.filter(x=>x.id===unit.id):db.units.filter(x=>x.document_id===docId);
-  results=RQRefs.scan(db.units,pool,db.relations,new Map(db.documents.map(x=>[x.id,x])));};
+  results=RQRefs.scan(db.units,pool,relationsSeenFrom(docId),new Map(db.documents.map(x=>[x.id,x])));};
  f.onsubmit=e=>e.preventDefault();
  f.innerHTML=`<h2>Návrhy výslovných odkazů · ${esc(unit?unitPath(unit.id):documentLabel(doc))}</h2>
  <p>Studio našlo v textu místa, kde ${unit?'tato část':'dokument'} výslovně odkazuje na jiný článek, odstavec, přílohu nebo pravidlo <strong>téhož dokumentu</strong>. Vybrané se uloží jako <strong>návrhy vazeb</strong> do „Ke kontrole“; nic se neschválí samo. Odkazy na jiné předpisy (např. směrnice, nařízení ES) se zatím nehledají.</p>
