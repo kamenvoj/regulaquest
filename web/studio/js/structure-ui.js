@@ -29,7 +29,7 @@ function rqRunEdit(payload,close,after){
  return act(payload).then(res=>{close();if(after)after(res);return res}).catch(err=>toast(err.message,true));
 }
 function rqHistory(u){
- const labels={edit_content:'Úprava obsahu a tabulek',edit_structure:'Úprava struktury',split_unit:'Rozdělení textu',created_by_split:'Nová část oddělením',move_text:'Přesun textu',merge_unit:'Sloučení částí',legacy_edit_text:'Starší úprava textu',import_text:'Dávkový import',created:'Vytvoření části',verified:'Ověření textu',edit_text:'Úprava textu',ancestor_structure_changed:'Změna nadřazené části'};
+ const labels={edit_content:'Úprava obsahu a tabulek',edit_structure:'Úprava struktury',split_unit:'Rozdělení textu',created_by_split:'Nová část oddělením',move_text:'Přesun textu',merge_unit:'Sloučení částí',legacy_edit_text:'Starší úprava textu',import_text:'Dávkový import',created:'Vytvoření části',verified:'Ověření textu',edit_text:'Úprava textu',ancestor_structure_changed:'Změna nadřazené části',archived:'Archivace části',restored:'Obnovení části',new_version:'Nové znění předpisu',removed_in_new_version:'V novém znění chybí (archivováno)'};
  const html=`<p class="rq-explain">Historie se ukládá v databázi u každé úpravy, včetně toho, kdo ji provedl.</p>
  <div id="rqHistoryItems">Načítám historii…</div><div id="rqHistoryDetail"></div>
  <div class="modal-actions"><button class="btn" type="button" id="rqHistoryClose">Zavřít</button></div>`;

@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
 
 DSN = os.environ.get('RQ_PG_DSN')
 ROOT = Path(__file__).resolve().parents[1]
-FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[12356]_*.sql'))
+FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('0[123567]_*.sql'))
 
 OWNER, ADMIN, STUDENT, STUDENT2 = (str(uuid.UUID(int=i)) for i in (1, 2, 3, 4))
 
@@ -261,6 +261,18 @@ class DatabaseTest(unittest.TestCase):
         self.call('rq_new_unit', {'document_id': 'mdr-cs', 'kind': 'section', 'label': 'Poznámka'})
         self.call('rq_import_finish', 'mdr-cs', ['mdr-cs-annex-viii'], {'mode': 'update'})
         self.assertEqual(self.sql("select archived from units where label='Poznámka'")[0][0], False)
+
+    def test_archive_and_restore_unit(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        self.fails('podřazené části', 'rq_archive_unit', 'mdr-cs-annex-viii', self.updated_at('mdr-cs-annex-viii'), 'x')
+        self.call('rq_verify_unit', 'mdr-cs-rule-12', None)
+        self.call('rq_archive_unit', 'mdr-cs-rule-12', self.updated_at('mdr-cs-rule-12'), 'duplicita')
+        self.assertTrue(self.sql("select archived from units where id='mdr-cs-rule-12'")[0][0])
+        self.call('rq_restore_unit', 'mdr-cs-rule-12', 'omyl')
+        self.assertEqual(self.sql("select archived, text_status from units where id='mdr-cs-rule-12'")[0], (False, 'needs_review'))
+        self.as_user(STUDENT)
+        self.fails('', 'rq_archive_unit', 'mdr-cs-rule-11', None, 'x')
 
     def test_structure_editor(self):
         self.setup_doc()

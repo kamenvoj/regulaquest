@@ -6,6 +6,7 @@
 - **Aktualizace na nové znění**: shodné části zůstanou ověřené, změněné se vrátí k ověření (staré znění v historii, schválené vazby a komentáře do kontroly), nové přibudou, chybějící se archivují. Náhled ukáže seznam změn před importem.
 - Rozpoznání CELEX, jazyka a data znění; nastavení verze a odkazu dokumentu.
 - Nový dokument lze zařadit jako jinou jazykovou verzi existujícího předpisu (společné tagy a zařazení).
+- **Archivace části** (tlačítko Archivovat u části; obnovení v přehledu dokumentu → Archivované části). Nic se nemaže, historie zůstává (migrace `07_archivace.sql`).
 - Databáze: migrace `06_import.sql` (`rq_import_units` po dávkách a v režimu nového znění, `rq_import_finish`).
 
 ## 0.4.0 – webové Studio (Supabase)
