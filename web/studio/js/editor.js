@@ -357,7 +357,7 @@ box.querySelector('#suggestLinks').onclick=()=>dialogReferences(u.id);box.queryS
 box.querySelectorAll('[data-com-drop]').forEach(x=>x.onclick=()=>safeAct({action:'archive_comment_draft',comment_id:x.dataset.comDrop}));
 box.querySelectorAll('[data-rel-drop]').forEach(x=>x.onclick=()=>safeAct({action:'relation_status',id:x.dataset.relDrop,status:'rejected'}));
 box.querySelectorAll('[data-hidden-page]').forEach(x=>x.onclick=()=>{const p=x.dataset.hiddenPage;if(p==='comments'){commentStatusFilter='archived';commentDocFilter='all'}else{relationStatusFilter='archived';relationDocFilter='all'}setPage(p)});
-box.querySelectorAll('[data-anchor-jump]').forEach(x=>x.onclick=()=>{const els=document.querySelectorAll(`#reader [data-cid="${CSS.escape(x.dataset.anchorJump)}"]`);if(!els.length){toast('Vybraný text se v ustanovení nenašel.',true);return}els[0].scrollIntoView({block:'center',behavior:'smooth'});els.forEach(e=>{e.classList.remove('rq-flash');void e.offsetWidth;e.classList.add('rq-flash')})});
+box.querySelectorAll('[data-anchor-jump]').forEach(x=>{x.onclick=e=>{e.stopPropagation();rqSetFocus(x.dataset.anchorJump,x)};const card=x.closest('.boxnote');if(card){card.classList.add('focusable');if(rqFocus&&rqFocus.src===x.dataset.anchorJump)card.classList.add('focused');card.addEventListener('click',e=>{if(!e.target.closest('button,a'))rqSetFocus(x.dataset.anchorJump,x)})}});
 }
 function renderReview(){
  const filter=$('#reviewDocFilter');filter.innerHTML='<option value="all">Všechny dokumenty</option>'+db.documents.map(d=>`<option value="${esc(d.id)}">${esc(documentLabel(d))}</option>`).join('');filter.value=reviewDocFilter;
@@ -973,6 +973,18 @@ function dialogRelated(unitId){
    Kotva = přesné znění výběru + kolikátý výskyt v části. Po novém znění se nenalezené kotvy označí. */
 let rqMissing=new Set();
 function rqUnitComments(u){return db.comments.filter(c=>c.unit_id===u.id&&!['archived','rejected'].includes(c.status))}
+let rqFocus=null;
+function rqSetFocus(src){
+ const u=getUnit(selected);if(!u)return;
+ if(!src||(rqFocus&&rqFocus.src===src)){rqFocus=null}
+ else{let item=null;
+  if(src.startsWith('L')){const g=rqLinkAnchors(u).find(x=>x.rels.some(r=>'L'+r.id===src));if(g)item={id:g.id,kind:'link',label:`Odkaz „${esc(g.anchor_text.slice(0,70))}“`}}
+  else{const c=db.comments.find(x=>x.id===src);if(c)item={id:c.id,kind:c.kind,label:`${esc(noteName[c.kind]||c.kind)} „${esc(c.anchor_text.slice(0,70))}“`}}
+  if(!item){toast('Vybraný text se v ustanovení nenašel.',true);return}
+  rqFocus={...item,src,unit:u.id}}
+ const box=$('#reader'),y=box.scrollTop;renderReader();renderContext();if(!rqFocus)box.scrollTop=y;
+ if(rqFocus&&!document.querySelector('#reader .rq-focus'))toast('Vybraný text se v ustanovení nenašel (kotva nenalezena).',true);
+}
 let rqOff=(()=>{try{const v=JSON.parse(localStorage.getItem('rq-studio-vrstvy-skryte'));if(Array.isArray(v))return new Set(v)}catch{}return new Set()})();
 function rqOpenAnchor(c){
  if(c.kind==='link')return rqLinkOpen(c);
@@ -1012,8 +1024,9 @@ function rqTreeMarks(u){
 function rqAnchors(box,u){
  if(!window.RQNotes)return;
  const roots=[...box.querySelectorAll('[data-anchor-root]')];
+ if(rqFocus&&rqFocus.unit!==u.id)rqFocus=null;
  const all=rqUnitComments(u).filter(c=>c.anchor_text).concat(rqLinkAnchors(u));
- const shown=all.filter(c=>!rqOff.has(RQNotes.layerOf(c.kind))),ids=c=>c.rels?c.rels.map(r=>r.id):[c.id];
+ const shown=all.filter(c=>!rqOff.has(RQNotes.layerOf(c.kind))||(rqFocus&&c.id===rqFocus.id)),ids=c=>c.rels?c.rels.map(r=>r.id):[c.id];
  let missing=shown,nTerms=0;
  if(window.RQTerms)roots.forEach(r=>nTerms+=RQTerms.mark(r,u));
  roots.forEach(r=>{missing=RQNotes.applyAnchors(r,missing,rqOpenAnchor)});
@@ -1024,6 +1037,8 @@ function rqAnchors(box,u){
  const items=[...RQNotes.LAYERS,'note','warning','link'].map(k=>[k,cnt(k)]).concat([['term',nTerms]]).filter(x=>x[1]);
  if(items.length&&roots.length)roots[0].before(RQNotes.layerBar(items,rqOff,k=>{try{localStorage.setItem('rq-studio-vrstvy-skryte',JSON.stringify([...rqOff]))}catch{}
   if(RQNotes.CSS_LAYERS.includes(k))box.classList.toggle('off-'+k,rqOff.has(k));else{const y=box.scrollTop;renderReader();box.scrollTop=y}}));
+ box.classList.remove('focus-mode');
+ if(rqFocus&&roots.length){const el=RQNotes.applyFocus(box,rqFocus.id);roots[0].before(RQNotes.focusChip(rqFocus.kind,rqFocus.label,()=>rqSetFocus(null)));if(el)requestAnimationFrame(()=>el.scrollIntoView({block:'center',behavior:'smooth'}))}
  if(missing.length&&roots.length){const n=document.createElement('div');n.className='notice anchor-missing';n.innerHTML=`<strong>${missing.length}× poznámka nebo vazba bez kotvy.</strong> Vybraný text už v ustanovení není (pravděpodobně nové znění). Najdete je vpravo se štítkem „Kotva nenalezena“.`;roots[0].before(n)}
  if(before!==rqMissing.size)renderContext();
  roots.forEach(r=>r.addEventListener('mouseup',()=>setTimeout(()=>rqSelBar(r,u),0)));

@@ -16,7 +16,7 @@ const S = {
   data:null, draft:false,
   units:new Map(), docs:new Map(), children:new Map(),
   rels:new Map(), notes:new Map(), order:new Map(),
-  terms:[], off:loadOff(),
+  terms:[], off:loadOff(), focus:null,
   docId:null, unitId:null, query:'', highlight:'', expanded:new Set(), tab:'text'
 };
 
@@ -162,6 +162,7 @@ function mirrorRelations(list){
 
 /* ---------- Routing ---------- */
 function route(){
+  S.focus = null;
   const h = decodeURIComponent(location.hash.slice(1));
   const m = h.match(/^\/(u|d)\/(.+)$/);
   S.unitId = null;
@@ -372,6 +373,11 @@ function renderUnit(u){
   const nTerms = markTerms(d);
   anchorNotes();
   layerBar(u, nTerms);
+  if (S.focus){
+    const panel = $('#panelText'), el = RQNotes.applyFocus(panel, S.focus.id);
+    panel.querySelector('.legal')?.before(RQNotes.focusChip(S.focus.kind, S.focus.label, () => setFocus(null)));
+    if (el) requestAnimationFrame(() => el.scrollIntoView({block:'center', behavior:'smooth'}));
+  }
   resolveFigures();
   document.title = `${u.label} · ${docShort(d)} · RegulaQuest`;
 }
@@ -385,7 +391,7 @@ function anchorNotes(){
   if (!window.RQNotes) return;
   document.querySelectorAll('#panelText .legal').forEach(box => {
     const id = box.dataset.unit; if (!id) return;
-    RQNotes.applyAnchors(box, anchorItems(id).filter(c => !S.off.has(RQNotes.layerOf(c.kind))), toggleNote);
+    RQNotes.applyAnchors(box, anchorItems(id).filter(c => !S.off.has(RQNotes.layerOf(c.kind)) || c.id === S.focus?.id), toggleNote);
   });
 }
 /* Pojmy z definic: první výskyt v každé části, klepnutím definice pod řádkem. */
@@ -425,6 +431,14 @@ function layerBar(u, nTerms){
     const y = window.scrollY, py = panel.scrollTop; renderUnit(u); window.scrollTo(0, y); panel.scrollTop = py;
   });
   panel.querySelector('.legal').before(bar);
+}
+/* Zaměření z panelu Souvislosti: v textu výrazně jen vybraná položka (i když je její vrstva vypnutá). */
+function setFocus(f){
+  const u = S.units.get(S.unitId); if (!u) return;
+  S.focus = f && S.focus?.id === f.id ? null : f;
+  const y = window.scrollY, py = $('#panelText').scrollTop;
+  renderUnit(u); renderContext();
+  if (S.focus) setTab('text', false); else { window.scrollTo(0, y); $('#panelText').scrollTop = py; }
 }
 function noteHtml(c){
   if (c.kind === 'link') return `<span class="rq-pop-h">${ICON('link')} Propojeno</span>` + c.rels.map(r => { const o = S.units.get(r.target_id); if (!o) return ''; const d = S.docs.get(o.document_id);
@@ -495,12 +509,14 @@ function renderContext(){
     .map(c => ({c, n:(S.notes.get(c.id)||[]).filter(n => !HL.includes(n.kind)).length, r:(S.rels.get(c.id)||[]).length})).filter(x => x.n || x.r);
   const section = (title, items, fn) => items.length ? `<div class="ctx-section"><h3>${title} <span class="count">${items.length}</span></h3>${items.map(fn).join('')}</div>` : '';
   const quote = n => n.anchor_text ? `<button type="button" class="anchor-q" data-cid="${esc(n.id)}" title="Ukázat v textu">„${esc(trim(n.anchor_text, 90))}“</button>` : '';
-  const noteCard = n => `<div class="ctx-card ${n.kind==='warning'?'warning':''}"><div class="meta"><span class="k">${ICON(n.kind)} ${esc(NOTE_NAMES[n.kind]||n.kind)}${n.language!==S.docs.get(u.document_id)?.language?' · '+esc(n.language.toUpperCase()):''}</span>${S.draft&&n.status!=='approved'?'<span class="chip warn">Koncept</span>':''}</div>${quote(n)}${n.kind==='key'?'':`<div class="body">${plain(n.body)}</div>`}</div>`;
+  const fattr = (id, kind, text) => id ? ` data-focus="${esc(id)}" data-fkind="${esc(kind)}" data-flabel="${esc(trim(text, 70))}" title="Ukázat v textu jen tuto položku"` : '';
+  const noteCard = n => `<div class="ctx-card ${n.kind==='warning'?'warning':''}${S.focus?.id===n.id?' focused':''}"${n.anchor_text?fattr(n.id, n.kind, `${NOTE_NAMES[n.kind]||n.kind} „${n.anchor_text}“`):''}><div class="meta"><span class="k">${ICON(n.kind)} ${esc(NOTE_NAMES[n.kind]||n.kind)}${n.language!==S.docs.get(u.document_id)?.language?' · '+esc(n.language.toUpperCase()):''}</span>${S.draft&&n.status!=='approved'?'<span class="chip warn">Koncept</span>':''}</div>${quote(n)}${n.kind==='key'?'':`<div class="body">${plain(n.body)}</div>`}</div>`;
   const lgroups = RQNotes.linkGroups(rels.filter(r => r.source_id === u.id && !r.mirrored));
   const relQuote = r => { if (!r.anchor_text || r.source_id !== u.id || r.mirrored) return ''; const g = lgroups.find(x => x.rels.includes(r));
     return g ? `<button type="button" class="anchor-q" data-cid="${esc(g.id)}" title="Ukázat v textu">„${esc(trim(r.anchor_text, 90))}“</button>` : ''; };
   const relCard = r => { const o = other(r); if (!o) return ''; const d = S.docs.get(o.document_id);
-    return `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(o.id)}"><div class="meta"><span class="k">${ICON(guidance.includes(r)||legalBasis.includes(r)?'guidance':r.relation_type)} ${esc(REL_NAMES[r.relation_type]||r.relation_type)}</span>${S.draft&&r.status!=='approved'?'<span class="chip warn">Návrh</span>':''}</div><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),70)):''}</strong><small>${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${relQuote(r)}${r.rationale?`<div class="why">${esc(r.rationale)}</div>`:''}</div>`; };
+    const g = r.anchor_text && r.source_id === u.id && !r.mirrored ? lgroups.find(x => x.rels.includes(r)) : null;
+    return `<div class="ctx-card${g && S.focus?.id===g.id?' focused':''}"${g?fattr(g.id, 'link', `Odkaz „${r.anchor_text}“`):''}><a class="ctx-link" href="#/u/${encodeURIComponent(o.id)}"><div class="meta"><span class="k">${ICON(guidance.includes(r)||legalBasis.includes(r)?'guidance':r.relation_type)} ${esc(REL_NAMES[r.relation_type]||r.relation_type)}</span>${S.draft&&r.status!=='approved'?'<span class="chip warn">Návrh</span>':''}</div><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),70)):''}</strong><small>${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${relQuote(r)}${r.rationale?`<div class="why">${esc(r.rationale)}</div>`:''}</div>`; };
   const total = notes.length + rels.length;
   box.innerHTML = `<div class="ctx-title">Souvislosti · ${esc(u.label)}</div>` +
     section('Na co si dát pozor', warnings, noteCard) +
@@ -513,12 +529,10 @@ function renderContext(){
     (childInfo.length ? `<div class="ctx-section"><h3>V jednotlivých částech</h3>${childInfo.map(x => `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(x.c.id)}"><strong>${esc(x.c.label)}</strong><small>${[x.n?`${x.n}× výklad`:'',x.r?`${x.r}× souvislost`:''].filter(Boolean).join(' · ')}</small></a></div>`).join('')}</div>` : '') +
     (total || childInfo.length ? '' : '<div class="ctx-empty">K tomuto ustanovení zatím nejsou zveřejněné výklady ani vazby.</div>') + disclaimer();
   $('#tabCount').textContent = total ? String(total) : '';
-  box.querySelectorAll('.anchor-q').forEach(b => b.onclick = () => {
-    const el = document.querySelector(`#panelText [data-cid="${CSS.escape(b.dataset.cid)}"]`);
-    if (!el) return;
-    setTab('text', false); el.scrollIntoView({block:'center', behavior:'smooth'});
-    document.querySelectorAll(`#panelText [data-cid="${CSS.escape(b.dataset.cid)}"]`).forEach(x => { x.classList.remove('rq-flash'); void x.offsetWidth; x.classList.add('rq-flash'); });
-  });
+  box.querySelectorAll('[data-focus]').forEach(c => c.addEventListener('click', e => {
+    if (e.target.closest('a, button:not(.anchor-q)')) return;
+    setFocus({ id: c.dataset.focus, kind: c.dataset.fkind, label: esc(c.dataset.flabel) });
+  }));
 }
 function disclaimer(){ return '<div class="disclaimer">Výklady připravuje redakce RegulaQuest pro výuku. Nejsou právním stanoviskem; rozhodující je vždy oficiální znění předpisu.</div>'; }
 

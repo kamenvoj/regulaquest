@@ -308,3 +308,4 @@ dialog.wide{width:min(1100px,calc(100vw - 24px));max-width:min(1100px,calc(100vw
 /* 0.12 lišta tlačítek zůstává viditelná dole v panelu */
 .reader .rq-structure-actions{position:sticky;bottom:-25px;z-index:6;background:#fff;margin:0 -28px;padding:12px 28px 14px;border-top:1px solid #e4ebea;box-shadow:0 -8px 14px -10px rgba(20,50,60,.25)}
 .reader .rq-structure-actions{gap:6px}.reader .rq-structure-actions .btn{padding:6px 10px;font-size:11.5px}
+.boxnote.focusable{cursor:pointer}.boxnote.focused{outline:2px solid #16313c;outline-offset:1px}

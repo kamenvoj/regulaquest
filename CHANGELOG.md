@@ -1,5 +1,10 @@
 # Změny
 
+## 0.14.0 – 2026-11-26 · Zaměření z bočního panelu
+- Klepnutím na položku v panelu Souvislosti (čtečka) nebo Naše komentáře / Propojené pasáže (Studio) se v textu výrazně označí
+  jen tato položka (tmavý rámeček), ostatní značky se ztlumí. Funguje i tehdy, když je její vrstva vypnutá.
+- Nad textem štítek „Zvýrazněno jen: …“ s tlačítkem „Zobrazit vše ✕“; opětovné klepnutí na kartu zaměření zruší.
+
 ## 0.13.0 – 2026-11-26 · Přepínače vrstev ve Studiu, více položek na jednom místě
 - Studio má nad textem stejnou řadu přepínačů jako čtečka: Klíčové, Povinnosti, Lhůty, Výjimky, Poznámky, Pozor, Odkazy, Pojmy
   (jen ty, které v části jsou, s počtem). Volba se pamatuje v prohlížeči; ve Studiu je výchozí vše zapnuté.

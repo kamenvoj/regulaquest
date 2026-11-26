@@ -99,6 +99,13 @@ with sync_playwright() as pw:
     print('lišta vrstev studio:', p.locator('#reader .layer-bar .lb').all_inner_texts())
     n0 = p.locator('#reader .rq-mk').count(); p.click('#reader .lb-note'); time.sleep(0.4)
     print('poznámky vypnuty:', n0, '→', p.locator('#reader .rq-mk').count()); p.click('#reader .lb-note'); time.sleep(0.4)
+    # zaměření z panelu i při vypnuté vrstvě
+    p.click('#reader .lb-note'); time.sleep(0.4)
+    p.locator('#context .anchor-q').nth(1).click(); time.sleep(0.6)
+    print('studio zaměření:', p.locator('#reader .rq-focus').count(), p.inner_text('#reader .focus-chip')[:80].replace('\n',' '), '| zvýrazněná karta:', p.locator('#context .boxnote.focused').count())
+    p.screenshot(path='/tmp/a11-studio-focus.png')
+    p.click('#reader .focus-chip button'); time.sleep(0.4); p.click('#reader .lb-note'); time.sleep(0.4)
+    print('po zrušení:', p.locator('#reader .rq-focus').count(), p.locator('#reader.focus-mode').count())
     # rychlé odstranění konceptu komentáře
     before = p.locator('#context .boxnote').count()
     p.locator('#context [data-com-drop]').first.click(); time.sleep(0.9)
@@ -123,6 +130,11 @@ with sync_playwright() as pw:
     r.locator('#panelText .rq-mk').first.click(); time.sleep(0.3)
     print('rozbaleno:', r.inner_text('#panelText .rq-pop')[:80])
     r.screenshot(path='/tmp/a3-reader.png')
+    r.locator('.lb-note').click(); time.sleep(0.3)
+    r.locator('#panelContext [data-focus]').first.click(); time.sleep(0.6)
+    print('čtečka zaměření:', r.locator('#panelText .rq-focus').count(), r.inner_text('#panelText .focus-chip')[:70].replace('\n',' '))
+    r.screenshot(path='/tmp/a12-reader-focus.png')
+    r.click('#panelText .focus-chip button'); time.sleep(0.3); r.locator('.lb-note').click(); time.sleep(0.3)
     print('souvislosti:', [h.strip() for h in r.locator('#panelContext h3').all_inner_texts()])
     r.click('#legendBtn'); time.sleep(0.2); r.screenshot(path='/tmp/a4-legend.png')
     # hledání: zvýraznění výsledku je jiné než klíčová pasáž

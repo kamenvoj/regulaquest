@@ -98,6 +98,7 @@
       const mk = document.createElement('button');
       mk.type = 'button'; mk.className = 'rq-mk' + (warn ? ' warn' : '') + (one && c.kind === 'link' ? ' link' : '') + (one ? '' : ' multi');
       mk.dataset.cid = one ? c.id : 'G' + c.id;
+      mk.dataset.items = items.map(x => x.id).join(' ');
       const kinds = [...new Set(items.map(x => x.kind))];
       mk.setAttribute('aria-label', one ? (c.kind === 'link' ? 'Zobrazit propojení' : 'Zobrazit poznámku') : `Zobrazit ${items.length} položky na tomto místě`);
       mk.innerHTML = one ? (ICON[c.kind] || ICON.comment) : kinds.slice(0, 3).map(k => ICON[k] || ICON.comment).join('') + `<b>${items.length}</b>`;
@@ -106,6 +107,21 @@
       [...g.flatMap(p => p.spans), mk].forEach(e => e.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); onOpen && onOpen(target, mk); }));
     }
     return missing;
+  }
+
+  /* Zaměření: zvýrazní jednu položku (podle id) a ztlumí ostatní značky v root. Vrací první prvek pro posun. */
+  function applyFocus(root, id) {
+    root.classList.add('focus-mode');
+    const els = [...root.querySelectorAll(`[data-cid="${CSS.escape(id)}"]`)]
+      .concat([...root.querySelectorAll('.rq-mk')].filter(m => (m.dataset.items || '').split(' ').includes(id)));
+    els.forEach(e => e.classList.add('rq-focus'));
+    return els[0] || null;
+  }
+  function focusChip(kind, label, onClear) {
+    const el = document.createElement('div'); el.className = 'focus-chip'; el.dataset.noAnchor = '1';
+    el.innerHTML = `<span>Zvýrazněno jen:</span> <strong>${ICON[kind] || ICON.comment} ${label}</strong><button type="button">Zobrazit vše ✕</button>`;
+    el.querySelector('button').onclick = onClear;
+    return el;
   }
 
   /* Řada přepínačů vrstev. items = [[vrstva, počet]], off = Set skrytých; onToggle(vrstva) po změně. */
@@ -224,6 +240,6 @@
       g.get(k).rels.push(r); });
     return [...g.values()];
   }
-  window.RQNotes = { linkGroups, layerOf, layerBar, CSS_LAYERS, ANCHOR_ORDER, ICON, ORDER, LAYERS, LAYER_NAMES, applyAnchors, selectionAnchor,
+  window.RQNotes = { applyFocus, focusChip, linkGroups, layerOf, layerBar, CSS_LAYERS, ANCHOR_ORDER, ICON, ORDER, LAYERS, LAYER_NAMES, applyAnchors, selectionAnchor,
     suggestForms, parseDefinitions, definitionText, applyTerms, countTerm, tokens, fold };
 })();
