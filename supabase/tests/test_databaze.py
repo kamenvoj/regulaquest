@@ -343,6 +343,20 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual([t['name'] for t in pub['terms']], ['software (SW)'])
         self.fails('', 'rq_import_terms', 'mdr-cs-rule-11', [])
 
+    def test_anchored_relations(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        tgt = self.sql("select id from units where id <> 'mdr-cs-rule-11' and not archived limit 1")[0][0]
+        a = self.call('rq_new_relation', 'mdr-cs-rule-11', tgt, 'references', 'důvod', '', 'manual', 'Software', 1)
+        b = self.call('rq_new_relation', 'mdr-cs-rule-11', tgt, 'references', 'důvod 2', '', 'manual', '', 1)
+        self.assertNotEqual(a, b)
+        self.fails('už existuje', 'rq_new_relation', 'mdr-cs-rule-11', tgt, 'references', 'x', '', 'manual', 'Software', 1)
+        self.fails('nebyl nalezen', 'rq_new_relation', 'mdr-cs-rule-11', tgt, 'related', 'x', '', 'manual', 'Nic takového', 1)
+        r = self.call('rq_batch_new_relations', [{'source_id': 'mdr-cs-rule-11', 'target_id': tgt, 'relation_type': 'related', 'rationale': 'r', 'anchor_text': 'Software', 'anchor_occurrence': 1}])
+        self.assertEqual(r['created'], 1)
+        self.assertEqual(self.sql("select anchor_text from relations where relation_type='related'")[0][0], 'Software')
+        self.assertIn('anchor_text', self.call('rq_draft_preview')['relations'][0])
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)

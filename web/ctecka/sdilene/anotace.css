@@ -40,3 +40,9 @@ mark .rq-key{background:transparent;box-shadow:none}
 .layer-bar .lb[aria-pressed="false"] .sw{opacity:.35}
 mark .rq-hl{background:transparent;box-shadow:none}
 .rq-term:has(.rq-anc){border-bottom:0}
+.rq-anc.link{border-bottom:1.5px solid #9fcfcb}
+.rq-anc.link:hover{border-bottom-color:#1d7d83}
+.rq-pop .lk{display:block;padding:4px 0;color:#10595d;text-decoration:none}
+.rq-pop .lk small{color:#6b7f85;margin-left:6px}
+.rq-pop .lk:hover strong{text-decoration:underline}
+.rq-pop .why{display:block;font-size:12.5px;color:#4f646a;margin:0 0 6px}

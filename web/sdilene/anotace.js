@@ -20,6 +20,7 @@
     deadline: svg('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>'),
     exception: svg('<path d="M6 3v6a6 6 0 0 0 6 6h6"/><path d="m15 12 3 3-3 3"/><path d="M6 21v-6"/>'),
     term: svg('<path d="M4 7V4h16v3M9 20h6M12 4v16"/>'),
+    link: svg('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'),
   };
   // Zvýraznění (vrstvy) – bez vlastního textu, jen označují pasáž.
   const LAYERS = ['key', 'duty', 'deadline', 'exception'];
@@ -71,14 +72,14 @@
       if (at < 0) { missing.push(c); continue; }
       const spans = wrap(tm, at, at + q.length, () => {
         const el = document.createElement('span');
-        el.className = LAYERS.includes(c.kind) ? 'rq-hl hl-' + c.kind + (c.kind === 'key' ? ' rq-key' : '') : 'rq-anc' + (c.kind === 'warning' ? ' warn' : '');
+        el.className = LAYERS.includes(c.kind) ? 'rq-hl hl-' + c.kind + (c.kind === 'key' ? ' rq-key' : '') : 'rq-anc' + (c.kind === 'warning' ? ' warn' : c.kind === 'link' ? ' link' : '');
         el.dataset.cid = c.id; if (c.status && c.status !== 'approved') el.classList.add('draft');
         return el;
       });
       if (!LAYERS.includes(c.kind) && spans.length) {
         const mk = document.createElement('button');
         mk.type = 'button'; mk.className = 'rq-mk' + (c.kind === 'warning' ? ' warn' : ''); mk.dataset.cid = c.id;
-        mk.setAttribute('aria-label', 'Zobrazit poznámku'); mk.innerHTML = ICON[c.kind] || ICON.comment;
+        mk.setAttribute('aria-label', c.kind === 'link' ? 'Zobrazit propojení' : 'Zobrazit poznámku'); if (c.kind === 'link') mk.classList.add('link'); mk.innerHTML = ICON[c.kind] || ICON.comment;
         spans[spans.length - 1].after(mk);
         [...spans, mk].forEach(e => e.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); onOpen && onOpen(c, mk); }));
       }
@@ -179,6 +180,13 @@
     return n;
   }
 
-  window.RQNotes = { ICON, ORDER, LAYERS, LAYER_NAMES, applyAnchors, selectionAnchor,
+  function linkGroups(rels) {
+    const g = new Map();
+    rels.filter(r => r.anchor_text).forEach(r => { const k = r.anchor_occurrence + '|' + r.anchor_text;
+      if (!g.has(k)) g.set(k, { id: 'L' + r.id, kind: 'link', anchor_text: r.anchor_text, anchor_occurrence: r.anchor_occurrence, status: r.status, rels: [] });
+      g.get(k).rels.push(r); });
+    return [...g.values()];
+  }
+  window.RQNotes = { linkGroups, ICON, ORDER, LAYERS, LAYER_NAMES, applyAnchors, selectionAnchor,
     suggestForms, parseDefinitions, definitionText, applyTerms, countTerm, tokens, fold };
 })();

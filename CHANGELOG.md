@@ -1,5 +1,13 @@
 # Změny
 
+## 0.11.0 – 2026-11-26 · Vazby z místa v textu
+- Vazbu lze vytvořit z vybraného úseku textu (lišta výběru → **Propojit**). V textu je místo podtržené a označené ikonou řetízku;
+  ve čtečce se po klepnutí rozbalí seznam propojených ustanovení. Totéž cílové ustanovení lze propojit z více míst jedné části.
+- Návrhy výslovných odkazů (✧ Návrhy) se ukládají rovnou ukotvené k nalezené citaci (např. „čl. 17 odst. 5“).
+- Panel ve Studiu skrývá archivované a zamítnuté komentáře a vazby (odkaz „zobrazit ve správě“).
+  U konceptu komentáře je tlačítko **Odstranit** (přesune do archivu), u návrhu vazby **Odstranit návrh** (zamítne).
+- Migrace 12_vazby_z_textu.sql.
+
 ## 0.10.0 – 2026-11-26 · Pojmy z definic a vrstvy zvýraznění
 - Vrstvy zvýraznění: **Klíčové** (žlutá), **Povinnost** (zelená), **Lhůta / číslo** (fialová), **Výjimka / podmínka** (růžová). Ve Studiu z lišty po výběru textu.
 - Čtečka: nad textem přepínače vrstev, které v části jsou (s počtem). Výchozí: klíčové a pojmy zapnuté, ostatní vypnuté; volba se pamatuje v prohlížeči.

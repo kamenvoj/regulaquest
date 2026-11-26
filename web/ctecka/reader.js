@@ -381,7 +381,8 @@ function anchorNotes(){
   if (!window.RQNotes) return;
   document.querySelectorAll('#panelText .legal').forEach(box => {
     const id = box.dataset.unit; if (!id) return;
-    RQNotes.applyAnchors(box, S.notes.get(id) || [], toggleNote);
+    const links = RQNotes.linkGroups((S.rels.get(id) || []).filter(r => r.source_id === id && !r.mirrored));
+    RQNotes.applyAnchors(box, (S.notes.get(id) || []).concat(links), toggleNote);
   });
 }
 /* Pojmy z definic: první výskyt v každé části, klepnutím definice pod řádkem. */
@@ -428,7 +429,9 @@ function toggleNote(c, mk){
   if (open) return;
   const pop = document.createElement('span');
   pop.className = 'rq-pop' + (c.kind === 'warning' ? ' warn' : ''); pop.dataset.cid = c.id; pop.dataset.noAnchor = '1';
-  pop.innerHTML = `<span class="rq-pop-h">${ICON(c.kind)} ${esc(NOTE_NAMES[c.kind]||c.kind)}${S.draft&&c.status!=='approved'?' · koncept':''}</span>${esc(c.body).replace(/\n/g,'<br>')}`;
+  if (c.kind === 'link') pop.innerHTML = `<span class="rq-pop-h">${ICON('link')} Propojeno</span>` + c.rels.map(r => { const o = S.units.get(r.target_id); if (!o) return ''; const d = S.docs.get(o.document_id);
+      return `<a class="lk" href="#/u/${encodeURIComponent(o.id)}"><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),60)):''}</strong><small>${esc(REL_NAMES[r.relation_type]||'')} · ${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${r.rationale?`<span class="why">${esc(r.rationale)}</span>`:''}`; }).join('');
+  else pop.innerHTML = `<span class="rq-pop-h">${ICON(c.kind)} ${esc(NOTE_NAMES[c.kind]||c.kind)}${S.draft&&c.status!=='approved'?' · koncept':''}</span>${esc(c.body).replace(/\n/g,'<br>')}`;
   const block = mk.closest('p, .ln, li, td, .legal') || mk.parentElement;
   block.after(pop);
 }
@@ -486,8 +489,11 @@ function renderContext(){
   const section = (title, items, fn) => items.length ? `<div class="ctx-section"><h3>${title} <span class="count">${items.length}</span></h3>${items.map(fn).join('')}</div>` : '';
   const quote = n => n.anchor_text ? `<button type="button" class="anchor-q" data-cid="${esc(n.id)}" title="Ukázat v textu">„${esc(trim(n.anchor_text, 90))}“</button>` : '';
   const noteCard = n => `<div class="ctx-card ${n.kind==='warning'?'warning':''}"><div class="meta"><span class="k">${ICON(n.kind)} ${esc(NOTE_NAMES[n.kind]||n.kind)}${n.language!==S.docs.get(u.document_id)?.language?' · '+esc(n.language.toUpperCase()):''}</span>${S.draft&&n.status!=='approved'?'<span class="chip warn">Koncept</span>':''}</div>${quote(n)}${n.kind==='key'?'':`<div class="body">${plain(n.body)}</div>`}</div>`;
+  const lgroups = RQNotes.linkGroups(rels.filter(r => r.source_id === u.id && !r.mirrored));
+  const relQuote = r => { if (!r.anchor_text || r.source_id !== u.id || r.mirrored) return ''; const g = lgroups.find(x => x.rels.includes(r));
+    return g ? `<button type="button" class="anchor-q" data-cid="${esc(g.id)}" title="Ukázat v textu">„${esc(trim(r.anchor_text, 90))}“</button>` : ''; };
   const relCard = r => { const o = other(r); if (!o) return ''; const d = S.docs.get(o.document_id);
-    return `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(o.id)}"><div class="meta"><span class="k">${ICON(guidance.includes(r)||legalBasis.includes(r)?'guidance':r.relation_type)} ${esc(REL_NAMES[r.relation_type]||r.relation_type)}</span>${S.draft&&r.status!=='approved'?'<span class="chip warn">Návrh</span>':''}</div><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),70)):''}</strong><small>${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${r.rationale?`<div class="why">${esc(r.rationale)}</div>`:''}</div>`; };
+    return `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(o.id)}"><div class="meta"><span class="k">${ICON(guidance.includes(r)||legalBasis.includes(r)?'guidance':r.relation_type)} ${esc(REL_NAMES[r.relation_type]||r.relation_type)}</span>${S.draft&&r.status!=='approved'?'<span class="chip warn">Návrh</span>':''}</div><strong>${esc(o.label)}${headingOf(o)?' – '+esc(trim(headingOf(o),70)):''}</strong><small>${esc(docShort(d))}${ancestors(o).length?' › '+esc(ancestors(o).map(a=>a.label).join(' › ')):''}</small></a>${relQuote(r)}${r.rationale?`<div class="why">${esc(r.rationale)}</div>`:''}</div>`; };
   const total = notes.length + rels.length;
   box.innerHTML = `<div class="ctx-title">Souvislosti · ${esc(u.label)}</div>` +
     section('Na co si dát pozor', warnings, noteCard) +
