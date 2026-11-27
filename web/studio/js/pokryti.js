@@ -30,9 +30,16 @@ window.RQCoverage = (function () {
 
   function render() {
     const box = $('#coverageContent'); if (!box) return;
-    if (!docId || !getDoc(docId)) docId = activeDocId || db.documents[0]?.id || null;
-    const d = getDoc(docId);
-    const tops = d ? db.units.filter(u => u.document_id === d.id && !u.editor_archived && !u.parent_id) : [];
+    const areaKey = String(docId || '').startsWith('area:') ? docId.slice(5) : null;
+    const areas = (db.areas || []).filter(a => !a.archived && (db.document_areas || []).some(x => x.area_key === a.key));
+    if (areaKey && !areas.some(a => a.key === areaKey)) docId = null;
+    if (!areaKey && (!docId || !getDoc(docId))) docId = activeDocId || db.documents[0]?.id || null;
+    // Celá oblast: dokumenty zařazené do oblasti, z každé jazykové skupiny jeden (přednostně český – štítky se zrcadlí)
+    const docsOf = () => { const keys = new Set((db.document_areas || []).filter(x => x.area_key === areaKey).map(x => x.group_key)), byG = new Map();
+      db.documents.filter(x => !x.archived && keys.has(x.group_key || x.id)).forEach(x => { const g = x.group_key || x.id; if (!byG.has(g) || x.language === 'cs') byG.set(g, x); }); return [...byG.values()]; };
+    const docs = areaKey ? docsOf() : (getDoc(docId) ? [getDoc(docId)] : []);
+    const d = docs[0];
+    const tops = docs.flatMap(dd => db.units.filter(u => u.document_id === dd.id && !u.editor_archived && !u.parent_id));
     // u dokumentů se strukturou kapitol vezmeme o úroveň níž (články, pravidla), pokud nejvyšší úroveň nemá text
     const rows = tops.flatMap(u => (!String(u.body || '').trim() && ['chapter', 'part', 'section'].includes(u.kind))
       ? db.units.filter(x => x.parent_id === u.id && !x.editor_archived) : [u]).map(u => ({ u, s: stats(u) }));
@@ -46,13 +53,13 @@ window.RQCoverage = (function () {
       ['S vazbou', tot(s => s.rel)], ['S metodikou', tot(s => s.guidance)]];
     box.innerHTML = `<div class="page-head"><div><div class="eyebrow">REDAKCE / POKRYTÍ</div><h1>Pokrytí</h1>
       <p>Kde už je hotovo a kde pokračovat. Čísla zahrnují i odstavce a body daného článku (pravidla, přílohy). Archivované a zamítnuté položky se nepočítají.</p></div>
-      <label class="form-field cov-doc"><span>Dokument</span><select class="select" id="covDoc">${db.documents.map(x => `<option value="${esc(x.id)}" ${x.id === docId ? 'selected' : ''}>${esc(x.family)} · ${esc(x.language.toUpperCase())} – ${esc(x.title.slice(0, 60))}</option>`).join('')}</select></label></div>
+      <label class="form-field cov-doc"><span>Dokument</span><select class="select" id="covDoc">${areas.length ? `<optgroup label="Celá oblast">${areas.map(a => `<option value="area:${esc(a.key)}" ${'area:' + a.key === docId ? 'selected' : ''}>${esc(a.name)} (všechny dokumenty)</option>`).join('')}</optgroup><optgroup label="Dokument">` : ''}${db.documents.map(x => `<option value="${esc(x.id)}" ${x.id === docId ? 'selected' : ''}>${esc(x.family)} · ${esc(x.language.toUpperCase())} – ${esc(x.title.slice(0, 60))}</option>`).join('')}${areas.length ? '</optgroup>' : ''}</select></label></div>
       ${d ? `<div class="cov-summary">${sum.map(([l, n]) => `<div class="cov-metric"><span>${l}</span><strong>${n} / ${rows.length}</strong><i><b style="width:${pct(n)}%"></b></i></div>`).join('')}</div>
       <div class="cov-tools">${Object.entries(FILTERS).map(([k, l]) => `<button type="button" class="chip-btn${k === filter ? ' on' : ''}" data-f="${k}">${l}${k === 'all' ? '' : ` <small>${rows.filter(r => { const f = filter; filter = k; const ok = pass(r); filter = f; return ok; }).length}</small>`}</button>`).join('')}
         <label class="cov-sort"><input type="checkbox" id="covSort" ${sortBy === 'gaps' ? 'checked' : ''}> nejméně zpracované nahoře</label></div>
       <div class="cov-table" role="table"><div class="cov-row head" role="row"><span>Část</span><span>Text</span><span>Štítky</span><span>Výklad</span><span>Zvýraznění</span><span>Vazby</span><span>Metodika</span><span>Trasy</span></div>
       ${shown.map(({ u, s }) => `<button type="button" class="cov-row" role="row" data-open="${esc(u.id)}" title="Otevřít">
-        <span class="cov-name"><strong>${esc(u.label)}</strong>${u.heading ? `<small>${esc(u.heading.slice(0, 70))}</small>` : ''}</span>
+        <span class="cov-name"><strong>${areaKey ? `<em class="cov-doctag">${esc(getDoc(u.document_id)?.family || '')}</em> ` : ''}${esc(u.label)}</strong>${u.heading ? `<small>${esc(u.heading.slice(0, 70))}</small>` : ''}</span>
         <span class="${!s.text ? 'na' : s.verified === s.text ? 'ok' : 'warn'}">${s.text ? `${s.verified}/${s.text}` : '–'}</span>
         <span class="${s.tags ? 'ok' : 'no'}" title="${esc(s.tagNames.join(', '))}">${s.tags || '·'}</span>
         <span class="${s.notes.length ? (s.notesOk === s.notes.length ? 'ok' : 'warn') : 'no'}" title="schváleno ${s.notesOk} z ${s.notes.length}">${s.notes.length || '·'}</span>
@@ -61,7 +68,8 @@ window.RQCoverage = (function () {
         <span class="${s.guidance ? 'ok' : 'no'}">${s.guidance || '·'}</span>
         <span class="${s.steps ? 'ok' : 'no'}">${s.steps || '·'}</span></button>`).join('') || '<p class="fine">Nic neodpovídá filtru.</p>'}</div>
       <p class="fine cov-legend"><span class="ok">zelená</span> hotovo · <span class="warn">oranžová</span> rozpracováno (neověřený text, neschválené položky) · <span class="no">·</span> zatím nic</p>`
-      : '<div class="empty">Zatím žádný dokument.</div>'}`;
+      : `<div class="empty">${areaKey ? 'Do této oblasti zatím nejsou zařazené žádné dokumenty.' : 'Zatím žádný dokument.'}</div>`}
+      ${areaKey && d ? `<p class="fine">Oblast: ${docs.length} dokumentů (z každé jazykové verze jeden – štítky se mezi verzemi zrcadlí).</p>` : ''}`;
     const ds = box.querySelector('#covDoc'); if (ds) ds.onchange = () => { docId = ds.value; render(); };
     box.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; render(); });
     const so = box.querySelector('#covSort'); if (so) so.onchange = () => { sortBy = so.checked ? 'gaps' : 'order'; render(); };

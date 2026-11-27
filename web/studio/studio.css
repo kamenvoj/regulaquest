@@ -565,3 +565,4 @@ dialog:has(#docAreas){width:min(860px,calc(100vw - 24px));max-width:min(860px,ca
 .teach-list li:first-child{border-top:0}
 .teach-list .linklike{font-weight:700;text-align:left}
 .teach-list small{color:#5b6f75}
+.cov-doctag{font-style:normal;font-size:10.5px;font-weight:800;color:#176f75;background:#e8f3f2;border-radius:5px;padding:1px 5px;margin-right:4px}

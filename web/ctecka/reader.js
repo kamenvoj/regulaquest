@@ -134,6 +134,9 @@ function index(d){
   const setOutline = off => { try { localStorage.setItem('rq-osnova-skryta', off ? '1' : ''); } catch {} layoutPanels(); };
   $('#railOutline').onclick = () => setOutline(!outlineOff());
   $('#outlineClose').onclick = () => setOutline(true);
+  // Upozornění na telefonu (jednou; zapamatuje si prohlížeč)
+  try { if (localStorage.getItem('rq-mobil-ok')) document.body.classList.add('mobile-ok'); } catch {}
+  $('#mobileOk').onclick = () => { document.body.classList.add('mobile-ok'); try { localStorage.setItem('rq-mobil-ok', '1'); } catch {} };
   const help = () => window.RQReaderHelp && RQReaderHelp.open(S.view);
   $('#helpBtn').onclick = help; $('#navHelp').onclick = help;
 }

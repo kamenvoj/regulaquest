@@ -562,3 +562,11 @@ div.card:hover{box-shadow:none;border-color:var(--line)}
 .upd-list.compact .upd{padding:9px 12px}
 a.chipb{text-decoration:none;display:inline-block}
 @media (max-width:1180px){ .home-tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .home-two,.home-cont.n2,.home-cont.n3{grid-template-columns:minmax(0,1fr)} }
+
+/* ---------- 0.32 Upozornění na telefonu ---------- */
+.mobile-note{display:none}
+@media (max-width:760px){
+ body:not(.mobile-ok) .mobile-note{display:flex;gap:10px;align-items:center;background:var(--gold-soft);color:#4d3a12;border-bottom:1px solid #efdcb5;padding:9px 14px;font-size:13px;line-height:1.4}
+ .mobile-note span{flex:1}
+ .mobile-note button{flex:none;border:1px solid #d9bd85;background:#fff;color:#4d3a12;border-radius:8px;padding:6px 10px;font:inherit;font-weight:700;cursor:pointer}
+}

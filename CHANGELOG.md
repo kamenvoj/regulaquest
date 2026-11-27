@@ -1,5 +1,10 @@
 # Změny
 
+## 0.32.0 – 2026-11-27 · Před pilotem
+- Čtečka: na telefonu upozornění „Čtečka je určená hlavně pro počítač…“ s tlačítkem Rozumím (zobrazí se jednou, pamatuje si ho prohlížeč).
+- Studio → Pokrytí: kromě jednoho dokumentu lze zvolit **celou oblast** (všechny zařazené dokumenty, z každé jazykové verze jeden);
+  filtry včetně „Bez štítků“ pak platí napříč oblastí, u řádků je zkratka dokumentu.
+
 ## 0.31.1 – 2026-11-27
 - Přehled pro studenty: dlaždice Najít předpisy vypadá stejně jako ostatní (bez tmavého zvýraznění a tlačítek).
 
