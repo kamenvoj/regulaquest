@@ -450,6 +450,24 @@ class DatabaseTest(unittest.TestCase):
         self.call('rq_delete_mark', m)
         self.assertEqual(self.call('rq_my_reader_state')['marks'], [])
 
+    def test_areas(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        gk = self.sql("select group_key from documents where id='mdr-cs'")[0][0]
+        self.call('rq_set_document_area', gk, 'zp', 'core', '', 1)
+        self.fails('kdy je dokument relevantní', 'rq_set_document_area', gk, 'metrologie', 'situational', '', 1)
+        self.call('rq_set_document_area', gk, 'metrologie', 'situational', 'ZP s měřicí funkcí', 1)
+        k = self.call('rq_save_area', '', 'Zdravotnická technika', '', None)
+        self.assertEqual(k, 'zdravotnicka_technika')
+        self.call('rq_archive_area', 'metrologie', True)
+        self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
+        pv = self.call('rq_draft_preview')
+        self.assertEqual([(x['area_key'], x['role']) for x in pv['document_areas']], [('zp', 'core')])
+        self.assertIn('zdravotnicka_technika', [a['key'] for a in pv['areas']])
+        self.call('rq_remove_document_area', gk, 'zp')
+        self.assertEqual(self.call('rq_draft_preview')['document_areas'], [])
+        self.assertIn('document_areas', self.call('rq_backup'))
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)

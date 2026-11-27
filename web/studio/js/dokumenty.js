@@ -3,7 +3,7 @@
    na Přehledu jen připnuté a naposledy upravované, v katalogu vše s filtrem podle stavu. */
 window.RQDocs = (function () {
   const PIN = 'rq-pripnute';
-  let catalogStatus = 'all';
+  let catalogStatus = 'all', catalogArea = 'all';
   const pins = () => { try { return new Set(JSON.parse(localStorage.getItem(PIN)) || []); } catch { return new Set(); } };
   function togglePin(g) { const p = pins(); p.has(g) ? p.delete(g) : p.add(g); try { localStorage.setItem(PIN, JSON.stringify([...p])); } catch {} }
   const key = d => d.group_key || d.id;
@@ -76,18 +76,23 @@ window.RQDocs = (function () {
     const holder = $('#documentOverview'), q = docOverviewSearch.trim().toLocaleLowerCase('cs');
     $('#catalogJurisdiction').value = catalogJurisdiction; $('#catalogType').value = catalogType;
     const st = $('#catalogStatus'); if (st) { st.value = catalogStatus; st.onchange = () => { catalogStatus = st.value; renderCatalog(); }; }
+    const ar = $('#catalogArea');
+    if (ar) { ar.innerHTML = '<option value="all">Všechny</option><option value="none">Bez oblasti</option>' + (db.areas || []).filter(a => !a.archived).map(a => `<option value="${esc(a.key)}">${esc(a.name)}</option>`).join('');
+      ar.value = catalogArea; ar.onchange = () => { catalogArea = ar.value; renderCatalog(); }; }
+    const ma = $('#manageAreas'); if (ma && window.RQAreas) ma.onclick = () => RQAreas.manager();
+    const inArea = g => { const xs = window.RQAreas ? RQAreas.of(g.key) : []; return catalogArea === 'all' || (catalogArea === 'none' ? !xs.length : xs.some(x => x.area_key === catalogArea)); };
     const si = $('#documentListSearch'); if (si && si.value !== docOverviewSearch) si.value = docOverviewSearch;
     const gs = groups(db.documents).filter(g => {
       const d = g.main;
       return (catalogJurisdiction === 'all' || d.jurisdiction === catalogJurisdiction) && (catalogType === 'all' || d.document_type === catalogType)
-        && (catalogStatus === 'all' || (catalogStatus === 'pinned' ? pins().has(g.key) : status(g) === catalogStatus))
+        && inArea(g) && (catalogStatus === 'all' || (catalogStatus === 'pinned' ? pins().has(g.key) : status(g) === catalogStatus))
         && g.docs.some(x => [x.family, x.title, x.language, x.version, x.kind, ...(x.topics || [])].join(' ').toLocaleLowerCase('cs').includes(q));
     }).sort((a, b) => [a.main.jurisdiction, a.main.document_type, a.main.family].join('|').localeCompare([b.main.jurisdiction, b.main.document_type, b.main.family].join('|'), 'cs'));
     let prev = null;
     holder.innerHTML = gs.length ? gs.map(g => {
       const grp = g.main.jurisdiction + '|' + g.main.document_type, head = grp !== prev ? `<div class="catalog-section-title">${esc(jurisdictions[g.main.jurisdiction] || 'Nezařazeno')} / ${esc(docTypes[g.main.document_type] || 'Ostatní')}</div>` : ''; prev = grp;
       const topics = [...new Set(g.docs.flatMap(d => d.topics || []))];
-      return head + card(g, `<div class="topic-chips">${topics.map(t => `<span class="topic-chip">${esc(t)}</span>`).join('')}</div>
+      return head + card(g, `${window.RQAreas ? `<div class="area-chips">${RQAreas.chips(g.key)}</div>` : ''}<div class="topic-chips">${topics.map(t => `<span class="topic-chip">${esc(t)}</span>`).join('')}</div>
         <div class="dg-meta">${g.docs.map(d => `<button type="button" class="linklike inline" data-edit-metadata="${esc(d.id)}">Údaje ${esc(d.language.toUpperCase())}</button>`).join(' · ')}</div>`);
     }).join('') : '<div class="review-card"><p>Žádný dokument neodpovídá filtru.</p></div>';
     bind(holder, renderCatalog);

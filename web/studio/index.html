@@ -7,8 +7,8 @@
 <title>RegulaQuest Studio</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23142c38'/%3E%3Cpath d='M18 6L21.5 15L30 18L21 21.5L18 30L15 21.5L6 18L15 15Z' fill='%23E9CB90'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="sdilene/prihlaseni.css">
-<link rel="stylesheet" href="sdilene/anotace.css?v=0.21.0">
-<link rel="stylesheet" href="studio.css?v=0.21.0">
+<link rel="stylesheet" href="sdilene/anotace.css?v=0.22.0">
+<link rel="stylesheet" href="studio.css?v=0.22.0">
 </head>
 <body>
 <div id="app"><div class="rq-login"></div></div>
@@ -68,7 +68,7 @@
    <div class="overview-toolbar catalog-filter-controls">
     <label class="form-field"><span>Hledat dokument / tag</span><input class="input" id="documentListSearch" type="search" placeholder="Např. MDR, klinické hodnocení…"></label>
     <label class="form-field"><span>Původ</span><select class="select" id="catalogJurisdiction"><option value="all">Všechny</option><option value="eu">EU</option><option value="cz">ČR</option><option value="international">Mezinárodní</option><option value="other">Ostatní</option></select></label>
-    <label class="form-field"><span>Druh</span><select class="select" id="catalogType"><option value="all">Všechny</option><option value="regulation">Nařízení</option><option value="directive">Směrnice</option><option value="law">Zákon</option><option value="decree">Vyhláška</option><option value="guidance">Metodika</option><option value="standard">Technická norma</option><option value="other">Ostatní</option></select></label><label class="form-field"><span>Stav</span><select class="select" id="catalogStatus"><option value="all">Všechny</option><option value="pinned">★ Připnuté</option><option value="new">Nezačaté</option><option value="progress">Rozpracované</option><option value="done">Hotové (vše ověřeno)</option></select></label>
+    <label class="form-field"><span>Druh</span><select class="select" id="catalogType"><option value="all">Všechny</option><option value="regulation">Nařízení</option><option value="directive">Směrnice</option><option value="law">Zákon</option><option value="decree">Vyhláška</option><option value="guidance">Metodika</option><option value="standard">Technická norma</option><option value="other">Ostatní</option></select></label><label class="form-field"><span>Stav</span><select class="select" id="catalogStatus"><option value="all">Všechny</option><option value="pinned">★ Připnuté</option><option value="new">Nezačaté</option><option value="progress">Rozpracované</option><option value="done">Hotové (vše ověřeno)</option></select></label><label class="form-field"><span>Oblast</span><select class="select" id="catalogArea"><option value="all">Všechny</option></select></label><button type="button" class="btn" id="manageAreas" style="align-self:flex-end;margin-bottom:13px">Spravovat oblasti…</button>
    </div>
    <div class="overview-list" id="documentOverview"></div>
   </section>
@@ -119,22 +119,23 @@
 <script src="sdilene/supabase.js"></script>
 <script src="sdilene/config.js"></script>
 <script src="sdilene/prihlaseni.js"></script>
-<script src="sdilene/anotace.js?v=0.21.0"></script>
+<script src="sdilene/anotace.js?v=0.22.0"></script>
 <script src="vendor/qrcode.js"></script>
-<script src="js/import-eurlex.js?v=0.21.0"></script>
-<script src="js/reference-suggest.js?v=0.21.0"></script>
-<script src="js/related-search.js?v=0.21.0"></script>
-<script src="js/import-pdf.js?v=0.21.0"></script>
-<script src="js/editor.js?v=0.21.0"></script>
-<script src="js/structure-ui.js?v=0.21.0"></script>
-<script src="js/pojmy.js?v=0.21.0"></script>
-<script src="js/trasy.js?v=0.21.0"></script>
-<script src="js/pokryti.js?v=0.21.0"></script>
-<script src="js/domov.js?v=0.21.0"></script>
-<script src="js/dokumenty.js?v=0.21.0"></script>
-<script src="js/napoveda.js?v=0.21.0"></script>
-<script src="js/pristupy.js?v=0.21.0"></script>
-<script>window.RQ_VERSION="0.21.0"</script>
-<script src="js/studio.js?v=0.21.0"></script>
+<script src="js/import-eurlex.js?v=0.22.0"></script>
+<script src="js/reference-suggest.js?v=0.22.0"></script>
+<script src="js/related-search.js?v=0.22.0"></script>
+<script src="js/import-pdf.js?v=0.22.0"></script>
+<script src="js/editor.js?v=0.22.0"></script>
+<script src="js/structure-ui.js?v=0.22.0"></script>
+<script src="js/pojmy.js?v=0.22.0"></script>
+<script src="js/trasy.js?v=0.22.0"></script>
+<script src="js/pokryti.js?v=0.22.0"></script>
+<script src="js/domov.js?v=0.22.0"></script>
+<script src="js/dokumenty.js?v=0.22.0"></script>
+<script src="js/oblasti.js?v=0.22.0"></script>
+<script src="js/napoveda.js?v=0.22.0"></script>
+<script src="js/pristupy.js?v=0.22.0"></script>
+<script>window.RQ_VERSION="0.22.0"</script>
+<script src="js/studio.js?v=0.22.0"></script>
 </body>
 </html>

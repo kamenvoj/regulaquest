@@ -658,13 +658,14 @@ function dialogDocumentMetadata(id){
  ${select('Druh dokumentu','document_type',Object.entries(docTypes),d.document_type||'other')}
  <label class="form-field"><span>Odborné tagy (oddělit čárkou)</span><textarea class="textarea" name="topics" placeholder="Např. klasifikace, software, klinické hodnocení">${esc((d.topics||[]).join(', '))}</textarea><small class="form-hint">Zvolte jednotné názvy. Tagy nepředstavují samotnou odbornou vazbu na ustanovení.</small></label>
  <div class="notice">Dokumentová skupina: ${esc(d.group_key||d.id)}. Změna typu, původu a tagů bude platit pro propojené jazykové verze. Text ani schválené vazby se nemění.</div>
- <div class="doc-danger"><strong>Odstranění dokumentu</strong><p>Archivace dokument skryje v katalogu i ve čtečce (od příští publikace); vše zůstane a lze ho obnovit. Trvalé smazání je jen pro omyly – u dokumentu, který ještě nebyl publikován a nemá schválený obsah.</p>
+ ${window.RQAreas?RQAreas.metaSection(d):''}<div class="doc-danger"><strong>Odstranění dokumentu</strong><p>Archivace dokument skryje v katalogu i ve čtečce (od příští publikace); vše zůstane a lze ho obnovit. Trvalé smazání je jen pro omyly – u dokumentu, který ještě nebyl publikován a nemá schválený obsah.</p>
   <button class="btn tiny" type="button" id="archiveDoc">Archivovat dokument</button> <button class="btn tiny danger" type="button" id="deleteDoc">Smazat dokument trvale…</button></div>
  <div class="modal-actions"><button class="btn" type="button" id="cancelMetadata">Zrušit</button><button class="btn accent" type="submit">Uložit metadata</button></div>`;
  f.querySelector('#cancelMetadata').onclick=()=>modal.close();
  f.querySelector('#archiveDoc').onclick=async()=>{if(!confirm(`Archivovat ${d.family} · ${d.language.toUpperCase()}? Dokument zmizí z katalogu a po příští publikaci i ze čtečky. Obnovit ho lze na úvodní stránce.`))return;
   try{await rpc('rq_archive_document',{p_id:id,p_archived:true});modal.close();await refresh();setPage('home');toast('Dokument archivován.')}catch(e){toast(e.message,true)}};
  f.querySelector('#deleteDoc').onclick=()=>{modal.close();setTimeout(()=>rqDeleteDocument(id),0)};
+ if(window.RQAreas)RQAreas.bindMeta(d);
  f.onsubmit=e=>{e.preventDefault();const raw=Object.fromEntries(new FormData(f).entries());const topics=[...new Set(String(raw.topics||'').split(',').map(t=>t.trim()).filter(Boolean))];if(topics.length>40){toast('Maximálně 40 tagů',true);return}
  safeAct({action:'update_document_metadata',document_id:id,title:raw.title,family:raw.family,version:raw.version,publisher:raw.publisher,url:raw.url,jurisdiction:raw.jurisdiction,document_type:raw.document_type,topics,short_title:raw.short_title||'',featured:!!raw.featured,featured_sort:Number(raw.featured_sort)||100});modal.close();};
  modal.showModal();

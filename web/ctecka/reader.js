@@ -17,6 +17,7 @@ const S = {
   units:new Map(), docs:new Map(), children:new Map(),
   rels:new Map(), notes:new Map(), order:new Map(),
   terms:[], off:loadOff(), focus:null, role:loadRole(), tagNames:new Map(), paths:[], path:null,
+  area:(()=>{ try { return localStorage.getItem('rq-oblast') || ''; } catch { return ''; } })(),
   view:'home', me:{ marks:[], positions:[], progress:[] }, newUnits:new Map(), docFilter:'all', docQuery:'', termQuery:'',
   docId:null, unitId:null, query:'', highlight:'', expanded:new Set(), tab:'text'
 };
@@ -585,6 +586,7 @@ function renderDoc(d){
   $('#panelText').innerHTML = `<div class="eyebrow">${esc(DOC_KIND[d.document_type] || 'Dokument')} · ${esc(LANG_NAMES[d.language]||d.language)}</div><h1>${esc(docTitle(d))}</h1>
     <p class="lead">${esc(d.title)}${d.version?' · '+esc(versionText(d.version)):''}</p>
     <div class="facts">${upd ? `<span class="fact">Aktualizováno ${esc(fmtDate(upd))}</span>` : ''}<span class="fact">${units.length} ověřených částí${S.draft?' (v náhledu i neověřené)':''}</span>${withNotes.length ? `<span class="fact">${withNotes.length} částí s výkladem</span>` : ''}</div>
+    ${areasOf(d.group_key || d.id).length ? `<div class="area-tags">${areasOf(d.group_key || d.id).map(x => `<span class="atag ${x.role}" title="${esc(x.note || '')}">${esc((S.data.areas || []).find(a => a.key === x.area_key)?.name || x.area_key)} · ${esc(ROLE_ONE[x.role])}${x.note ? ` – ${esc(x.note)}` : ''}</span>`).join('')}</div>` : ''}
     ${pu && pu.document_id === d.id ? `<p><a class="btn acc" href="#/u/${encodeURIComponent(pu.id)}">Pokračovat: ${esc(pu.label)}</a></p>` : ''}
     <div class="note">Vyberte část v osnově vlevo nebo použijte hledání nahoře.</div>
     ${withNotes.length ? `<div class="subparts"><h2>Části s odborným výkladem</h2><ul class="list-plain">${withNotes.slice(0, 40).map(u => `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(u.label)}${headingOf(u)?' – '+esc(trim(headingOf(u),60)):''}<small>${esc(ancestors(u).map(a=>a.label).join(' › '))}</small></a></li>`).join('')}</ul></div>` : ''}
@@ -666,7 +668,7 @@ function docGroups(){
     return { key, docs: ds, main: ds[0], featured: ds.some(d => d.featured), sort: Math.min(...ds.map(d => d.featured_sort ?? 100)) }; });
 }
 const docUpdated = g => g.docs.map(d => (S.data.doc_updated || {})[d.id]).filter(Boolean).sort().pop();
-function docCard(g, label){
+function docCard(g, label, note){
   const n = g.docs.reduce((a, d) => a + S.data.units.filter(u => u.document_id === d.id && !u.navigation_only).length, 0);
   const ids = new Set(S.data.units.filter(u => g.docs.some(d => d.id === u.document_id)).map(u => u.id));
   const notes = S.data.comments.filter(c => ids.has(c.unit_id) && !['key', ...HL].includes(c.kind)).length;
@@ -675,9 +677,15 @@ function docCard(g, label){
       <button type="button" class="pin${pinned ? ' on' : ''}" data-pin="${esc(g.key)}" aria-pressed="${pinned}" title="${pinned ? 'Odepnout z Přehledu' : 'Připnout na Přehled'}">${pinned ? '★' : '☆'}</button></div>
     <a class="dc-title" href="#/d/${encodeURIComponent(g.main.id)}">${esc(docTitle(g.main))}</a>
     <div class="muted">${esc(trim(g.main.title, 120))}</div>
+    ${note ? `<div class="situ"><strong>Kdy:</strong> ${esc(note)}</div>` : ''}
     <div class="facts">${upd ? `<span class="fact">Aktualizováno ${esc(fmtDate(upd))}</span>` : ''}<span class="fact">${n} ${n===1?'část':n<5?'části':'částí'}</span>${notes ? `<span class="fact">${notes} výkladů</span>` : ''}</div>
     <div class="dc-langs">${g.docs.map(d => `<a class="btn small${d === g.main ? ' acc' : ''}" href="#/d/${encodeURIComponent(d.id)}">${g.docs.length > 1 ? esc(LANG_NAMES[d.language] || d.language) : 'Otevřít'}</a>`).join('')}</div></div>`;
 }
+const AREA_ROLES = { core:'Hlavní předpisy', guidance:'Metodiky a výklady', supplementary:'Doplňkové předpisy', situational:'Pro specifické situace' };
+const ROLE_ONE = { core:'hlavní předpis', guidance:'metodika', supplementary:'doplňkový předpis', situational:'pro specifické situace' };
+const areasOf = gk => (S.data.document_areas || []).filter(x => x.group_key === gk);
+const usedAreas = () => (S.data.areas || []).filter(a => (S.data.document_areas || []).some(x => x.area_key === a.key && docGroups().some(g => g.key === x.group_key)));
+function setArea(k){ S.area = k; try { localStorage.setItem('rq-oblast', k); } catch {} }
 const DOC_KIND = { regulation:'Nařízení', directive:'Směrnice', law:'Zákon', decree:'Vyhláška', guidance:'Metodika', standard:'Norma', other:'Dokument' };
 function bindPins(box){
   box.querySelectorAll('[data-pin]').forEach(b => b.onclick = async () => {
@@ -688,12 +696,16 @@ function bindPins(box){
   });
 }
 function renderHome(){
-  const gs = docGroups(), last = (S.data.history || [])[0];
+  const all = docGroups(), last = (S.data.history || [])[0];
+  const ua = usedAreas(), area = ua.find(a => a.key === S.area);
+  const gs = area ? all.filter(g => areasOf(g.key).some(x => x.area_key === area.key)) : all;
   const pinned = gs.filter(g => S.me.marks.some(m => m.unit_id === 'doc:' + g.key));
   const featured = gs.filter(g => g.featured && !pinned.includes(g)).sort((a, b) => a.sort - b.sort);
   const recentKeys = S.me.positions.map(p => p.doc_group);
   const recent = recentKeys.map(k => gs.find(g => g.key === k)).filter(g => g && !pinned.includes(g) && !featured.includes(g));
   let cards = [...pinned.map(g => [g, 'Připnuté']), ...featured.map(g => [g, 'Doporučené']), ...recent.map(g => [g, 'Naposledy otevřené'])].slice(0, 6);
+  if (area){ const core = gs.filter(g => !cards.some(c => c[0] === g) && areasOf(g.key).some(x => x.area_key === area.key && x.role === 'core'));
+    cards = cards.concat(core.map(g => [g, 'Hlavní předpis'])).slice(0, 6); }
   if (!cards.length) cards = gs.slice(0, 6).map(g => [g, '']);
   const pos = S.me.positions.map(p => S.units.get(p.unit_id)).find(Boolean);
   const openPath = S.paths.find(p => { const k = progress(p); return k && k < p.steps.length; });
@@ -709,28 +721,43 @@ function renderHome(){
       ${pos ? `<div class="card"><div class="kind">Pokračovat ve čtení</div><h3>${esc(docShort(S.docs.get(pos.document_id)))} · ${esc(pos.label)}</h3><div class="muted">${esc(headingOf(pos) || ancestors(pos).map(a => a.label).join(' › '))}</div><a class="btn acc" href="#/u/${encodeURIComponent(pos.id)}">Pokračovat</a></div>` : ''}
       ${openPath ? `<div class="card"><div class="kind">Rozpracovaná trasa</div><h3>${esc(openPath.title)}</h3><i class="pbar"><b style="width:${Math.round(progress(openPath)/openPath.steps.length*100)}%"></b></i><div class="muted">Prošli jste ${progress(openPath)} z ${openPath.steps.length}</div><a class="btn" href="#/t/${encodeURIComponent(openPath.id)}/${Math.min(openPath.steps.length, progress(openPath) + 1)}">Pokračovat v trase</a></div>` : ''}
     </div>` : ''}
-    <div class="sec"><h2>Dokumenty</h2><a href="#/dokumenty">Všechny dokumenty (${gs.length})</a></div>
+    <div class="sec"><h2>Dokumenty${area ? ` · ${esc(area.name)}` : ''}</h2><a href="#/dokumenty">${area ? `Celá oblast (${gs.length})` : `Všechny dokumenty (${gs.length})`}</a></div>
+    ${ua.length ? `<div class="area-switch" role="group" aria-label="Oblast"><button type="button" class="chipb ${!area ? 'on' : ''}" data-area="">Všechny oblasti</button>${ua.map(a => `<button type="button" class="chipb ${area?.key === a.key ? 'on' : ''}" data-area="${esc(a.key)}">${esc(a.name)}</button>`).join('')}</div>` : ''}
     <div class="cards">${cards.map(([g, l]) => docCard(g, l)).join('')}</div>
     ${S.paths.length ? `<div class="sec"><h2>Trasy</h2><a href="#/trasy">Všechny trasy</a></div><div class="cards">${S.paths.slice(0, 3).map(pathCard).join('')}</div>` : ''}
     ${marks.length ? `<div class="sec"><h2>Moje záložky</h2><a href="#/zalozky">Všechny</a></div><div class="card marklist">${marks.map(markRow).join('')}</div>` : ''}
     <div class="source">${esc(S.data.notice||'')}</div></div>`;
   bindPins($('#panelText'));
+  $('#panelText').querySelectorAll('[data-area]').forEach(b => b.onclick = () => { setArea(b.dataset.area); renderHome(); });
   document.title = 'RegulaQuest · Čtečka regulace zdravotnických prostředků';
 }
 function renderDocs(){
-  const q = fold(S.docQuery), f = S.docFilter;
-  const gs = docGroups().filter(g => (f === 'all' || (f === 'guide' ? g.main.document_type === 'guidance' : g.main.document_type !== 'guidance'))
-    && (!q || g.docs.some(d => fold([d.title, d.family, d.short_title, ...(d.topics || [])].join(' ')).includes(q))))
-    .sort((a, b) => (a.main.document_type === 'guidance' ? 1 : 0) - (b.main.document_type === 'guidance' ? 1 : 0) || docTitle(a.main).localeCompare(docTitle(b.main), 'cs'));
-  $('#panelText').innerHTML = `<div class="eyebrow">Dokumenty</div><h1>Všechny dokumenty</h1>
-    <p class="lead">Předpisy a metodiky s ověřeným textem a výklady. Hvězdičkou si dokument připnete na Přehled.</p>
+  const q = fold(S.docQuery), f = S.docFilter, ua = usedAreas(), area = ua.find(a => a.key === S.area);
+  const match = g => (f === 'all' || (f === 'guide' ? g.main.document_type === 'guidance' : g.main.document_type !== 'guidance'))
+    && (!q || g.docs.some(d => fold([d.title, d.family, d.short_title, ...(d.topics || [])].join(' ')).includes(q)));
+  const byName = (a, b) => docTitle(a.main).localeCompare(docTitle(b.main), 'cs');
+  let body;
+  if (area){
+    const inA = docGroups().map(g => ({ g, x: areasOf(g.key).find(x => x.area_key === area.key) })).filter(o => o.x && match(o.g));
+    body = (area.description ? `<p class="lead">${esc(area.description)}</p>` : '') + Object.entries(AREA_ROLES).map(([role, title]) => {
+      const list = inA.filter(o => o.x.role === role).sort((a, b) => (a.x.sort - b.x.sort) || byName(a.g, b.g));
+      return list.length ? `<div class="sec"><h2>${title}</h2>${role === 'situational' ? '<span class="muted">Platí jen v určitých případech – viz „Kdy“</span>' : ''}</div><div class="cards">${list.map(o => docCard(o.g, '', role === 'situational' ? o.x.note : '')).join('')}</div>` : '';
+    }).join('') || '<div class="empty">V této oblasti zatím nejsou dokumenty odpovídající hledání.</div>';
+  } else {
+    const gs = docGroups().filter(match).sort((a, b) => (a.main.document_type === 'guidance' ? 1 : 0) - (b.main.document_type === 'guidance' ? 1 : 0) || byName(a, b));
+    body = gs.length ? `<div class="cards">${gs.map(g => docCard(g, '', '') .replace('<div class="facts">', `<div class="area-tags">${areasOf(g.key).map(x => `<span class="atag ${x.role}">${esc((S.data.areas || []).find(a => a.key === x.area_key)?.name || x.area_key)}</span>`).join('')}</div><div class="facts">`)).join('')}</div>` : '<div class="empty">Žádný dokument neodpovídá hledání.</div>';
+  }
+  $('#panelText').innerHTML = `<div class="eyebrow">Dokumenty</div><h1>${area ? esc(area.name) : 'Všechny dokumenty'}</h1>
+    ${area ? '' : '<p class="lead">Předpisy a metodiky s ověřeným textem a výklady. Vyberte oblast – uvidíte hlavní předpisy, metodiky, doplňkové předpisy i ty pro specifické situace. Hvězdičkou si dokument připnete na Přehled.</p>'}
+    ${ua.length ? `<div class="area-switch" role="group" aria-label="Oblast"><button type="button" class="chipb ${!area ? 'on' : ''}" data-area="">Všechny oblasti</button>${ua.map(a => `<button type="button" class="chipb ${area?.key === a.key ? 'on' : ''}" data-area="${esc(a.key)}">${esc(a.name)}</button>`).join('')}</div>` : ''}
     <div class="toolbar"><input type="search" id="docQ" placeholder="Hledat dokument (název, zkratka, téma)…" aria-label="Hledat dokument" value="${esc(S.docQuery)}">
       <span class="langs" role="group" aria-label="Druh">${[['all','Vše'],['law','Předpisy'],['guide','Metodiky']].map(([k,l]) => `<button type="button" class="lang ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}</span></div>
-    ${gs.length ? `<div class="cards">${gs.map(g => docCard(g)).join('')}</div>` : '<div class="empty">Žádný dokument neodpovídá hledání.</div>'}`;
+    ${body}`;
   const qi = $('#docQ'); qi.oninput = () => { S.docQuery = qi.value; const pos = qi.selectionStart; renderDocs(); const n = $('#docQ'); n.focus(); n.setSelectionRange(pos, pos); };
   document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.docFilter = b.dataset.f; renderDocs(); });
+  document.querySelectorAll('#panelText [data-area]').forEach(b => b.onclick = () => { setArea(b.dataset.area); renderDocs(); });
   bindPins($('#panelText'));
-  document.title = 'Dokumenty · RegulaQuest';
+  document.title = `${area ? area.name : 'Dokumenty'} · RegulaQuest`;
 }
 function markRow(m){
   const u = S.units.get(m.unit_id); if (!u) return '';

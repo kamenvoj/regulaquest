@@ -340,3 +340,13 @@ div.card:hover{box-shadow:none;border-color:var(--line)}
  .trow{grid-template-columns:minmax(0,1fr)}
  body.no-ctx .layout{display:block}
 }
+/* 0.22 oblasti */
+.area-switch{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px;max-width:1180px}
+.chipb{border:1px solid #d5e0e1;background:#fff;border-radius:999px;padding:6px 12px;font-weight:600;font-size:12.5px;color:#3f565d;cursor:pointer}
+.chipb:hover{border-color:var(--teal)}
+.chipb.on{background:#16313c;border-color:#16313c;color:#fff}
+.area-tags{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.atag{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;background:#e3eeed;color:#135f62}
+.atag.guidance{background:#e9effa;color:#41598a}.atag.supplementary{background:#f1f4f4;color:#4b6168}.atag.situational{background:#fdf3e4;color:#7a4f0e}
+.situ{font-size:12.5px;background:#fdf6ea;border:1px solid #f0dfbd;border-radius:8px;padding:6px 9px;color:#5c4415}
+.situ strong{font-size:inherit;font-weight:800}

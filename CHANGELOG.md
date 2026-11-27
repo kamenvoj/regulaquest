@@ -1,5 +1,17 @@
 # Změny
 
+## 0.22.0 – 2026-11-27 · Oblasti
+- **Oblasti** (stejné pro všechny studenty): Zdravotnické prostředky, Metrologie, Zdroje ionizujícího záření, Poskytování zdravotní péče,
+  Veřejné zakázky, Úhrady, Ochrana osobních údajů, Kyberbezpečnost, Regulace AI, Léčivé přípravky, Ochrana průmyslového vlastnictví.
+  Ve Studiu Katalog → „Spravovat oblasti…“ (přidat, přejmenovat, popis, vyřadit).
+- Dokument (všechny jazykové verze) může být ve více oblastech, v každé s rolí: hlavní předpis, metodika / výklad, doplňkový,
+  pro specifické situace (s poznámkou, kdy je relevantní). Zařazení v „Údaje dokumentu“; váže se na skupinu dokumentu, takže
+  přežije úklid testovacích dat i nový import.
+- Katalog ve Studiu: filtr Oblast (i „Bez oblasti“), štítky oblastí u dokumentů.
+- Čtečka: přepínač oblastí na Přehledu a v Dokumentech; stránka oblasti rozdělená na hlavní předpisy, metodiky, doplňkové
+  a „Pro specifické situace“ (s „Kdy: …“); u dokumentu jeho oblasti a role. Zvolená oblast se pamatuje v prohlížeči.
+- Migrace 18_oblasti.sql.
+
 ## 0.21.0 – 2026-11-27 · Nová čtečka pro studenty
 - Rozložení: hlavní navigace vlevo (Přehled, Dokumenty s osnovou otevřeného dokumentu, Trasy s kroky, Pojmy, Záložky, Co je nového,
   Značky a nápověda), hledání v horní liště, panel Souvislosti jen při čtení ustanovení. Nápověda v bočním panelu (? Nápověda).
