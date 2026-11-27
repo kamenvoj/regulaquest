@@ -1,7 +1,7 @@
 -- RegulaQuest · Úklid testovacích dat před ostrým startem
 -- SMAŽE: dokumenty, části, komentáře, vazby, pojmy, trasy, řešené případy, historii, importy, publikace.
 -- Vyžaduje migrace až po 17_ctecka.sql. Smaže i záložky a postup studentů (odkazují na smazané části).
--- PONECHÁ: účty (profiles), skupiny studentů, nastavení přihlášení, štítky, oblasti a jejich zařazení, otázky průvodce, aktuality a jejich zdroje, prezentace (vazby na ustanovení se zruší), užitečné odkazy, všechny funkce a migrace.
+-- PONECHÁ: účty (profiles), skupiny studentů, nastavení přihlášení, štítky, oblasti (zařazení dokumentů do oblastí se smaže – po importu je nastavte znovu), otázky průvodce, aktuality a jejich zdroje, prezentace (vazby na ustanovení se zruší), užitečné odkazy, všechny funkce a migrace.
 -- Soubory v úložišti (originals, figures) se SQL smazat nedají – vysypte je ručně v Supabase → Storage.
 --
 -- Postup: 1) GitHub → Actions → záloha → Run workflow (pro jistotu),
@@ -26,7 +26,11 @@ begin
   end if;
   -- Aktuality zůstávají (nejsou testovací), jen se zruší vazby na smazaná ustanovení
   if to_regclass('public.news_items') is not null then
-    update public.news_items set unit_ids = '{}' where unit_ids <> '{}';
+    update public.news_items set unit_ids = '{}', group_keys = '{}' where unit_ids <> '{}' or group_keys <> '{}';
+  end if;
+  -- Zařazení dokumentů do oblastí patří ke smazaným dokumentům (nové importy dostanou nové klíče) – po importu zařadit znovu
+  if to_regclass('public.document_areas') is not null then
+    truncate table public.document_areas;
   end if;
   raise notice 'Hotovo: testovací data smazána. Účty a skupiny zůstaly.';
 end $$;

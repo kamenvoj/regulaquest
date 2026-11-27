@@ -397,6 +397,29 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(r['units'], 3)
         self.assertEqual(self.sql("select count(*) from units")[0][0], 0)
 
+    def test_delete_document_cleans_links(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        title = self.sql("select title from documents where id='mdr-cs'")[0][0]
+        gk = self.sql("select coalesce(group_key, id) from documents where id='mdr-cs'")[0][0]
+        self.sql("with x as (insert into paths(id, title) values ('p1', 'Trasa') returning 1) select count(*) from x")
+        self.sql("with x as (insert into path_steps(id, path_id, sort, unit_id, note) values ('ps1', 'p1', 10, 'mdr-cs-rule-11', ''), ('ps2', 'p1', 20, null, 'úvod') returning 1) select count(*) from x")
+        c = self.call('rq_save_case', None, {'title': 'Případ'})
+        self.call('rq_save_case_step', None, c, {'title': 'Krok', 'unit_id': 'mdr-cs-rule-11'})
+        self.call('rq_link_case_unit', c, 'mdr-cs-rule-11', True)
+        pid = self.call('rq_import_presentation', {'title': 'P'}, [{'data': {'title': 'S'}}])
+        self.call('rq_link_presentation_unit', pid, None, 'mdr-cs-rule-11', True)
+        n = self.call('rq_save_news_item', None, {'url': 'https://example.org/n', 'title': 'N', 'group_keys': [gk], 'unit_ids': ['mdr-cs-rule-11']})
+        self.sql("with x as (insert into document_areas(group_key, area_key, role) values (%s, 'zp', 'core') returning 1) select count(*) from x", gk)
+        r = self.call('rq_delete_document', 'mdr-cs', title)
+        self.assertEqual(self.sql("select count(*) from units")[0][0], 0)
+        self.assertEqual([x[0] for x in self.sql("select id from path_steps order by sort")], ['ps2'])           # krok s ustanovením pryč, textový zůstal
+        self.assertEqual(self.sql("select unit_id, title from case_steps")[0], (None, 'Krok'))                  # krok případu zůstal bez odkazu
+        self.assertEqual(self.sql("select count(*) from case_links")[0][0], 0)
+        self.assertEqual(self.sql("select count(*) from presentation_unit_links")[0][0], 0)
+        self.assertEqual(self.sql("select unit_ids, group_keys from news_items where id = %s", n)[0], ([], []))
+        self.assertEqual(self.sql("select count(*) from document_areas where group_key = %s", gk)[0][0], 0)    # skupina už nemá žádný dokument
+
     def test_paths(self):
         self.setup_doc()
         self.as_user(ADMIN)

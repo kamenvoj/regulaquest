@@ -1,5 +1,13 @@
 # Změny
 
+## 0.33.0 – 2026-11-27 · Kontrola návazností před čistým importem
+- Smazání dokumentu uklidí i odkazy z výukových částí na jeho ustanovení (kroky a vazby řešených případů – text kroku zůstane,
+  ruční vazby prezentací, odkazy aktualit); když ve skupině jazykových verzí nezůstane žádný dokument, zruší se i její zařazení do oblastí.
+- Zpřístupnění prezentací podle českého data (dříve UTC – po půlnoci mohla být prezentace hodinu „ještě skrytá“).
+- Úklid testovacích dat: smaže i zařazení dokumentů do oblastí a odkazy aktualit na dokumenty – po čistém importu dostanou
+  dokumenty nové klíče, takže by staré zařazení stejně nefungovalo. Po importu je potřeba dokumenty do oblastí zařadit znovu.
+- Migrace 24_udrzba.sql.
+
 ## 0.32.0 – 2026-11-27 · Před pilotem
 - Čtečka: na telefonu upozornění „Čtečka je určená hlavně pro počítač…“ s tlačítkem Rozumím (zobrazí se jednou, pamatuje si ho prohlížeč).
 - Studio → Pokrytí: kromě jednoho dokumentu lze zvolit **celou oblast** (všechny zařazené dokumenty, z každé jazykové verze jeden);
