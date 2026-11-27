@@ -73,6 +73,7 @@ async function renderPres(){
   $('#panelText').innerHTML = `<div class="pv${PR.grid ? ' grid' : ''}" id="pv">
     <div class="pv-top"><div><div class="crumbs"><a href="#/prezentace">Prezentace</a></div><h1 class="pv-title">${esc(full.title)}</h1></div>
       <div class="pv-tools"><button type="button" class="btn small" id="pvGrid" aria-pressed="${PR.grid}">▦ Přehled snímků</button><button type="button" class="btn small" id="pvFull" title="Celá obrazovka (F)">⛶ Celá obrazovka</button></div></div>
+    ${typeof fbBtn === 'function' && !PR.grid ? `<div class="fb-line">${fbBtn('slide', '', PR.id, '')}</div>` : ''}
     ${br ? `<div class="pv-backbar"><a href="#/prezentace/${encodeURIComponent(br.p.id)}/${encodeURIComponent(back)}" data-pop>← Zpět na snímek ${br.i + 1}${br.p.id !== PR.id ? ' (' + esc(br.p.title) + ')' : ''}</a></div>` : ''}
     ${PR.grid ? `<div class="pv-grid">${slides.map((x, i) => `<a class="pv-thumb${i === n ? ' on' : ''}" href="#/prezentace/${encodeURIComponent(PR.id)}/${encodeURIComponent(x.id)}"><span>${i + 1}</span><div class="sl-wrap">${RQSlides.render(x.data, {})}</div></a>`).join('')}</div>` : `
     <div class="pv-stagewrap" id="pvStageWrap"><div class="sl-wrap pv-stage" id="pvStage">${RQSlides.render(s.data, opts)}</div>

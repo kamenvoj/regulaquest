@@ -47,6 +47,7 @@ function renderCase(c){
   const rel = (c.unit_ids || []).map(id => S.units.get(id)).filter(Boolean);
   $('#panelText').innerHTML = `<div class="case"><div class="crumbs"><a href="#/pripady">Řešené případy</a></div>
     <div class="eyebrow">Řešený případ${c.status === 'draft' ? ' · koncept' : ''}</div><h1>${esc(c.title)}</h1>
+    ${typeof fbBtn === 'function' ? `<div class="fb-line">${fbBtn('case', c.id, '', 'Řešený případ: ' + c.title)}</div>` : ''}
     ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ''}
     ${(c.area_keys || []).length || (c.tags || []).length ? `<div class="upd-links">${(c.area_keys || []).map(k => `<span class="atag">${esc(areaName(k))}</span>`).join('')}${(c.tags || []).map(k => `<span class="atag supplementary">${esc(roleName(k))}</span>`).join('')}</div>` : ''}
     ${c.assignment ? `<section class="cs-box assign"><h2>Zadání</h2>${caseText(c.assignment)}</section>` : ''}

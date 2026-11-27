@@ -1,5 +1,19 @@
 # Změny
 
+## 0.35.0 – 2026-11-27 · Připomínky studentů a přehled využívání
+- Čtečka – tlačítko „⚑ Nahlásit chybu / nejasnost“ u ustanovení, snímku prezentace, řešeného případu a trasy
+  (typ: chyba / nejasnost / návrh). Připomínka se ukládá bez vazby na účet; student je upozorněn, ať se nepodepisuje.
+- Studio – nová stránka Připomínky studentů (nové / vyřešené, poznámka redakce, odkaz na místo v pracovním náhledu),
+  počet nových v levém panelu.
+- Čtečka – souhrnné měření využívání: čas (jen při otevřené kartě a aktivitě), návštěvy, co se otevírá a co se hledá
+  (hledaný výraz až po 3 s bez psaní). Admini se nezaznamenávají.
+- Studio – nová stránka Využívání: filtr skupina (nebo všechny) a období; kolik studentů čtečku použilo („10 z 15“),
+  návštěvy, čas, typický čas a četnost návštěv na studenta (jen při ≥ 5 aktivních), aktivita po dnech a dnech v týdnu,
+  co otevírali, oblasti, nejčtenější části, nejčastěji hledané a hledání bez výsledku. Nikdy po jednotlivých účtech.
+- Denní záznamy „účet × den“ (jen čas a počet návštěv) se po 13 měsících mažou (pg_cron); co se čte a hledá, je bez vazby na účet.
+- Nápověda ve čtečce (Připomínky a soukromí) i ve Studiu. Úklid testovacích dat maže i připomínky a statistiky.
+- Migrace 26_vyuziti.sql.
+
 ## 0.34.0 – 2026-11-27 · Hledání napříč obsahem
 - Čtečka – hledání nahoře prohledává i snímky prezentací (nadpisy a texty, bez poznámek řečníka), řešené případy,
   užitečné odkazy a aktuality.

@@ -222,6 +222,7 @@ function route(){
   if (typeof PR !== 'undefined' && !['unit', 'pres'].includes(S.view)) PR.back = null;
   render();
   setTab('text', false);
+  if (typeof trackRoute === 'function') trackRoute();
 }
 
 function setTab(t, scroll=true){
@@ -443,6 +444,7 @@ function renderSearch(){
   const caseHits = ts.length ? (S.data.cases || []).filter(c => has([c.title, c.summary, c.assignment, c.conclusion, ...(c.steps || []).map(st => st.title + ' ' + st.body)].join(' '))) : [];
   const linkHits = ts.length && typeof LK !== 'undefined' ? LK.list.filter(l => has([l.title, l.description, l.category].join(' '))) : [];
   const newsHits = ts.length && typeof NW !== 'undefined' ? NW.list.filter(n => has([n.title, n.summary, n.comment].join(' '))) : [];
+  if (typeof trackSearch === 'function') trackSearch(q, hits.length + nhits.length + termHits.length + slideHits.length + caseHits.length + linkHits.length + newsHits.length);
   hits.sort((a,b) => (a.document_id===S.docId?0:1)-(b.document_id===S.docId?0:1) || (kids(a.id).length?1:0)-(kids(b.id).length?1:0));
   const shown = hits.slice(0, 80);
   box.innerHTML = `<div class="eyebrow">Hledání</div><h1>„${esc(q)}“</h1>
@@ -476,7 +478,7 @@ function renderUnit(u){
   const status = S.draft && u.text_status !== 'verified' && !u.navigation_only ? ' <span class="chip warn">Neověřený text</span>' : '';
   let html = crumbs(u) + `<div class="title-row"><h1>${esc(u.label)}${status}${headingOf(u) ? `<span class="heading">${esc(headingOf(u))}</span>` : ''}</h1>
     ${cp ? `<a class="lang-btn" href="#/u/${encodeURIComponent(cp.unit.id)}" title="Stejné ustanovení v jazyce ${esc(LANG_NAMES[cp.doc.language]||cp.doc.language)}">${esc(cp.doc.language.toUpperCase())}</a>` : ''}</div>`;
-  html += markBox(u);
+  html += markBox(u) + (typeof fbBtn === 'function' ? `<div class="fb-line">${fbBtn('unit', u.id, '', `${docShort(d)} · ${ancestors(u).map(a => a.label).concat(u.label).join(' › ')}`)}</div>` : '');
   const known = k => S.tagNames.has(k);
   const own = (u.tags || []).filter(known), inh = own.length ? [] : [...new Set(ancestors(u).flatMap(a => a.tags || []))].filter(known);
   if (own.length || inh.length) html += `<div class="roles-row"><span>Štítky:</span>${(own.length ? own : inh).map(k => `<span class="role-chip${k===S.role?' on':''}">${esc(roleName(k))}</span>`).join('')}${inh.length ? '<small>(podle nadřazené části)</small>' : ''}</div>`;
@@ -687,10 +689,11 @@ function renderStep(){
   if (!n){
     panel.innerHTML = head + `<div class="path-intro">${p.description ? `<div class="pb-note">${plain(p.description)}</div>` : ''}
       <ol class="path-overview">${p.steps.map((s, i) => `<li class="${(doneMap()[p.id]||[]).includes(s.id)?'done':''}"><a href="#/t/${encodeURIComponent(p.id)}/${i+1}">${esc(stepLabel(s))}</a></li>`).join('')}</ol></div>` + nav;
+    if (typeof fbBtn === 'function') panel.insertAdjacentHTML('beforeend', `<div class="fb-line">${fbBtn('path', p.id, '', 'Trasa: ' + p.title)}</div>`);
     document.title = `${p.title} · RegulaQuest`; return;
   }
   const u = S.unitId && S.units.get(S.unitId);
-  if (!u){ panel.innerHTML = head + nav; document.title = `${p.title} · RegulaQuest`; return; }
+  if (!u){ panel.innerHTML = head + nav + (typeof fbBtn === 'function' ? `<div class="fb-line">${fbBtn('path', p.id, '', `Trasa: ${p.title} · krok ${n}`)}</div>` : ''); document.title = `${p.title} · RegulaQuest`; return; }
   renderUnit(u);
   panel.querySelector('.pager')?.remove();
   panel.insertAdjacentHTML('afterbegin', head);

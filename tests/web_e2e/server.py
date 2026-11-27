@@ -4,7 +4,8 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from functools import partial
 import psycopg
 DSN = sys.argv[1]; ROOT = sys.argv[2]
-USERS = {'vojta@admin.regulaquest.cz': str(uuid.UUID(int=1)), 'ondra@admin.regulaquest.cz': str(uuid.UUID(int=2))}
+USERS = {'vojta@admin.regulaquest.cz': str(uuid.UUID(int=1)), 'ondra@admin.regulaquest.cz': str(uuid.UUID(int=2)),
+         'rq-test01@studenti.regulaquest.invalid': str(uuid.UUID(int=3))}   # studentský účet (test_vyuziti.py)
 IDENT = re.compile(r'^[a-z_]+$')
 
 def run(uid, fn):

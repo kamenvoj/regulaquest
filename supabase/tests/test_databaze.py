@@ -766,5 +766,32 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual({u['id'] for u in self.call('rq_draft_preview')['units']}, expected)
 
 
+    def test_feedback_and_usage(self):
+        self.setup_doc()
+        self.as_user(STUDENT)
+        self.call('rq_send_feedback', 'unclear', 'unit', 'mdr-cs-rule-11', '', 'MDR · Pravidlo 11', 'Není jasné, co je software.')
+        self.fails('pár slov', 'rq_send_feedback', 'error', 'unit', 'x', '', '', 'a')
+        self.fails('', 'rq_feedback_admin')
+        self.assertEqual(self.sql("select count(*) from feedback where message like '%%software%%'")[0][0], 1)
+        self.assertNotIn('user', ' '.join(self.sql("select column_name from information_schema.columns where table_name = 'feedback'")[0]))
+        # využívání: dva studenti, admin se nepočítá
+        self.call('rq_track', 60, True, [{'kind': 'unit', 'id': 'mdr-cs-rule-11'}, {'kind': 'doc', 'id': 'mdr-cs'}], [{'q': 'UDI', 'hits': 0}])
+        self.call('rq_track', 500, False, [], [])                  # dávka se ořízne na 180 s
+        self.as_user(STUDENT2); self.call('rq_track', 30, True, [{'kind': 'unit', 'id': 'mdr-cs-rule-11'}], [{'q': 'udi ', 'hits': 0}])
+        self.as_user(ADMIN); self.call('rq_track', 999, True, [{'kind': 'unit', 'id': 'mdr-cs-rule-11'}], [])
+        self.assertEqual(self.sql("select count(*), sum(seconds), sum(visits) from usage_days")[0], (2, 270, 2))
+        self.assertEqual(self.sql("select n from usage_content where kind = 'unit'")[0][0], 2)
+        r = self.con.execute('select rq_usage_report(null::uuid, null::date, null::date)').fetchone()[0]
+        self.assertEqual((r['accounts'], r['active'], r['small']), (2, 2, True))
+        self.assertNotIn('minutes_median', r['per_student'])    # pod 5 aktivními se rozložení neukazuje
+        self.assertEqual(r['per_student']['minutes_total'], 5)        # 270 s
+        self.assertEqual(r['search_misses'], [{'q': 'udi', 'n': 2}])
+        self.assertEqual(r['top']['unit'][0]['n'], 2)
+        self.assertEqual(self.call('rq_feedback_admin')[0]['status'], 'new')
+        fid = self.call('rq_feedback_admin')[0]['id']
+        self.call('rq_feedback_set', fid, 'done', None)
+        self.assertEqual(self.call('rq_feedback_admin')[0]['status'], 'done')
+        self.as_user(STUDENT); self.fails('', 'rq_usage_report')
+
 if __name__ == '__main__':
     unittest.main()
