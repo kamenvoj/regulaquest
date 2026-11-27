@@ -2,7 +2,9 @@
 /* RegulaQuest Studio – nápověda v postranním panelu. Otevírá se u části, ve které právě pracujete. */
 window.RQHelp = (function () {
   const S = [
-    ['home', 'Přehled Studia', `<p>Úvodní stránka: stav dokumentů, kolik je ověřeno a co čeká na kontrolu. <b>Pokračovat</b> otevře ustanovení, na kterém jste naposledy pracoval(a) (pamatuje si to tento prohlížeč). <b>Poslední aktivita</b> ukazuje, kdo co naposledy udělal – skládá se z historie, kterou Studio vede tak jako tak.</p>
+    ['home', 'Přehled Studia', `<p>Úvodní stránka: stav dokumentů, kolik je ověřeno a co čeká na kontrolu. <b>Pokračovat</b> otevře ustanovení, na kterém jste naposledy pracoval(a) (pamatuje si to tento prohlížeč).</p>
+      <p><b>Výuka</b> shrnuje ostatní části: nové aktuality k přečtení, prezentace (kolik je připravených a které brzy uvidí studenti), rozpracované řešené případy a koncepty odkazů, a kolik úprav od poslední publikace studenti ještě nevidí. Klepnutím na název přejdete na danou stránku. <b>Rychlé cesty</b> vedou na nejčastější stránky.</p>
+      <p><b>Poslední aktivita</b> ukazuje, kdo co naposledy udělal (komentáře, vazby, úpravy textu, případy, prezentace, zveřejněné aktuality a odkazy) – skládá se z historie, kterou Studio vede tak jako tak.</p>
       <p>Horní lišta: <b>⟳ Obnovit</b> načte změny druhého admina (Studio se samo neobnovuje), <b>Pohled studenta</b> otevře čtečku tak, jak ji vidí studenti (jen publikovaný obsah), <b>Odhlásit</b>.</p>`],
     ['documents', 'Katalog zdrojů', `<p>Seznam dokumentů (předpisy, metodiky). <b>Upravit údaje a tagy</b>: název, verze, vydavatel, oficiální URL, druh dokumentu – a dole <b>Archivovat</b> (skryje, lze obnovit na úvodní stránce) nebo <b>Smazat trvale</b> (jen omyl: nepublikovaný dokument bez schváleného obsahu).</p>
       <p><b>↧ Import dokumentu</b>: HTML z EUR-Lex (CS/EN) nebo PDF metodiky. Při importu nového znění se změněné části označí, jejich ověření se zruší a chybějící se archivují; komentáře a vazby zůstanou.</p>`],

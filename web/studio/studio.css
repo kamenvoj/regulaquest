@@ -560,3 +560,8 @@ dialog:has(#docAreas){width:min(860px,calc(100vw - 24px));max-width:min(860px,ca
 .pr-card .textarea{grid-column:1 / -1;min-height:60px}
 .pr-add{display:flex;gap:6px;align-items:center;margin-bottom:12px}
 .pr-sum{font-size:13px;line-height:1.7}
+.teach-list{list-style:none;margin:0 0 8px;padding:0}
+.teach-list li{display:grid;grid-template-columns:150px 1fr;gap:8px;padding:6px 0;border-top:1px solid #eef2f2;font-size:12.5px;color:#3d565d;align-items:baseline}
+.teach-list li:first-child{border-top:0}
+.teach-list .linklike{font-weight:700;text-align:left}
+.teach-list small{color:#5b6f75}

@@ -1,5 +1,12 @@
 # Změny
 
+## 0.30.0 – 2026-11-27 · Přehled Studia doplněný o výuku
+- Přehled Studia: nová karta **Výuka** – nové aktuality k přečtení, prezentace (připravené a které brzy uvidí studenti),
+  rozpracované řešené případy, koncepty odkazů a počet úprav od poslední publikace, které studenti ještě nevidí.
+- Rychlé cesty doplněné o Prezentace, Řešené případy, Aktuality a Užitečné odkazy.
+- Poslední aktivita zahrnuje i úpravy případů a prezentací a zveřejněné aktuality a odkazy.
+- Nápověda: aktualizované úvodní sekce ve Studiu i ve čtečce (nové části, rozcestník, aktuality na Přehledu).
+
 ## 0.29.0 – 2026-11-27 · Prezentace
 - **Studio – Výuka → Prezentace** (samostatně od dokumentů): import z PowerPointu přímo v prohlížeči – převezme nadpisy, sekce,
   štítky (DISKUZE), karty, pruhy, otázky, tabulky, klíčovou myšlenku a poznámky řečníka. Vzhled dělá jednotná šablona ve stylu
