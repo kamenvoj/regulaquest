@@ -204,6 +204,7 @@ function route(){
   let m;
   if (/^\/najit(\?|$)/.test(raw)){ S.view = 'finder'; finderParse(raw.split('?')[1]); }
   else if (raw === '/pruvodce'){ S.view = 'guide'; G.pos = 0; }
+  else if (raw === '/o-aplikaci') S.view = 'about';
   else if ((m = h.match(/^\/t\/([^/]+)(?:\/(\d+))?$/)) && S.paths.find(x => x.id === m[1])){
     const p = S.paths.find(x => x.id === m[1]);
     const n = Math.min(+(m[2] || 0), p.steps.length), st = n ? p.steps[n-1] : null;
@@ -257,6 +258,7 @@ function render(){
   else if (v === 'search') renderSearch();
   else if (v === 'finder') renderFinder();
   else if (v === 'guide') renderGuide();
+  else if (v === 'about') renderAbout();
   else renderHome();
   renderContext();
   $('#panelText').scrollTop = 0; window.scrollTo(0, 0);

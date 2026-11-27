@@ -1,5 +1,9 @@
 # Změny
 
+## 0.35.1 – 2026-11-27 · O aplikaci
+- Čtečka: v horní liště tlačítko „O aplikaci“ (#/o-aplikaci) – účel, výukový obsah, zdroje a závaznost textů,
+  využití AI při vývoji, omezení, připomínky a soukromí, institucionální zázemí.
+
 ## 0.35.0 – 2026-11-27 · Připomínky studentů a přehled využívání
 - Čtečka – tlačítko „⚑ Nahlásit chybu / nejasnost“ u ustanovení, snímku prezentace, řešeného případu a trasy
   (typ: chyba / nejasnost / návrh). Připomínka se ukládá bez vazby na účet; student je upozorněn, ať se nepodepisuje.

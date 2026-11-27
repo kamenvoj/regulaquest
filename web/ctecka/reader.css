@@ -590,3 +590,12 @@ a.chipb{text-decoration:none;display:inline-block}
 .fb-dlg textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:8px 10px;border:1px solid #cfd8dc;border-radius:8px}
 .fb-note{font-size:12.5px;color:var(--muted,#5b6b73);margin:8px 0 14px}
 .fb-actions{display:flex;justify-content:flex-end;gap:8px}
+
+/* O aplikaci */
+a.top-btn{text-decoration:none;display:inline-flex;align-items:center}
+.about{max-width:760px}
+.about h2{font-size:19px;margin:26px 0 8px}
+.about p,.about li{line-height:1.6}
+.about ul{padding-left:20px}
+.about li{margin-bottom:6px}
+.about-foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line,#dde3ec);display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--muted,#5b6b73)}
