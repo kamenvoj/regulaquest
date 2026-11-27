@@ -2,7 +2,7 @@
 /* RegulaQuest – nápověda ke čtečce (boční panel). Otevírá se u části, kde student právě je. */
 window.RQReaderHelp = (function () {
   const S = [
-    ['home', 'Přehled', `<p>Úvodní stránka: kdy byl obsah naposledy aktualizován a <b>Pokračovat</b> – kde jste skončili ve čtení, v trase a v prezentaci (pamatuje si to váš účet, funguje i na jiném počítači). <b>Rozcestník</b> vede na všechny části čtečky s počty a novinkami; <b>Najít předpisy</b> a <b>Průvodce otázkami</b> pomohou, když nevíte, který předpis hledat.</p>
+    ['home', 'Přehled', `<p>Úvodní stránka: kdy byl obsah naposledy aktualizován a <b>Pokračovat</b> – kde jste skončili ve čtení, v trase a v prezentaci (pamatuje si to váš účet, funguje i na jiném počítači). <b>Rozcestník</b> vede na všechny části aplikace s počty a novinkami; <b>Najít předpisy</b> a <b>Průvodce otázkami</b> pomohou, když nevíte, který předpis hledat.</p>
       <p>Níže <b>Moje záložky</b> (posledních pět), <b>Nové pro vás</b> (co přibylo v poslední aktualizaci, nové prezentace a aktuality), <b>Procházet podle oblasti</b> a připnuté, doporučené a naposledy otevřené dokumenty. Hvězdičkou ☆ si dokument připnete na Přehled.</p>
       <p>V levém panelu najdete i <b>Prezentace</b> z přednášek, <b>Řešené případy</b>, <b>Aktuality</b> z úřadů a <b>Odkazy</b> na užitečné weby. Při čtení dokumentu se panel zúží na ikony – název ukáže najetí myší.</p>`],
     ['docs', 'Dokumenty a čtení', `<p><b>Dokumenty</b> ukazují všechny předpisy a metodiky. Po otevření se navigace vlevo zúží na pruh ikon (název ukáže najetí myší, tlačítko » ji rozbalí s popisky) a vedle ní se otevře osnova dokumentu; skrýt ji můžete tlačítkem « (zpět ikonou osnovy v pruhu). Přepínačem <b>CS / EN</b> přejdete na stejné místo v druhém jazyce. Výběrem <b>Jen:</b> zúžíte osnovu na ustanovení se štítkem (např. Dovozce, Třída III). Značka <b>NOVÉ</b> = změna v poslední aktualizaci.</p>
@@ -25,7 +25,7 @@ window.RQReaderHelp = (function () {
     ['terms', 'Pojmy', `<p>Slovník definic z definičních článků (čl. 2 MDR…) česky i anglicky, s odkazem na přesné místo v předpisu.</p>`],
     ['news', 'Co je nového', `<p>Přehled aktualizací obsahu: shrnutí od redakce a seznam změněných ustanovení, nových výkladů, vazeb a tras.</p>`],
     ['feedback', 'Připomínky a soukromí', `<p><b>⚑ Nahlásit chybu / nejasnost</b> najdete u ustanovení, snímku prezentace, řešeného případu a trasy. Připomínka jde redakci <b>bez vašeho jména a účtu</b>, takže se prosím nepodepisujte.</p>
-      <p>Aby redakce věděla, co studentům pomáhá, čtečka zaznamenává <b>souhrnné</b> údaje o využívání: čas strávený ve čtečce, počet návštěv, které části se otevírají a co se hledá. Redakce vidí jen souhrny za skupinu nebo za všechny (např. „10 z 15 studentů“, typický čas, nejčtenější části), nikdy přehled o jednotlivém účtu. Neukládá se IP adresa ani zařízení; denní záznamy o čase se po roce mažou.</p>`],
+      <p>Aby redakce věděla, co studentům pomáhá, aplikace zaznamenává <b>souhrnné</b> údaje o využívání: čas strávený v aplikaci, počet návštěv, které části se otevírají a co se hledá. Redakce vidí jen souhrny za skupinu nebo za všechny (např. „10 z 15 studentů“, typický čas, nejčtenější části), nikdy přehled o jednotlivém účtu. Neukládá se IP adresa ani zařízení; denní záznamy o čase se po roce mažou.</p>`],
     ['search', 'Hledání', `<p>Pole nahoře hledá ve všech dokumentech – v textech, výkladech redakce a pojmech – a také ve snímcích prezentací, řešených případech, užitečných odkazech a aktualitách. Nezáleží na diakritice. Po otevření výsledku je hledaný výraz v textu zvýrazněný.</p>`],
   ];
   const VIEW = { home: 'home', docs: 'docs', doc: 'docs', unit: 'docs', path: 'paths', paths: 'paths', terms: 'terms', marks: 'marks', news: 'news', search: 'search', finder: 'finder', guide: 'finder', updates: 'updates', cases: 'cases', case: 'cases', links: 'links', prlist: 'prlist', pres: 'prlist' };
@@ -33,10 +33,10 @@ window.RQReaderHelp = (function () {
     let el = document.getElementById('rqHelp');
     if (!el) {
       el = document.createElement('aside'); el.id = 'rqHelp'; el.className = 'help-drawer'; el.setAttribute('aria-label', 'Nápověda');
-      el.innerHTML = `<div class="help-head"><strong>Jak čtečka funguje</strong><button type="button" id="rqHelpClose">Zavřít ✕</button></div>
+      el.innerHTML = `<div class="help-head"><strong>Jak aplikace funguje</strong><button type="button" id="rqHelpClose">Zavřít ✕</button></div>
         <nav class="help-toc">${S.map(([k, t]) => `<button type="button" data-h="${k}">${t}</button>`).join('')}</nav>
         <div class="help-body">${S.map(([k, t, h]) => `<section id="help-${k}"><h3>${t}</h3>${h}</section>`).join('')}
-         <section><h3>Upozornění</h3><p>Výklady připravuje redakce pro výuku; nejsou právním stanoviskem. Rozhodující je vždy oficiální znění předpisu. Čtečka je určena hlavně pro počítač; na telefonu se panely přepínají dole.</p></section></div>`;
+         <section><h3>Upozornění</h3><p>Výklady připravuje redakce pro výuku; nejsou právním stanoviskem. Rozhodující je vždy oficiální znění předpisu. Aplikace je určena hlavně pro počítač; na telefonu se panely přepínají dole.</p></section></div>`;
       document.body.appendChild(el);
       el.querySelector('#rqHelpClose').onclick = close;
       el.querySelectorAll('[data-h]').forEach(b => b.onclick = () => go(b.dataset.h));

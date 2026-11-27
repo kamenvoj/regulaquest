@@ -1,5 +1,10 @@
 # Změny
 
+## 0.35.2 – 2026-11-27 · Název studentské části
+- Studentská část má podnázev „Výukové prostředí pro práci s legislativou“ (dříve „Čtečka regulace zdravotnických
+  prostředků“); v jejích textech se místo „čtečka“ píše „aplikace“. Platí i pro lístečky s přístupy.
+- Ve Studiu se jí říká „studentská část“ (převod textů v generátoru: port/nazvy.py).
+
 ## 0.35.1 – 2026-11-27 · O aplikaci
 - Čtečka: v horní liště tlačítko „O aplikaci“ (#/o-aplikaci) – účel, výukový obsah, zdroje a závaznost textů,
   využití AI při vývoji, omezení, připomínky a soukromí, institucionální zázemí.

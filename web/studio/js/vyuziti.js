@@ -22,7 +22,7 @@ window.RQFeedback = (function () {
     if (!F) { box.innerHTML = '<p class="fine">Načítám…</p>'; try { await load(); } catch (e) { box.innerHTML = `<div class="notice">${esc(e.message)}</div>`; return; } }
     const n = s => F.filter(f => f.status === s).length, xs = F.filter(f => st === 'all' || f.status === st);
     box.innerHTML = `<div class="page-head"><div><div class="eyebrow">ZPĚTNÁ VAZBA / PŘIPOMÍNKY STUDENTŮ</div><h1>Připomínky studentů</h1>
-      <p>Chyby, nejasnosti a návrhy, které studenti poslali tlačítkem „⚑ Nahlásit chybu / nejasnost“ ve čtečce. Připomínky jsou anonymní – neukládá se, kdo je poslal.</p></div></div>
+      <p>Chyby, nejasnosti a návrhy, které studenti poslali tlačítkem „⚑ Nahlásit chybu / nejasnost“ ve studentské části. Připomínky jsou anonymní – neukládá se, kdo je poslal.</p></div></div>
       <div class="nw-tabs"><button type="button" class="btn tiny${st === 'new' ? ' accent' : ''}" data-fs="new">Nové (${n('new')})</button><button type="button" class="btn tiny${st === 'done' ? ' accent' : ''}" data-fs="done">Vyřešené (${n('done')})</button><button type="button" class="btn tiny${st === 'all' ? ' accent' : ''}" data-fs="all">Vše (${F.length})</button></div>
       ${xs.length ? `<ul class="nw-list fb-list">${xs.map(f => `<li class="nw-item${f.status === 'done' ? ' fb-done' : ''}" data-id="${f.id}"><div class="nw-main">
         <div class="fb-meta"><span class="fb-kind k-${f.kind}">${KIND[f.kind] || f.kind}</span> ${esc(WHERE[f.target_kind] || '')}${f.target_label ? ': <strong>' + esc(f.target_label) + '</strong>' : ''} <small class="fine">· ${esc(fmt(f.created_at))}</small></div>
@@ -78,12 +78,12 @@ window.RQUsage = (function () {
     const wd = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'].map((n, i) => ({ label: n, n: (R.weekdays || {})[i + 1] || 0 }));
     const top = (key, title) => (R.top[key] || []).length ? `<div class="us-card"><h3>${title}</h3>${bars(R.top[key].map(x => ({ label: x.label || x.id, n: x.n })))}</div>` : '';
     const pages = (R.top.page || []).map(x => ({ label: PAGES[x.id] || x.id, n: x.n })).filter(x => !['unit', 'doc', 'pres', 'case', 'path'].includes(x.label));
-    box.innerHTML = `<div class="page-head"><div><div class="eyebrow">ZPĚTNÁ VAZBA / VYUŽÍVÁNÍ</div><h1>Využívání čtečky</h1>
-      <p>Souhrnný obrázek o tom, jak studenti čtečku používají. Jen souhrny za skupinu nebo za všechny – nikdy po jednotlivých účtech. Redakce (admini) se nepočítá.</p></div></div>
+    box.innerHTML = `<div class="page-head"><div><div class="eyebrow">ZPĚTNÁ VAZBA / VYUŽÍVÁNÍ</div><h1>Využívání studentské části</h1>
+      <p>Souhrnný obrázek o tom, jak studenti studentskou část používají. Jen souhrny za skupinu nebo za všechny – nikdy po jednotlivých účtech. Redakce (admini) se nepočítá.</p></div></div>
       <div class="us-filter"><label>Skupina <select class="select" id="usGrp"><option value="">Všechny skupiny</option>${R.groups.map(g => `<option value="${esc(g.id)}"${g.id === grp ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
         <label>Období <select class="select" id="usRange">${Object.entries(DAYS).map(([v, n]) => `<option value="${v}"${v === range ? ' selected' : ''}>${n}</option>`).join('')}</select></label></div>
       <div class="us-tiles">
-        ${tile(`${R.active} z ${R.accounts}`, 'studentů čtečku použilo', R.accounts ? `${pct} % účtů` : 'zatím žádné studentské účty')}
+        ${tile(`${R.active} z ${R.accounts}`, 'studentů pracovalo ve studentské části', R.accounts ? `${pct} % účtů` : 'zatím žádné studentské účty')}
         ${tile(num(p.visits_total || 0), [1].includes(+p.visits_total) ? 'návštěva celkem' : +p.visits_total >= 2 && +p.visits_total <= 4 ? 'návštěvy celkem' : 'návštěv celkem', R.small ? '' : `typicky ${num(p.visits_median)} na studenta (průměr ${num(p.visits_mean)})`)}
         ${tile(mins(p.minutes_total || 0), 'čas celkem', R.small ? '' : `typicky ${mins(p.minutes_median)} na studenta`)}
         ${R.small ? '' : tile(num(p.days_median), 'dní s aktivitou (medián)', `průměr ${num(p.days_mean)} · jedna návštěva typicky ${mins(p.visit_minutes_median)}`)}
@@ -91,19 +91,19 @@ window.RQUsage = (function () {
       ${R.small ? `<div class="notice">Rozložení na studenty (typický čas, jak často se vracejí) se ukáže, až bude ve vybrané skupině a období aspoň 5 aktivních studentů – u menšího počtu by šlo odhadovat jednotlivce.</div>` : `
       <div class="us-grid">
         <div class="us-card"><h3>Čas na studenta za období</h3>${bars(['do 15 min', '15–60 min', '1–3 h', 'nad 3 h'].map(l => ({ label: l, n: p.minutes_buckets[l] || 0, sub: 'stud.' })))}<p class="fine">Prostřední polovina studentů: ${mins(p.minutes_p25)} – ${mins(p.minutes_p75)} (průměr ${mins(p.minutes_mean)}).</p></div>
-        <div class="us-card"><h3>Kolikrát přišli</h3>${bars([['1', '1×'], ['2–3', '2–3×'], ['4–9', '4–9×'], ['10+', '10× a víc']].map(([k, l]) => ({ label: l, n: p.visits_buckets[k] || 0, sub: 'stud.' })))}<p class="fine">Návštěva = otevření čtečky, nebo návrat po 30 minutách nečinnosti.</p></div>
+        <div class="us-card"><h3>Kolikrát přišli</h3>${bars([['1', '1×'], ['2–3', '2–3×'], ['4–9', '4–9×'], ['10+', '10× a víc']].map(([k, l]) => ({ label: l, n: p.visits_buckets[k] || 0, sub: 'stud.' })))}<p class="fine">Návštěva = otevření studentské části, nebo návrat po 30 minutách nečinnosti.</p></div>
       </div>`}
       <div class="us-card"><h3>Aktivní studenti po dnech</h3>${daily(R.daily, R.from, R.to) || '<p class="fine">Pro tak dlouhé období se graf po dnech nekreslí.</p>'}</div>
       <div class="us-grid">
         <div class="us-card"><h3>Návštěvy podle dne v týdnu</h3>${bars(wd)}</div>
         <div class="us-card"><h3>Co otevírali</h3>${Object.keys(KINDS).some(x => k[x]) ? bars(Object.entries(KINDS).filter(([x]) => k[x]).map(([x, l]) => ({ label: l, n: k[x] }))) : '<p class="fine">Zatím nic.</p>'}
-          ${pages.length ? `<h4>Části čtečky</h4>${bars(pages)}` : ''}</div>
+          ${pages.length ? `<h4>Stránky studentské části</h4>${bars(pages)}` : ''}</div>
         <div class="us-card"><h3>Oblasti</h3>${(R.areas || []).length ? bars(R.areas.map(a => ({ label: a.name, n: a.n }))) : '<p class="fine">Zatím nic – nebo dokumenty nejsou zařazené do oblastí.</p>'}</div>
         ${top('unit', 'Nejčtenější ustanovení')}${top('pres', 'Nejotevíranější prezentace')}${top('case', 'Řešené případy')}${top('path', 'Trasy')}
         <div class="us-card"><h3>Hledání bez výsledku</h3>${(R.search_misses || []).length ? `<p class="fine">Co studenti hledali a nenašli – tipy, co doplnit nebo jak to pojmenovat.</p>${bars(R.search_misses.map(x => ({ label: x.q, n: x.n })))}` : '<p class="fine">Žádné.</p>'}</div>
         <div class="us-card"><h3>Nejčastěji hledané</h3>${(R.searches || []).length ? bars(R.searches.map(x => ({ label: x.q, n: x.n }))) : '<p class="fine">Zatím nic.</p>'}</div>
       </div>
-      <p class="fine">Čas se počítá jen při otevřené kartě čtečky a aktivitě studenta (po 3 minutách bez pohybu se zastaví). Denní záznamy o čase se po 13 měsících mažou; co se čte a hledá, se ukládá bez vazby na účet.</p>`;
+      <p class="fine">Čas se počítá jen při otevřené kartě studentské části a aktivitě studenta (po 3 minutách bez pohybu se zastaví). Denní záznamy o čase se po 13 měsících mažou; co se čte a hledá, se ukládá bez vazby na účet.</p>`;
     box.querySelector('#usGrp').onchange = e => { grp = e.target.value; render(); };
     box.querySelector('#usRange').onchange = e => { range = e.target.value; render(); };
   }

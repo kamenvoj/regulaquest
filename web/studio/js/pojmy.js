@@ -1,7 +1,7 @@
 'use strict';
 /* RegulaQuest Studio – pojmy z definičního článku (např. čl. 2 MDR).
    Pojem = bod definice; „vzory“ určují, které tvary slov se v textu označí (* = libovolná koncovka).
-   Ve čtečce se označí první výskyt pojmu v každé části a po klepnutí se ukáže definice z aktuálního textu. */
+   Ve studentské části se označí první výskyt pojmu v každé části a po klepnutí se ukáže definice z aktuálního textu. */
 window.RQTerms = (function () {
   const live = () => (db.terms || []).filter(t => t.status !== 'archived');
   // Stejný pojem v jiné jazykové verzi: stejné číslo bodu v odpovídajícím definičním článku.
@@ -50,7 +50,7 @@ window.RQTerms = (function () {
       const shown = mine.filter(t => !filter || RQNotes.fold(t.name + ' ' + t.source_label + ' ' + t.forms).includes(RQNotes.fold(filter)));
       const st = t => t.status === 'approved' ? '<span class="tag good">Schváleno</span>' : t.status === 'archived' ? '<span class="tag bad">Vyřazeno</span>' : '<span class="tag warn">Koncept</span>';
       f.innerHTML = `<h2>Pojmy z definic · ${esc(u.label)}</h2>
-      <p>Každý bod definice je pojem. Ve čtečce se v ostatních částech (${esc(doc.language.toUpperCase())}) jemně podtrhne jeho první výskyt a po klepnutí se ukáže definice.
+      <p>Každý bod definice je pojem. Ve studentské části se v ostatních částech (${esc(doc.language.toUpperCase())}) jemně podtrhne jeho první výskyt a po klepnutí se ukáže definice.
       <strong>Vzory</strong>: jeden na řádek, slova oddělená mezerou, <code>*</code> na konci slova = libovolná koncovka, diakritika a velká písmena se ignorují.
       Pojem s příliš mnoha výskyty (obecné slovo) raději vyřaďte nebo zpřesněte.</p>
       ${missing.length ? `<div class="notice"><strong>${missing.length} bodů definice zatím není mezi pojmy.</strong> <button type="button" class="btn tiny accent" id="tmImport">Načíst ${missing.length} pojmů jako koncept</button></div>` : ''}

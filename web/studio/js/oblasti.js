@@ -43,7 +43,7 @@ window.RQAreas = (function () {
     const d = $('#modal'), f = $('#modalContent'); f.onsubmit = e => e.preventDefault();
     const count = k => new Set((db.document_areas || []).filter(x => x.area_key === k).map(x => x.group_key)).size;
     const draw = () => {
-      f.innerHTML = `<h2>Oblasti</h2><p>Oblasti jsou stejné pro všechny studenty. Ve čtečce slouží k filtrování dokumentů a mají vlastní stránku s hlavními předpisy, metodikami, doplňkovými předpisy a předpisy pro specifické situace. Vyřazená oblast zmizí ze čtečky; zařazení dokumentů zůstane.</p>
+      f.innerHTML = `<h2>Oblasti</h2><p>Oblasti jsou stejné pro všechny studenty. Ve studentské části slouží k filtrování dokumentů a mají vlastní stránku s hlavními předpisy, metodikami, doplňkovými předpisy a předpisy pro specifické situace. Vyřazená oblast zmizí ze studentské části; zařazení dokumentů zůstane.</p>
       <div class="tg-group">${(db.areas || []).map(a => `<div class="tg-row area-def${a.archived ? ' arch' : ''}" data-k="${esc(a.key)}"><input class="input" data-name value="${esc(a.name)}" aria-label="Název oblasti"><input class="input" data-desc value="${esc(a.description || '')}" placeholder="Krátký popis pro studenty" aria-label="Popis oblasti"><small>${count(a.key)} dok.</small><button type="button" class="btn tiny" data-s>Uložit</button><button type="button" class="btn tiny ${a.archived ? '' : 'danger'}" data-a>${a.archived ? 'Obnovit' : 'Vyřadit'}</button></div>`).join('')}
        <div class="tg-row new"><input class="input" id="arNew" placeholder="Nová oblast (např. Biocidy)"><button type="button" class="btn tiny accent" id="arAdd">Přidat oblast</button></div></div>
       <div class="modal-actions"><button class="btn" type="button" id="arClose">Zavřít</button></div>`;

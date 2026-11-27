@@ -54,7 +54,7 @@ window.RQNews = (function () {
     const links = [...i.area_keys.map(k => `<span class="nw-chip area">${esc(areaName(k))}</span>`), ...i.tags.map(k => `<span class="nw-chip">${esc(tagName(k))}</span>`),
       ...i.group_keys.map(k => `<span class="nw-chip doc">${esc(groups().find(g => g.key === k)?.name || k)}</span>`), ...i.unit_ids.map(id => `<button type="button" class="nw-chip unit" data-open="${esc(id)}">${esc(unitLabel(id) || 'ustanovení')}</button>`)].join('');
     const acts = { new: [['read', 'Přečteno'], ['published', 'Zveřejnit'], ['rejected', 'Zamítnout']], read: [['published', 'Zveřejnit'], ['rejected', 'Zamítnout'], ['new', 'Vrátit mezi nové']],
-      published: [['read', 'Stáhnout ze čtečky'], ['rejected', 'Zamítnout']], rejected: [['read', 'Obnovit']] }[i.status];
+      published: [['read', 'Stáhnout ze studentské části'], ['rejected', 'Zamítnout']], rejected: [['read', 'Obnovit']] }[i.status];
     return `<li class="nw-item${editing === i.id ? ' editing' : ''}" data-id="${i.id}"><input type="checkbox" class="nw-sel" ${sel.has(i.id) ? 'checked' : ''} aria-label="Vybrat">
       <div class="nw-main"><div class="nw-meta">${esc(fmt(i.published_at || i.fetched_at))} · ${esc(i.source_name || 'Ručně')}${i.status === 'published' && i.published_on ? ` · zveřejněno ${esc(fmt(i.published_on))}` : ''}</div>
         <a class="nw-title" href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)} ↗</a>

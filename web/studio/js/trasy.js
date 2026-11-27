@@ -55,7 +55,7 @@ window.RQPaths = (function () {
       <label class="form-field"><span>Úvod pro studenty</span><textarea class="textarea" id="pDesc" rows="3" placeholder="Co se v trase naučí, pro koho je, kolik času zabere…">${esc(p.description)}</textarea></label>
       <div class="path-tools">${select('Stav', 'pStatus', Object.entries(STATUS), p.status)}
        <button type="button" class="btn accent" id="pSave">Uložit trasu</button>
-       <a class="btn" href="${previewUrl(p.id)}" target="_blank" rel="noopener">Náhled ve čtečce ↗</a>
+       <a class="btn" href="${previewUrl(p.id)}" target="_blank" rel="noopener">Náhled ve studentské části ↗</a>
        <button type="button" class="btn danger" id="pDelete">Smazat trasu</button></div>
       ${p.status === 'published' ? '<p class="fine">Zveřejněná trasa se studentům ukáže po příští publikaci. Kroky na neověřená ustanovení se nezobrazí.</p>' : ''}</div>
       <h3 class="steps-h">Kroky (${st.length})</h3>

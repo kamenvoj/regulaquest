@@ -42,7 +42,7 @@ async function load(rq){
     if (error) throw new Error(error.message);
     d = data;
   }catch(e){
-    $('#layout').innerHTML = `<div class="error"><h1>Čtečku nelze otevřít</h1><p>${esc(rq.czError(e))}</p></div>`;
+    $('#layout').innerHTML = `<div class="error"><h1>Aplikaci nelze otevřít</h1><p>${esc(rq.czError(e))}</p></div>`;
     return;
   }
   if (!d){
@@ -50,7 +50,7 @@ async function load(rq){
     return;
   }
   if (!String(d.format||'').startsWith('regulaquest-education')){
-    $('#layout').innerHTML = '<div class="error"><h1>Čtečku nelze otevřít</h1><p>Neznámý formát dat.</p></div>';
+    $('#layout').innerHTML = '<div class="error"><h1>Aplikaci nelze otevřít</h1><p>Neznámý formát dat.</p></div>';
     return;
   }
   index(d);
@@ -788,7 +788,7 @@ function renderHome(){
   if (!cards.length) cards = all.slice(0, 3).map(g => [g, '']);
 
   $('#panelText').innerHTML = `<div class="home">
-    <div class="eyebrow">Výuková čtečka · FBMI ČVUT</div>
+    <div class="eyebrow">Výukové prostředí · FBMI ČVUT</div>
     <h1>Regulace zdravotnických prostředků</h1>
     <p class="lead">Ověřené texty předpisů a metodik s výklady redakce, prezentacemi, trasami a řešenými případy. Studijní pomůcka, ne oficiální zdroj práva.</p>
     <div class="status"><span class="sdot"></span>Obsah aktualizován <strong>${esc(fmtDate(S.data.published_at))}</strong> <a href="#/novinky">Co je nového</a></div>
@@ -809,7 +809,7 @@ function renderHome(){
     <div class="source">${esc(S.data.notice || '')}</div></div>`;
   bindPins($('#panelText'));
   $('#panelText').querySelectorAll('[data-del-mark]').forEach(b => b.closest('.home') && b.remove());
-  document.title = 'RegulaQuest · Čtečka regulace zdravotnických prostředků';
+  document.title = 'RegulaQuest · Výukové prostředí pro práci s legislativou';
 }
 function renderDocs(){
   const q = fold(S.docQuery), f = S.docFilter, ua = usedAreas(), area = ua.find(a => a.key === S.area);
@@ -851,7 +851,7 @@ function renderMarks(){
   $('#panelText').innerHTML = `<div class="eyebrow">Záložky</div><h1>Moje záložky</h1>
     <p class="lead">Uložené k vašemu účtu – uvidíte je na počítači i na telefonu. Vidíte je jen vy. Záložku přidáte tlačítkem „Přidat záložku“ u ustanovení.</p>
     ${ok.length ? `<div class="card marklist">${ok.map(markRow).join('')}</div>` : '<div class="empty">Zatím nemáte žádnou záložku.</div>'}
-    ${gone ? `<p class="muted">${gone} záložek míří na ustanovení, které teď ve čtečce není (např. po aktualizaci obsahu).</p>` : ''}`;
+    ${gone ? `<p class="muted">${gone} záložek míří na ustanovení, které teď v aplikaci není (např. po aktualizaci obsahu).</p>` : ''}`;
   document.querySelectorAll('[data-del-mark]').forEach(b => b.onclick = async () => { const id = +b.dataset.delMark;
     if (await meCall('rq_delete_mark', { p_id: id }) !== null){ S.me.marks = S.me.marks.filter(m => m.id !== id); render(); } });
   document.title = 'Záložky · RegulaQuest';
@@ -944,7 +944,7 @@ function renderContext(){
 function disclaimer(){ return '<div class="disclaimer">Výklady připravuje redakce RegulaQuest pro výuku. Nejsou právním stanoviskem; rozhodující je vždy oficiální znění předpisu.</div>'; }
 
 RQAuth.start({
-  app: 'ctecka', require: 'member', title: 'Čtečka regulace zdravotnických prostředků',
+  app: 'ctecka', require: 'member', title: 'Výukové prostředí pro práci s legislativou',
   subtitle: 'Přihlaste se jménem a heslem z lístečku od vyučujícího.',
   onReady(rq){
     const tpl = document.getElementById('readerTpl');

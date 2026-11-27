@@ -335,7 +335,7 @@ if(!u){const d=getDoc(selected);if(!d){selected=null;return renderReader()}const
  box.querySelectorAll('[data-unit-open]').forEach(el=>el.onclick=()=>openUnit(el.dataset.unitOpen));box.querySelectorAll('[data-unit-restore]').forEach(el=>el.onclick=()=>{if(confirm('Obnovit tuto část? Vrátí se do osnovy ve stavu „Nutno ověřit“.'))safeAct({action:'restore_unit',unit_id:el.dataset.unitRestore})});const edit=box.querySelector('#editDocMetadataReader');if(edit)edit.onclick=()=>dialogDocumentMetadata(d.id);return}
 const d=getDoc(u.document_id);const related=db.units.filter(x=>x.parent_id===u.id&&!x.editor_archived);
 box.innerHTML=`<div class="hero-line"><span class="crumb">${esc(d.family)} / ${esc(d.language.toUpperCase())} / ${esc(u.locator||u.label)}</span>${u.editor_archived?'<span class="tag bad">Archivováno</span>':tag(u.text_status)}</div>
-${u.editor_archived?`<div class="notice archived-note"><strong>Archivovaná část.</strong> Není v osnově ani ve čtečce${u.merged_into?' (sloučena do '+esc(unitPath(u.merged_into))+')':''}. Zůstává jen pro dohledání historie.${u.merged_into?'':' <button class="btn tiny" type="button" id="rqRestore">Obnovit</button>'}</div>`:''}
+${u.editor_archived?`<div class="notice archived-note"><strong>Archivovaná část.</strong> Není v osnově ani ve studentské části${u.merged_into?' (sloučena do '+esc(unitPath(u.merged_into))+')':''}. Zůstává jen pro dohledání historie.${u.merged_into?'':' <button class="btn tiny" type="button" id="rqRestore">Obnovit</button>'}</div>`:''}
 <h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>${u.editor_archived?'':rqTagsRow(u)}${u.editor_archived?'':`<details class="rel-box" id="rqRelBox"${window.rqRelOpen?' open':''}><summary><span class="smallcaps">Souvisí</span> <span class="rel-sum" id="rqRelSum"></span></summary>${window.RQNews?RQNews.unitRow(u):''}${window.RQCases?RQCases.unitRow(u):''}${window.RQPres?RQPres.unitRow(u):''}</details>`}
 <div class="sourcebox"><strong>Zdroj:</strong> ${esc(d.title)}<br><strong>Verze:</strong> ${esc(d.version)} · ${esc(d.language.toUpperCase())}<br><strong>Umístění:</strong> ${esc(u.locator||u.label)}<br><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Porovnat s originálem ↗</a></div>
 ${u.content_blocks&&u.content_blocks.length?`<div class="rq-prepared-content" data-anchor-root><div class="section-kicker">REDAKČNĚ STRUKTUROVANÝ OBSAH A TABULKY · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>${rqRenderBlocks(u.content_blocks)}</div>`:''}
@@ -358,7 +358,7 @@ const rs=box.querySelector('#rqRestore');if(rs)rs.onclick=()=>{if(confirm('Obnov
 if(u.editor_archived)box.querySelector('#rqArchive').style.display='none';
 box.querySelector('#rqArchive').onclick=()=>{
  if(related.length){toast('Část má podřazené části. Nejprve archivujte je.',true);return}
- const reason=prompt(`Archivovat „${unitPath(u.id)}“?\n\nČást zmizí z osnovy i ze čtečky, v databázi zůstane i s historií a lze ji obnovit (Katalog → dokument → Archivované části). Její schválené vazby a komentáře se vrátí do kontroly.\n\nDůvod:`,'Nepotřebná nebo duplicitní část');
+ const reason=prompt(`Archivovat „${unitPath(u.id)}“?\n\nČást zmizí z osnovy i ze studentské části, v databázi zůstane i s historií a lze ji obnovit (Katalog → dokument → Archivované části). Její schválené vazby a komentáře se vrátí do kontroly.\n\nDůvod:`,'Nepotřebná nebo duplicitní část');
  if(reason===null)return;
  const parent=u.parent_id;safeAct({action:'archive_unit',unit_id:u.id,reason},()=>{selected=parent||u.document_id;render()});
 };
@@ -657,8 +657,8 @@ function dialogDocumentMetadata(id){
  <label class="form-field"><span>Název</span><textarea class="textarea" name="title" required>${esc(d.title)}</textarea></label>
  <div class="rq-meta-grid"><label class="form-field"><span>Zkratka / rodina</span><input class="input" name="family" required value="${esc(d.family)}"></label>
  <label class="form-field"><span>Revize / časová verze</span><input class="input" name="version" value="${esc(d.version)}"></label></div>
- <label class="form-field"><span>Krátký název pro studenty</span><input class="input" name="short_title" maxlength="120" value="${esc(d.short_title||'')}" placeholder="Např. MDR – Nařízení o zdravotnických prostředcích"><small class="form-hint">Zobrazí se ve čtečce na kartách a v seznamu dokumentů. Prázdné = zkratka a jazyk.</small></label>
- <div class="rq-meta-grid"><label class="form-field rq-check"><span>Doporučit studentům</span><label class="inline-check"><input type="checkbox" name="featured" ${d.featured?'checked':''}> zobrazit na úvodní stránce čtečky</label></label>
+ <label class="form-field"><span>Krátký název pro studenty</span><input class="input" name="short_title" maxlength="120" value="${esc(d.short_title||'')}" placeholder="Např. MDR – Nařízení o zdravotnických prostředcích"><small class="form-hint">Zobrazí se ve studentské části na kartách a v seznamu dokumentů. Prázdné = zkratka a jazyk.</small></label>
+ <div class="rq-meta-grid"><label class="form-field rq-check"><span>Doporučit studentům</span><label class="inline-check"><input type="checkbox" name="featured" ${d.featured?'checked':''}> zobrazit na úvodní stránce studentské části</label></label>
  <label class="form-field"><span>Pořadí mezi doporučenými</span><input class="input" name="featured_sort" type="number" min="0" max="999" value="${esc(d.featured_sort??100)}"></label></div>
  <label class="form-field"><span>Vydavatel</span><input class="input" name="publisher" value="${esc(d.publisher)}" placeholder="Např. Evropský parlament a Rada"></label>
  <label class="form-field"><span>Oficiální URL</span><input class="input" name="url" type="url" value="${esc(d.url)}" placeholder="https://…"></label>
@@ -666,11 +666,11 @@ function dialogDocumentMetadata(id){
  ${select('Druh dokumentu','document_type',Object.entries(docTypes),d.document_type||'other')}
  <label class="form-field"><span>Odborné tagy (oddělit čárkou)</span><textarea class="textarea" name="topics" placeholder="Např. klasifikace, software, klinické hodnocení">${esc((d.topics||[]).join(', '))}</textarea><small class="form-hint">Zvolte jednotné názvy. Tagy nepředstavují samotnou odbornou vazbu na ustanovení.</small></label>
  <div class="notice">Dokumentová skupina: ${esc(d.group_key||d.id)}. Změna typu, původu a tagů bude platit pro propojené jazykové verze. Text ani schválené vazby se nemění.</div>
- ${window.RQAreas?RQAreas.metaSection(d):''}<div class="doc-danger"><strong>Odstranění dokumentu</strong><p>Archivace dokument skryje v katalogu i ve čtečce (od příští publikace); vše zůstane a lze ho obnovit. Trvalé smazání je jen pro omyly – u dokumentu, který ještě nebyl publikován a nemá schválený obsah.</p>
+ ${window.RQAreas?RQAreas.metaSection(d):''}<div class="doc-danger"><strong>Odstranění dokumentu</strong><p>Archivace dokument skryje v katalogu i ve studentské části (od příští publikace); vše zůstane a lze ho obnovit. Trvalé smazání je jen pro omyly – u dokumentu, který ještě nebyl publikován a nemá schválený obsah.</p>
   <button class="btn tiny" type="button" id="archiveDoc">Archivovat dokument</button> <button class="btn tiny danger" type="button" id="deleteDoc">Smazat dokument trvale…</button></div>
  <div class="modal-actions"><button class="btn" type="button" id="cancelMetadata">Zrušit</button><button class="btn accent" type="submit">Uložit metadata</button></div>`;
  f.querySelector('#cancelMetadata').onclick=()=>modal.close();
- f.querySelector('#archiveDoc').onclick=async()=>{if(!confirm(`Archivovat ${d.family} · ${d.language.toUpperCase()}? Dokument zmizí z katalogu a po příští publikaci i ze čtečky. Obnovit ho lze na úvodní stránce.`))return;
+ f.querySelector('#archiveDoc').onclick=async()=>{if(!confirm(`Archivovat ${d.family} · ${d.language.toUpperCase()}? Dokument zmizí z katalogu a po příští publikaci i ze studentské části. Obnovit ho lze na úvodní stránce.`))return;
   try{await rpc('rq_archive_document',{p_id:id,p_archived:true});modal.close();await refresh();setPage('home');toast('Dokument archivován.')}catch(e){toast(e.message,true)}};
  f.querySelector('#deleteDoc').onclick=()=>{modal.close();setTimeout(()=>rqDeleteDocument(id),0)};
  if(window.RQAreas)RQAreas.bindMeta(d);
@@ -1032,7 +1032,7 @@ function rqTagManager(){
  const d=$('#modal'),f=$('#modalContent');f.onsubmit=e=>e.preventDefault();
  const used=k=>db.units.filter(u=>(u.tags||[]).includes(k)).length;
  const draw=()=>{
-  f.innerHTML=`<h2>Štítky</h2><p>Slovník štítků je společný pro celé Studio. Pro jiné předpisy si založte vlastní skupiny (např. „Oblast“ pro GDPR). Vyřazený štítek zmizí z nabídky i ze čtečky; u částí zůstane uložen a po obnovení se vrátí.</p>
+  f.innerHTML=`<h2>Štítky</h2><p>Slovník štítků je společný pro celé Studio. Pro jiné předpisy si založte vlastní skupiny (např. „Oblast“ pro GDPR). Vyřazený štítek zmizí z nabídky i ze studentské části; u částí zůstane uložen a po obnovení se vrátí.</p>
   ${(db.tag_groups||[]).map(g=>`<div class="tg-group"><div class="tg-head"><input class="input tg-gname" data-g="${esc(g.key)}" value="${esc(g.name)}" aria-label="Název skupiny"><button type="button" class="btn tiny" data-gsave="${esc(g.key)}">Uložit název</button></div>
    ${(db.tags||[]).filter(t=>t.group_key===g.key).map(t=>`<div class="tg-row${t.archived?' arch':''}"><input class="input tg-name" data-t="${esc(t.key)}" value="${esc(t.name)}" aria-label="Název štítku"><small>${used(t.key)}× použito</small><button type="button" class="btn tiny" data-tsave="${esc(t.key)}">Uložit</button><button type="button" class="btn tiny ${t.archived?'':'danger'}" data-tarch="${esc(t.key)}">${t.archived?'Obnovit':'Vyřadit'}</button></div>`).join('')}
    <div class="tg-row new"><input class="input" data-newtag="${esc(g.key)}" placeholder="Nový štítek ve skupině „${esc(g.name)}“"><button type="button" class="btn tiny accent" data-tadd="${esc(g.key)}">Přidat</button></div></div>`).join('')}
@@ -1210,5 +1210,5 @@ async function rqPubWarn(ids){
  if(window.RQPres)try{const A=await RQPres.load();(A.presentations||[]).filter(p=>p.status==='ready').forEach(p=>{
   const bad=(A.slide_index||[]).filter(s=>s.presentation_id===p.id).flatMap(s=>s.units.filter(id=>!ids.has(id)).map(id=>`${s.n}: ${name(id)}`));
   if(bad.length)out.push(`Prezentace <strong>${esc(p.title)}</strong> – snímky odkazují na neověřené části (${bad.slice(0,8).map(esc).join(', ')}${bad.length>8?' …':''})`)})}catch{}
- box.innerHTML=out.length?`<div class="pub-warn"><strong>Odkazy, které studenti zatím neotevřou</strong> – část není ověřená (nebo byla smazána), takže v čtečce nebude klikatelná. Publikovat lze i tak.<ul>${out.map(x=>`<li>${x}</li>`).join('')}</ul></div>`:'';
+ box.innerHTML=out.length?`<div class="pub-warn"><strong>Odkazy, které studenti zatím neotevřou</strong> – část není ověřená (nebo byla smazána), takže ve studentské části nebude klikatelná. Publikovat lze i tak.<ul>${out.map(x=>`<li>${x}</li>`).join('')}</ul></div>`:'';
 }

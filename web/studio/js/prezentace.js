@@ -99,7 +99,7 @@ window.RQPres = (function () {
   function editorView() {
     const s = P.slides[cur];
     return `<div class="page-head"><div><div class="eyebrow">VÝUKA / PREZENTACE</div><h1>${esc(P.title)}</h1></div>
-      <div class="head-actions"><button type="button" class="btn" id="prBack">← Všechny prezentace</button><a class="btn" href="${esc(readerUrl())}#/prezentace/${encodeURIComponent(P.id)}${s ? '/' + encodeURIComponent(s.id) : ''}" target="_blank" rel="noopener">Náhled ve čtečce ↗</a></div></div>
+      <div class="head-actions"><button type="button" class="btn" id="prBack">← Všechny prezentace</button><a class="btn" href="${esc(readerUrl())}#/prezentace/${encodeURIComponent(P.id)}${s ? '/' + encodeURIComponent(s.id) : ''}" target="_blank" rel="noopener">Náhled ve studentské části ↗</a></div></div>
       ${headForm()}
       <div class="pr-work"><aside class="pr-thumbs">${P.slides.map((x, i) => `<button type="button" class="pr-th${i === cur ? ' on' : ''}" data-go="${i}"><span>${i + 1}</span><div class="sl-wrap">${RQSlides.render(x.data, { deck: '' })}</div></button>`).join('')}
         <button type="button" class="btn tiny" id="prAddSlide">+ Snímek na konec</button></aside>

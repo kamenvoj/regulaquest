@@ -49,7 +49,7 @@ window.RQCases = (function () {
   function listView() {
     const xs = cases().filter(c => filter === 'all' || c.status === filter);
     return `<div class="page-head"><div><div class="eyebrow">VÝUKA / ŘEŠENÉ PŘÍPADY</div><h1>Řešené případy</h1>
-      <p>Konkrétní případy rozebrané krok za krokem (klasifikace, analýza rizik, posouzení…). Kroky odkazují na ustanovení; ve čtečce má případ vlastní stránku a u propojených ustanovení se ukáže odkaz. Studenti vidí zveřejněné případy po publikaci.</p></div>
+      <p>Konkrétní případy rozebrané krok za krokem (klasifikace, analýza rizik, posouzení…). Kroky odkazují na ustanovení; ve studentské části má případ vlastní stránku a u propojených ustanovení se ukáže odkaz. Studenti vidí zveřejněné případy po publikaci.</p></div>
       <div class="head-actions"><button type="button" class="btn accent" id="csNew">+ Nový případ</button></div></div>
       <div class="nw-tabs">${[['all', 'Vše'], ...Object.entries(STATUS)].map(([k, l]) => `<button type="button" class="btn${filter === k ? ' accent' : ''}" data-cf="${k}">${l} (${k === 'all' ? cases().length : cases().filter(c => c.status === k).length})</button>`).join('')}</div>
       <ul class="nw-list">${xs.map(c => `<li class="nw-item cs-row"><span></span><div class="nw-main"><div class="nw-meta">${esc(STATUS[c.status])} · ${steps(c.id).length} kroků · ${links(c.id).length} propojených ustanovení${c.area_keys.length ? ' · ' + esc(c.area_keys.map(areaName).join(', ')) : ''}</div>
@@ -72,7 +72,7 @@ window.RQCases = (function () {
   function detailView(c) {
     const ss = steps(c.id), ls = links(c.id);
     return `<div class="page-head"><div><div class="eyebrow">VÝUKA / ŘEŠENÉ PŘÍPADY</div><h1>${c.id ? esc(c.title) : 'Nový případ'}</h1></div>
-      <div class="head-actions"><button type="button" class="btn" id="csBack">← Všechny případy</button>${c.id ? `<a class="btn" href="${esc(previewUrl(c.id))}" target="_blank" rel="noopener">Náhled ve čtečce ↗</a>` : ''}</div></div>
+      <div class="head-actions"><button type="button" class="btn" id="csBack">← Všechny případy</button>${c.id ? `<a class="btn" href="${esc(previewUrl(c.id))}" target="_blank" rel="noopener">Náhled ve studentské části ↗</a>` : ''}</div></div>
       <div class="gq-card cs-form">
         <label class="form-field"><span>Název</span><input class="input" id="csTitle" maxlength="200" value="${esc(c.title || '')}" placeholder="Např. Klasifikace aplikace pro hodnocení kožních znamének"></label>
         <label class="form-field"><span>Krátký popis (na kartě v seznamu)</span><input class="input" id="csSummary" maxlength="1000" value="${esc(c.summary || '')}"></label>
@@ -85,7 +85,7 @@ window.RQCases = (function () {
       ${c.id ? `<div class="gq-card"><div class="gq-head"><h2>Postup (${ss.length} kroků)</h2><button type="button" class="btn" id="csAddStep">+ Krok</button></div>
         ${stepEdit === 'new' ? `<div data-sid="new">${stepForm({})}</div>` : ''}
         <ol class="cs-steps">${ss.map((s, i) => stepRow(s, i, ss.length)).join('')}</ol>${ss.length || stepEdit === 'new' ? '' : '<p class="fine">Zatím žádné kroky.</p>'}</div>
-      <div class="gq-card"><h2>Propojená ustanovení</h2><p class="fine">U těchto ustanovení se ve čtečce v Souvislostech ukáže odkaz na případ (stejně jako u ustanovení v krocích). Propojit jde i přímo z textu dokumentu: pod nadpisem „+ Případ“.</p>
+      <div class="gq-card"><h2>Propojená ustanovení</h2><p class="fine">U těchto ustanovení se ve studentské části v Souvislostech ukáže odkaz na případ (stejně jako u ustanovení v krocích). Propojit jde i přímo z textu dokumentu: pod nadpisem „+ Případ“.</p>
         <div class="nw-units">${ls.map(id => `<span class="role-chip on">${esc(unitLabel(id))}<button type="button" data-unlink="${esc(id)}" aria-label="Odpojit">×</button></span>`).join('') || '<small class="fine">Žádná.</small>'}</div>
         <div class="form-field" style="margin-top:10px"><span>Propojit další</span>${unitPicker('csLinkPick', '')}</div></div>` : '<p class="fine">Kroky a propojená ustanovení přidáte po založení případu.</p>'}`;
   }

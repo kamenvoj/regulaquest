@@ -89,7 +89,7 @@
     c.querySelectorAll('[data-show]').forEach(b => b.onclick = () => groupDialog(groups.find(g => g.id === b.dataset.show), byGroup(b.dataset.show)));
     c.querySelectorAll('[data-gtoggle]').forEach(b => b.onclick = async () => {
       const g = groups.find(x => x.id === b.dataset.gtoggle);
-      if (g.active && !confirm(`Deaktivovat skupinu „${g.name}“? Všichni její studenti okamžitě ztratí přístup do čtečky.`)) return;
+      if (g.active && !confirm(`Deaktivovat skupinu „${g.name}“? Všichni její studenti okamžitě ztratí přístup do studentské části.`)) return;
       try { await must(client.rpc('rq_update_group', { p_id: g.id, p_name: g.name, p_note: g.note, p_valid_until: g.valid_until, p_active: !g.active })); renderAccess(); }
       catch (e) { toast(e.message, true); }
     });
@@ -201,7 +201,7 @@
     const qr = qrSvg(cfg.readerUrl);
     $('#tisk').innerHTML = `<div class="slips">${list.map(a => `
       <div class="slip"><div class="qr">${qr}</div><div>
-        <h3>RegulaQuest – čtečka regulace ZP</h3>
+        <h3>RegulaQuest – výukové prostředí pro práci s legislativou</h3>
         <p>Adresa: <b>${esc(host)}</b></p>
         <p>Jméno: <span class="cred">${esc(a.username)}</span></p>
         <p>Heslo: <span class="cred">${esc(a.password)}</span></p>
