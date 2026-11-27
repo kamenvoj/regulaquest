@@ -1,5 +1,10 @@
 # Změny
 
+## 0.18.0 – 2026-11-27 · Přehled pokrytí
+- Nová stránka **Pokrytí** (Redakce): tabulka článků / příloh / pravidel vybraného dokumentu včetně jejich odstavců –
+  ověřený text, štítky, výklady, zvýraznění, vazby, vazby na metodiku (MDCG), kroky tras. Souhrn nahoře, filtry
+  (neověřený text, bez štítků, bez výkladu, bez vazeb, bez metodiky, zatím nic), řazení „nejméně zpracované nahoře“; klepnutím se část otevře.
+
 ## 0.17.0 – 2026-11-27 · Trasy
 - Nová stránka **Trasy** ve Studiu: seřazené průchody předpisy a metodikami s komentářem ke každému kroku.
   Krok = celé ustanovení („⇢ Do trasy“ pod textem), konkrétní místo v textu (lišta výběru → „⇢ Do trasy“) nebo samostatný text (úvod, shrnutí).

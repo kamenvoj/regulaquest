@@ -169,6 +169,7 @@ function render(){
  $('#navReview').textContent=(c.proposed||0)+(c.proposed_revisions||0)+(c.comment_revisions_pending||0)+db.comments.filter(x=>x.status==='draft').length;
  if(page==='home')renderHome();
  if(page==='paths'&&window.RQPaths)RQPaths.render();
+ if(page==='coverage'&&window.RQCoverage)RQCoverage.render();
  if(page==='library'){renderDocumentMetrics();renderList();renderReader();renderContext();rqLoadFigures($('#reader'))}
  if(page==='documents')renderDocumentsOverview();if(page==='verified')renderVerifiedOverview();if(page==='review')renderReview();if(page==='relations')renderRelations();if(page==='comments')renderComments();if(page==='publish')renderPublish();
 }
