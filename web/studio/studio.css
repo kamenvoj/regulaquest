@@ -336,3 +336,18 @@ dialog.wide{width:min(1100px,calc(100vw - 24px));max-width:min(1100px,calc(100vw
 .home-archived summary{cursor:pointer;font-size:12px;font-weight:700;color:#5f7479;padding:6px 0}
 .home-doc-row.arch{opacity:.75}
 .notice.warn{background:#fdf3e6;border-color:#f0d9b5}
+/* 0.17 trasy */
+.paths-layout{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start}
+.paths-list{display:flex;flex-direction:column;gap:6px}
+.path-item{text-align:left;border:1px solid #dfe8e8;background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.path-item strong{font-size:13px;color:#1d3a43}.path-item span{font-size:11px;color:#6d8287}
+.path-item.active{border-color:#1d7d83;box-shadow:0 0 0 2px #d4ebe9}
+.path-edit{background:#fff;border:1px solid #e1e9e9;border-radius:14px;padding:18px 20px}
+.path-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.path-tools .form-field{margin:0;min-width:180px}
+.steps-h{margin:18px 0 8px}
+.step-row{display:grid;grid-template-columns:34px 1fr;gap:10px;padding:12px 0;border-top:1px solid #edf1f1}
+.step-n{width:28px;height:28px;border-radius:50%;background:#16313c;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px}
+.step-main{display:flex;flex-direction:column;gap:6px}
+.step-where{font-size:12.5px;font-weight:700;color:#28474f}
+.linklike.inline{display:inline;margin:0 0 0 6px;font-size:11.5px}

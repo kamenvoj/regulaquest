@@ -397,6 +397,26 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(r['units'], 3)
         self.assertEqual(self.sql("select count(*) from units")[0][0], 0)
 
+    def test_paths(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        pid = self.call('rq_save_path', '', 'Klasifikace softwaru', 'Úvod', 'draft')
+        a = self.call('rq_save_path_step', '', pid, 'mdr-cs-rule-11', '', 'Začněte pravidlem 11.', 'Software', 1)
+        b = self.call('rq_save_path_step', '', pid, '', 'Shrnutí', 'Co si zapamatovat.', '', 1)
+        self.fails('nebyl nalezen', 'rq_save_path_step', '', pid, 'mdr-cs-rule-11', '', 'x', 'Nic', 1)
+        self.call('rq_move_path_step', b, -1)
+        self.assertEqual([r[0] for r in self.sql("select id from path_steps order by sort")], [b, a])
+        self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
+        self.assertEqual(len(self.call('rq_draft_preview')['paths'][0]['steps']), 2)
+        self.call('rq_publish', 'x')
+        self.assertEqual(self.call('rq_current_publication')['paths'], [])
+        self.call('rq_save_path', pid, 'Klasifikace softwaru', 'Úvod', 'published')
+        self.fails('nejdřív', 'rq_delete_path', pid)
+        self.call('rq_publish', 'y')
+        self.as_user(STUDENT)
+        pub = self.call('rq_current_publication')
+        self.assertEqual(pub['paths'][0]['steps'][1]['anchor_text'], 'Software')
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)

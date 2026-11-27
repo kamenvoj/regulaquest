@@ -1,5 +1,6 @@
 -- RegulaQuest · Úklid testovacích dat před ostrým startem
--- SMAŽE: dokumenty, části, komentáře, vazby, pojmy, historii, importy, publikace.
+-- SMAŽE: dokumenty, části, komentáře, vazby, pojmy, trasy, historii, importy, publikace.
+-- Vyžaduje migrace až po 16_trasy.sql.
 -- PONECHÁ: účty (profiles), skupiny studentů, nastavení přihlášení, všechny funkce a migrace.
 -- Soubory v úložišti (originals, figures) se SQL smazat nedají – vysypte je ručně v Supabase → Storage.
 --
@@ -12,7 +13,7 @@ begin
   if potvrzeni <> 'ANO, SMAZAT TESTOVACÍ DATA' then
     raise exception 'Nic nesmazáno. Pro smazání změňte v souboru potvrzení na: ANO, SMAZAT TESTOVACÍ DATA';
   end if;
-  truncate table public.publications, public.comment_history, public.comment_revisions, public.comments,
+  truncate table public.path_steps, public.paths, public.publications, public.comment_history, public.comment_revisions, public.comments,
                  public.relation_history, public.relation_revisions, public.relations, public.terms,
                  public.unit_amendments, public.amendments, public.unit_edit_history, public.source_files,
                  public.import_log, public.units, public.documents restart identity;

@@ -11,6 +11,7 @@ python3 tests/web_e2e/server.py "host=/tmp/pg port=5544 user=postgres dbname=rqe
 python3 tests/web_e2e/test_ui.py      # heslo v testu: Heslo12345AB
 python3 tests/web_e2e/test_anotace.py # poznámky k výběru, zvýraznění, čtečka (pracovní náhled)
 python3 tests/web_e2e/test_dokumenty.py # archivace a smazání dokumentu
+python3 tests/web_e2e/test_trasy.py     # trasy ve Studiu a ve čtečce
 ```
 
 `test_import.py` naimportuje celé MDR (soubor `podklady/MDR_CS_20260719.html`, v gitu není) a pak upravenou kopii

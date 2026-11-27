@@ -16,7 +16,7 @@ const S = {
   data:null, draft:false,
   units:new Map(), docs:new Map(), children:new Map(),
   rels:new Map(), notes:new Map(), order:new Map(),
-  terms:[], off:loadOff(), focus:null, role:loadRole(), tagNames:new Map(),
+  terms:[], off:loadOff(), focus:null, role:loadRole(), tagNames:new Map(), paths:[], path:null, navMode:'osnova',
   docId:null, unitId:null, query:'', highlight:'', expanded:new Set(), tab:'text'
 };
 
@@ -91,6 +91,7 @@ function index(d){
     [r.source_id, r.target_id].forEach(id => { if (!S.rels.has(id)) S.rels.set(id, []); S.rels.get(id).push(r); });
   });
   S.terms = d.terms || [];
+  S.paths = (d.paths || []).filter(p => p.steps.length);
   d.comments.forEach(c => { if (!S.notes.has(c.unit_id)) S.notes.set(c.unit_id, []); S.notes.get(c.unit_id).push(c); });
 
   // Odkaz na pracovní náhled otevřel student: vysvětlit, proč vidí jen publikovaný obsah.
@@ -113,6 +114,8 @@ function index(d){
   rs.closest('.role-pick').classList.toggle('hidden', !used.size);
   rs.value = S.role;
   rs.onchange = () => { S.role = rs.value; try { localStorage.setItem('rq-stitek', S.role); } catch {} renderNav(); const u = S.units.get(S.unitId); if (u) { renderUnit(u); } };
+  $('#navMode').classList.toggle('hidden', !S.paths.length);
+  $('#navMode').querySelectorAll('button').forEach(b => b.onclick = () => { S.navMode = b.dataset.mode; renderNav(); });
   document.querySelectorAll('#legendPanel .lg').forEach(e => e.innerHTML = ICON(e.dataset.i));
   $('#legendBtn').onclick = () => { const p = $('#legendPanel'), open = p.classList.toggle('hidden'); $('#legendBtn').setAttribute('aria-expanded', String(!open)); };
 }
@@ -174,8 +177,20 @@ function mirrorRelations(list){
 
 /* ---------- Routing ---------- */
 function route(){
-  S.focus = null;
+  S.focus = null; S.path = null;
   const h = decodeURIComponent(location.hash.slice(1));
+  const t = h.match(/^\/t\/([^/]+)(?:\/(\d+))?$/);
+  if (t){
+    const p = S.paths.find(x => x.id === t[1]);
+    if (p){
+      const n = Math.min(+(t[2] || 0), p.steps.length), st = n ? p.steps[n-1] : null;
+      S.path = { p, n }; S.navMode = 'trasy';
+      S.unitId = st && st.unit_id && S.units.has(st.unit_id) ? st.unit_id : null;
+      if (S.unitId){ S.docId = S.units.get(S.unitId).document_id; ancestors(S.units.get(S.unitId)).forEach(a => S.expanded.add(a.id)); $('#docSelect').value = S.docId; }
+      if (n) markDone(p.id, st.id);
+      render(false); setTab('text', false); return;
+    }
+  }
   const m = h.match(/^\/(u|d)\/(.+)$/);
   S.unitId = null;
   if (m && m[1] === 'u' && S.units.has(m[2])){ S.unitId = m[2]; S.docId = S.units.get(m[2]).document_id; }
@@ -196,7 +211,8 @@ function setTab(t, scroll=true){
 
 function render(home){
   renderNav();
-  if (home) renderHome();
+  if (S.path) renderStep();
+  else if (home) renderHome();
   else if (S.unitId) renderUnit(S.units.get(S.unitId));
   else renderDoc(S.docs.get(S.docId));
   renderContext();
@@ -306,6 +322,9 @@ function snippet(text, q){
 /* ---------- Left panel ---------- */
 function renderNav(){
   const box = $('#navBody');
+  $('#navMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === S.navMode)));
+  $('#panelNav').classList.toggle('mode-trasy', S.navMode === 'trasy');
+  if (S.navMode === 'trasy' && S.query.length < 2) return renderPathList(box);
   if (S.query.length >= 2) return renderResults(box);
   const doc = S.docs.get(S.docId);
   if (!doc){ box.innerHTML = ''; return; }
@@ -499,6 +518,46 @@ function renderDoc(d){
   document.title = `${docShort(d)} · RegulaQuest`;
 }
 
+/* ---------- Trasy ---------- */
+function doneMap(){ try { return JSON.parse(localStorage.getItem('rq-trasy-hotovo')) || {}; } catch { return {}; } }
+function markDone(pid, sid){ const m = doneMap(); m[pid] = [...new Set([...(m[pid] || []), sid])]; try { localStorage.setItem('rq-trasy-hotovo', JSON.stringify(m)); } catch {} }
+function progress(p){ const d = new Set(doneMap()[p.id] || []); return p.steps.filter(s => d.has(s.id)).length; }
+function stepLabel(s){ const u = s.unit_id && S.units.get(s.unit_id); return s.title || (u ? `${docShort(S.docs.get(u.document_id))} › ${u.label}${headingOf(u) ? ' – ' + trim(headingOf(u), 50) : ''}` : 'Text'); }
+function renderPathList(box){
+  box.innerHTML = `<div class="nav-group">Trasy</div>` + S.paths.map(p => { const k = progress(p), n = p.steps.length;
+    return `<a class="path-card${S.path?.p.id===p.id?' current':''}" href="#/t/${encodeURIComponent(p.id)}"><strong>${esc(p.title)}</strong>
+      <span>${n} ${n===1?'krok':n<5?'kroky':'kroků'}${k ? ` · prošli jste ${k}` : ''}</span><i class="pbar"><b style="width:${Math.round(k/n*100)}%"></b></i></a>
+      ${S.path?.p.id===p.id ? `<ol class="path-steps">${p.steps.map((s, i) => `<li class="${S.path.n===i+1?'current':''} ${(doneMap()[p.id]||[]).includes(s.id)?'done':''}"><a href="#/t/${encodeURIComponent(p.id)}/${i+1}">${esc(stepLabel(s))}</a></li>`).join('')}</ol>` : ''}`; }).join('');
+}
+function renderStep(){
+  const { p, n } = S.path, panel = $('#panelText'), st = n ? p.steps[n-1] : null;
+  const head = `<div class="path-box"><div class="pb-top"><a href="#/t/${encodeURIComponent(p.id)}" class="pb-title">⇢ ${esc(p.title)}</a><span>${n ? `Krok ${n} z ${p.steps.length}` : `${p.steps.length} ${p.steps.length===1?'krok':p.steps.length<5?'kroky':'kroků'}`}</span></div>
+    <div class="pb-dots">${p.steps.map((s, i) => `<a href="#/t/${encodeURIComponent(p.id)}/${i+1}" class="${i+1===n?'on':''} ${(doneMap()[p.id]||[]).includes(s.id)?'done':''}" title="${esc(stepLabel(s))}"></a>`).join('')}</div>
+    ${st ? `${st.title ? `<h2>${esc(st.title)}</h2>` : ''}${st.note ? `<div class="pb-note">${plain(st.note)}</div>` : ''}` : ''}</div>`;
+  const nav = `<div class="pager path-pager">${n > 0 ? `<a class="prev" href="#/t/${encodeURIComponent(p.id)}/${n-1}"><small>← Zpět</small>${n-1 ? esc(stepLabel(p.steps[n-2])) : 'Úvod trasy'}</a>` : '<span></span>'}
+    ${n < p.steps.length ? `<a class="next" href="#/t/${encodeURIComponent(p.id)}/${n+1}"><small>${n ? 'Další krok →' : 'Začít trasu →'}</small>${esc(stepLabel(p.steps[n]))}</a>` : `<a class="next" href="#/t/${encodeURIComponent(p.id)}"><small>Hotovo ✓</small>Zpět na přehled trasy</a>`}</div>`;
+  if (!n){
+    panel.innerHTML = head + `<div class="path-intro">${p.description ? `<div class="pb-note">${plain(p.description)}</div>` : ''}
+      <ol class="path-overview">${p.steps.map((s, i) => `<li class="${(doneMap()[p.id]||[]).includes(s.id)?'done':''}"><a href="#/t/${encodeURIComponent(p.id)}/${i+1}">${esc(stepLabel(s))}</a></li>`).join('')}</ol></div>` + nav;
+    document.title = `${p.title} · RegulaQuest`; return;
+  }
+  const u = S.unitId && S.units.get(S.unitId);
+  if (!u){ panel.innerHTML = head + nav; document.title = `${p.title} · RegulaQuest`; return; }
+  renderUnit(u);
+  panel.querySelector('.pager')?.remove();
+  panel.insertAdjacentHTML('afterbegin', head);
+  const src = panel.querySelector('.source');
+  if (src) src.insertAdjacentHTML('beforebegin', nav); else panel.insertAdjacentHTML('beforeend', nav);
+  if (st.anchor_text){
+    const box = panel.querySelector(`.legal[data-unit="${CSS.escape(u.id)}"]`);
+    if (box){
+      RQNotes.applyAnchors(box, [{ id: 'STEP', kind: 'key', anchor_text: st.anchor_text, anchor_occurrence: st.anchor_occurrence }], () => {});
+      const el = RQNotes.applyFocus(panel, 'STEP');
+      if (el){ box.before(RQNotes.focusChip('route', 'místo, na které trasa míří', () => panel.classList.remove('focus-mode'))); requestAnimationFrame(() => el.scrollIntoView({block:'center', behavior:'smooth'})); }
+    }
+  }
+  document.title = `${p.title} – krok ${n} · RegulaQuest`;
+}
 function renderHome(){
   const docs = S.data.documents;
   const annotated = S.data.units.filter(u => S.notes.has(u.id));
@@ -507,6 +566,8 @@ function renderHome(){
     <p>Ověřené texty nařízení MDR a metodik MDCG, doplněné odbornými výklady a vazbami mezi ustanoveními. Aplikace je studijní pomůckou, ne oficiálním zdrojem práva.</p>
     <div class="cards">${docs.map(d => { const n = S.data.units.filter(u => u.document_id===d.id && !u.navigation_only).length;
       return `<a class="card" href="#/d/${encodeURIComponent(d.id)}"><strong>${esc(docShort(d))}</strong><span>${esc(d.title)}</span><em>${n} ${n===1?'část':n<5?'části':'částí'} k dispozici →</em></a>`; }).join('')}</div>
+    ${S.paths.length ? `<h2 class="block-title">Trasy</h2><div class="cards">${S.paths.map(p => { const k = progress(p);
+      return `<a class="card path" href="#/t/${encodeURIComponent(p.id)}"><strong>⇢ ${esc(p.title)}</strong><span>${esc(trim(p.description || '', 140))}</span><em>${p.steps.length} ${p.steps.length===1?'krok':p.steps.length<5?'kroky':'kroků'}${k ? ` · prošli jste ${k}` : ''} →</em></a>`; }).join('')}</div>` : ''}
     ${annotated.length ? `<h2 class="block-title">S odborným výkladem</h2><ul class="list-plain">${annotated.map(u => { const d=S.docs.get(u.document_id); return `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(docShort(d))} › ${esc(ancestors(u).map(a=>a.label).concat(u.label).join(' › '))}<small>${esc(trim(S.notes.get(u.id)[0].body.replace(/\s+/g,' '),140))}</small></a></li>`; }).join('')}</ul>` : ''}
     <div class="source">${esc(S.data.notice||'')} Data k ${esc(fmtDate(S.data.published_at))}.</div></div>`;
   document.title = 'RegulaQuest · Čtečka regulace zdravotnických prostředků';

@@ -1,5 +1,14 @@
 # Změny
 
+## 0.17.0 – 2026-11-27 · Trasy
+- Nová stránka **Trasy** ve Studiu: seřazené průchody předpisy a metodikami s komentářem ke každému kroku.
+  Krok = celé ustanovení („⇢ Do trasy“ pod textem), konkrétní místo v textu (lišta výběru → „⇢ Do trasy“) nebo samostatný text (úvod, shrnutí).
+  Pořadí šipkami, stav koncept / zveřejněná / archivovaná, náhled ve čtečce.
+- Čtečka: přepínač **Osnova | Trasy** v levém panelu, karty tras na úvodní stránce; průchod krok za krokem s komentářem,
+  zvýrazněným místem v textu a tlačítky Zpět / Další krok. Prohlížeč si pamatuje prošlé kroky (✓, ukazatel postupu).
+- Zveřejněné trasy se studentům ukážou po publikaci; kroky na neověřená ustanovení se vynechají.
+- Úklidový skript maže i trasy. Migrace 16_trasy.sql.
+
 ## 0.16.0 – 2026-11-27 · Archivace a smazání dokumentu
 - Katalog → „Upravit údaje a tagy“ → **Archivovat dokument** (skryje v katalogu a od příští publikace ve čtečce; obnovit lze na úvodní stránce
   v „Archivované dokumenty“) nebo **Smazat dokument trvale…** (jen nepublikovaný dokument bez schválených komentářů, vazeb a pojmů;
