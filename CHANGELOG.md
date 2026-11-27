@@ -1,5 +1,17 @@
 # Změny
 
+## 0.23.0 – 2026-11-27 · Najít předpisy a průvodce otázkami
+- **Čtečka – Najít předpisy** (levý panel, odkaz i z Přehledu): pole Oblast, skupiny štítků (Koho se týká, Třída rizika, Typ…),
+  další upřesnění (druh dokumentu, původ, téma) a slovo v textu. Výsledky hned: dokumenty seřazené podle shody s důvodem
+  („hlavní předpis · Zdravotnické prostředky“, „3 odpovídající ustanovení“), zvlášť předpisy pro specifické situace s „kdy“,
+  konkrétní ustanovení podle počtu shodných štítků a trasy k tématu. Výběr je v adrese – odkaz lze zkopírovat a poslat.
+- **Čtečka – Průvodce otázkami:** pro konkrétní situaci; otázky se větví podle oblastí z dřívějších odpovědí, na konci se otevře
+  vyhledávač s předvyplněným výběrem (lze dál upravit, „Upravit odpovědi“, „Začít znovu“).
+- Obojí je obecné: pole = skupiny štítků (u skupiny se nastaví, pro které oblasti platí), otázky a odpovědi definuje redakce.
+- **Studio – Výuka → Vyhledávání a průvodce:** otázky (přidat, upravit, pořadí, vyřadit, smazat; odpověď přidá oblasti a štítky;
+  otázka jen u zvolených oblastí), oblasti pro pole vyhledávače, odkazy do pracovního náhledu. Výchozí ukázková sada pěti otázek.
+- Migrace 19_hledani.sql (tag_groups.area_keys, guide_questions). Úklid testovacích dat otázky průvodce ponechá.
+
 ## 0.22.0 – 2026-11-27 · Oblasti
 - **Oblasti** (stejné pro všechny studenty): Zdravotnické prostředky, Metrologie, Zdroje ionizujícího záření, Poskytování zdravotní péče,
   Veřejné zakázky, Úhrady, Ochrana osobních údajů, Kyberbezpečnost, Regulace AI, Léčivé přípravky, Ochrana průmyslového vlastnictví.

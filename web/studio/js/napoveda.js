@@ -26,11 +26,15 @@ window.RQHelp = (function () {
     ['relations', 'Správa vazeb', `<p>Všechny vazby s filtrem podle stavu a dokumentu. Vazby se vytvářejí v Práci s dokumentem: <b>+ Propojit</b> (celé ustanovení), <b>Propojit</b> z vybraného textu, <b>✧ Návrhy</b> (výslovné odkazy nalezené v textu – ukotví se k citaci) a <b>◎ Souvislosti</b> (podobná místa v jiných dokumentech, např. MDR ↔ MDCG). Vazba vytvořená v jedné jazykové verzi se ukáže i v druhé.</p>`],
     ['comments', 'Správa komentářů', `<p>Všechny komentáře a zvýraznění s filtrem (koncepty, schválené, archivované, „originál změněn“ u převzatých překladů). Archivované jdou obnovit. Komentáře jsou pro každý jazyk zvlášť – u komentáře z druhé jazykové verze je <b>Převzít</b> (přeložit).</p>`],
     ['coverage', 'Pokrytí', `<p>Tabulka článků s tím, co už mají (ověřený text, štítky, výklad, zvýraznění, vazby, metodika, trasy). Zelená = hotovo, oranžová = rozpracováno. Filtry a „nejméně zpracované nahoře“ ukážou, kde pokračovat.</p>`],
+    ['guide', 'Vyhledávání a průvodce', `<p>Nastavení stránky <b>Najít předpisy</b> a <b>průvodce otázkami</b> ve čtečce. Nic z toho není napsané pro konkrétní obor – vše vychází z oblastí dokumentů a štítků ustanovení.</p>
+      <p><b>Pole vyhledávače</b> = skupiny štítků. U každé určete, pro které oblasti platí (třída rizika jen u ZP); bez oblasti se ukazuje vždy. Nabízí se jen štítky použité u zveřejněných částí.</p>
+      <p><b>Průvodce</b>: otázky v pořadí, každá odpověď může přidat oblasti a štítky. Otázka s oblastí se ukáže, jen když tu oblast přidala některá dřívější odpověď – tak se průvodce větví. Na konci se otevře vyhledávač s výběrem ze všech odpovědí. Vyzkoušejte v pracovním náhledu; studenti změny uvidí po publikaci.</p>
+      <p>Kvalita výsledků stojí na tom, jak důsledně jsou dokumenty zařazené do oblastí (Údaje dokumentu → Oblasti) a ustanovení oštítkovaná (filtr <b>Bez štítků</b> v Pokrytí).</p>`],
     ['paths', 'Trasy', `<p>Průchod několika místy v daném pořadí s komentářem ke každému kroku. Kroky přidáte z textu (<b>⇢ Do trasy</b>), pořadí šipkami, „+ Krok jen s textem“ pro úvod a shrnutí. Stav <b>Zveřejněná</b> = studenti trasu uvidí po příští publikaci (kroky na neověřená ustanovení se vynechají).</p>`],
     ['publish', 'Publikování', `<p>Studenti nevidí Studio, ale <b>publikaci</b> – pevný snímek ověřených textů a schválených položek. Po práci tedy vždy <b>⇪ Publikovat pro studenty</b>. Pracovní náhled ukáže i rozpracované věci (jen admini). Databáze se zálohuje každou noc; ruční záloha stáhne JSON.</p>`],
     ['access', 'Přístupy', `<p>Účty adminů a skupiny studentů (skupinový přístup bez osobních údajů). Hesla se nikde nezobrazují znovu – při vytvoření si je uložte.</p>`],
   ];
-  const PAGE = { home: 'home', documents: 'documents', library: 'library', verified: 'library', review: 'review', relations: 'relations', comments: 'comments', coverage: 'coverage', paths: 'paths', publish: 'publish', access: 'access' };
+  const PAGE = { home: 'home', documents: 'documents', library: 'library', verified: 'library', review: 'review', relations: 'relations', comments: 'comments', coverage: 'coverage', paths: 'paths', guide: 'guide', publish: 'publish', access: 'access' };
 
   function open(section) {
     let el = document.getElementById('rqHelp');

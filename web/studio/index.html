@@ -7,8 +7,8 @@
 <title>RegulaQuest Studio</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23142c38'/%3E%3Cpath d='M18 6L21.5 15L30 18L21 21.5L18 30L15 21.5L6 18L15 15Z' fill='%23E9CB90'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="sdilene/prihlaseni.css">
-<link rel="stylesheet" href="sdilene/anotace.css?v=0.22.0">
-<link rel="stylesheet" href="studio.css?v=0.22.0">
+<link rel="stylesheet" href="sdilene/anotace.css?v=0.23.0">
+<link rel="stylesheet" href="studio.css?v=0.23.0">
 </head>
 <body>
 <div id="app"><div class="rq-login"></div></div>
@@ -33,6 +33,7 @@
   <button class="nav-item" data-page="publish"><span class="nav-icon">↥</span> Publikování</button>
   <div class="rail-kicker">VÝUKA</div>
   <button class="nav-item" data-page="paths"><span class="nav-icon">⇢</span> Trasy</button>
+  <button class="nav-item" data-page="guide"><span class="nav-icon">✦</span> Vyhledávání a průvodce</button>
   <div class="rail-kicker">SPRÁVA</div>
   <button class="nav-item" data-page="access"><span class="nav-icon">⚿</span> Přístupy</button>
   <div class="rail-bottom"><div class="smallcaps">ČTEČKA PRO STUDENTY</div><a data-reader="" target="_blank" rel="noopener">Co uvidí studenti ↗</a><br><a data-reader="?nahled=pracovni" target="_blank" rel="noopener">Pracovní náhled ↗</a></div>
@@ -108,6 +109,7 @@
    </div></section>
   <section class="page hidden" id="page-coverage"><div id="coverageContent"></div></section>
   <section class="page hidden" id="page-paths"><div id="pathsContent"></div></section>
+  <section class="page hidden" id="page-guide"><div id="guideContent"></div></section>
   <section class="page hidden" id="page-access"><div id="accessContent"></div></section>
  </main>
 </div>
@@ -119,23 +121,24 @@
 <script src="sdilene/supabase.js"></script>
 <script src="sdilene/config.js"></script>
 <script src="sdilene/prihlaseni.js"></script>
-<script src="sdilene/anotace.js?v=0.22.0"></script>
+<script src="sdilene/anotace.js?v=0.23.0"></script>
 <script src="vendor/qrcode.js"></script>
-<script src="js/import-eurlex.js?v=0.22.0"></script>
-<script src="js/reference-suggest.js?v=0.22.0"></script>
-<script src="js/related-search.js?v=0.22.0"></script>
-<script src="js/import-pdf.js?v=0.22.0"></script>
-<script src="js/editor.js?v=0.22.0"></script>
-<script src="js/structure-ui.js?v=0.22.0"></script>
-<script src="js/pojmy.js?v=0.22.0"></script>
-<script src="js/trasy.js?v=0.22.0"></script>
-<script src="js/pokryti.js?v=0.22.0"></script>
-<script src="js/domov.js?v=0.22.0"></script>
-<script src="js/dokumenty.js?v=0.22.0"></script>
-<script src="js/oblasti.js?v=0.22.0"></script>
-<script src="js/napoveda.js?v=0.22.0"></script>
-<script src="js/pristupy.js?v=0.22.0"></script>
-<script>window.RQ_VERSION="0.22.0"</script>
-<script src="js/studio.js?v=0.22.0"></script>
+<script src="js/import-eurlex.js?v=0.23.0"></script>
+<script src="js/reference-suggest.js?v=0.23.0"></script>
+<script src="js/related-search.js?v=0.23.0"></script>
+<script src="js/import-pdf.js?v=0.23.0"></script>
+<script src="js/editor.js?v=0.23.0"></script>
+<script src="js/structure-ui.js?v=0.23.0"></script>
+<script src="js/pojmy.js?v=0.23.0"></script>
+<script src="js/trasy.js?v=0.23.0"></script>
+<script src="js/pruvodce.js?v=0.23.0"></script>
+<script src="js/pokryti.js?v=0.23.0"></script>
+<script src="js/domov.js?v=0.23.0"></script>
+<script src="js/dokumenty.js?v=0.23.0"></script>
+<script src="js/oblasti.js?v=0.23.0"></script>
+<script src="js/napoveda.js?v=0.23.0"></script>
+<script src="js/pristupy.js?v=0.23.0"></script>
+<script>window.RQ_VERSION="0.23.0"</script>
+<script src="js/studio.js?v=0.23.0"></script>
 </body>
 </html>

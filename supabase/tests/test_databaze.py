@@ -468,6 +468,37 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(self.call('rq_draft_preview')['document_areas'], [])
         self.assertIn('document_areas', self.call('rq_backup'))
 
+    def test_finder_and_guide(self):
+        self.setup_doc()
+        self.as_user(STUDENT)
+        self.fails('', 'rq_set_tag_group_areas', 'typ', ['zp'])
+        self.as_user(ADMIN)
+        # výchozí sada průvodce a navázání skupin na oblast ZP
+        self.assertEqual(self.sql("select area_keys from tag_groups where key='typ'")[0][0], ['zp'])
+        self.assertEqual(self.sql("select count(*) from guide_questions")[0][0], 5)
+        self.call('rq_set_tag_group_areas', 'role', ['zp', 'metrologie', 'zp'])
+        self.assertEqual(self.sql("select area_keys from tag_groups where key='role'")[0][0], ['metrologie', 'zp'])
+        self.fails('Neznámá oblast', 'rq_set_tag_group_areas', 'role', ['neexistuje'])
+        opts = [{'label': 'Měří', 'areas': ['metrologie'], 'tags': ['trida_im']}, {'label': ' ', 'areas': []}, {'label': 'Neměří'}]
+        q = self.call('rq_save_guide_question', None, 'Měří prostředek?', '', False, ['zp'], opts, None)
+        row = self.sql("select options, sort from guide_questions where id=%s", q)[0]
+        self.assertEqual([o['label'] for o in row[0]], ['Měří', 'Neměří'])
+        self.assertEqual(row[1], 60)
+        self.fails('alespoň dvě', 'rq_save_guide_question', q, 'X', '', False, [], [{'label': 'Jen jedna'}], None)
+        self.fails('Neznámý štítek', 'rq_save_guide_question', q, 'X', '', False, [], [{'label': 'A', 'tags': ['nic']}, {'label': 'B'}], None)
+        self.call('rq_move_guide_question', q, -1)
+        order = [r[0] for r in self.sql("select id from guide_questions order by sort")]
+        self.assertEqual(order.index(q), 4)
+        self.call('rq_archive_guide_question', q, True)
+        self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
+        pv = self.call('rq_draft_preview')
+        self.assertEqual(len(pv['guide']), 5)
+        self.assertNotIn(q, [x['id'] for x in pv['guide']])
+        self.assertEqual(next(g for g in pv['tag_groups'] if g['key'] == 'role')['area_keys'], ['metrologie', 'zp'])
+        self.call('rq_delete_guide_question', q)
+        self.assertIn('guide_questions', self.call('rq_backup'))
+        self.assertIn('guide_questions', self.call('rq_studio_state'))
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)

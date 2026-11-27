@@ -188,9 +188,11 @@ function mirrorRelations(list){
 /* ---------- Routing ---------- */
 function route(){
   S.focus = null; S.path = null; S.unitId = null;
-  const h = decodeURIComponent(location.hash.slice(1)) || '/';
+  const raw = location.hash.slice(1), h = decodeURIComponent(raw) || '/';
   let m;
-  if ((m = h.match(/^\/t\/([^/]+)(?:\/(\d+))?$/)) && S.paths.find(x => x.id === m[1])){
+  if (/^\/najit(\?|$)/.test(raw)){ S.view = 'finder'; finderParse(raw.split('?')[1]); }
+  else if (raw === '/pruvodce'){ S.view = 'guide'; G.pos = 0; }
+  else if ((m = h.match(/^\/t\/([^/]+)(?:\/(\d+))?$/)) && S.paths.find(x => x.id === m[1])){
     const p = S.paths.find(x => x.id === m[1]);
     const n = Math.min(+(m[2] || 0), p.steps.length), st = n ? p.steps[n-1] : null;
     S.path = { p, n }; S.view = 'path';
@@ -216,7 +218,7 @@ function setTab(t, scroll=true){
 function render(){
   const v = S.view, reading = v === 'unit' || v === 'doc' || (v === 'path' && S.unitId);
   document.querySelectorAll('.appnav [data-nav]').forEach(x => x.classList.toggle('on',
-    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news'})[v]));
+    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news'})[v]));
   $('#navMarks').textContent = S.me.marks.filter(m => !m.unit_id.startsWith('doc:')).length || '';
   renderNav();
   renderPathNav();
@@ -230,6 +232,8 @@ function render(){
   else if (v === 'marks') renderMarks();
   else if (v === 'news') renderNews();
   else if (v === 'search') renderSearch();
+  else if (v === 'finder') renderFinder();
+  else if (v === 'guide') renderGuide();
   else renderHome();
   renderContext();
   $('#panelText').scrollTop = 0; window.scrollTo(0, 0);
@@ -721,6 +725,8 @@ function renderHome(){
       ${pos ? `<div class="card"><div class="kind">Pokračovat ve čtení</div><h3>${esc(docShort(S.docs.get(pos.document_id)))} · ${esc(pos.label)}</h3><div class="muted">${esc(headingOf(pos) || ancestors(pos).map(a => a.label).join(' › '))}</div><a class="btn acc" href="#/u/${encodeURIComponent(pos.id)}">Pokračovat</a></div>` : ''}
       ${openPath ? `<div class="card"><div class="kind">Rozpracovaná trasa</div><h3>${esc(openPath.title)}</h3><i class="pbar"><b style="width:${Math.round(progress(openPath)/openPath.steps.length*100)}%"></b></i><div class="muted">Prošli jste ${progress(openPath)} z ${openPath.steps.length}</div><a class="btn" href="#/t/${encodeURIComponent(openPath.id)}/${Math.min(openPath.steps.length, progress(openPath) + 1)}">Pokračovat v trase</a></div>` : ''}
     </div>` : ''}
+    <div class="findbar"><div><strong>Nevíte, který předpis hledat?</strong><span>Popište situaci několika odpověďmi, nebo vyberte oblast a koho se to týká.</span></div>
+      <a class="btn acc" href="#/pruvodce">Průvodce otázkami</a><a class="btn" href="#/najit">Najít předpisy</a></div>
     <div class="sec"><h2>Dokumenty${area ? ` · ${esc(area.name)}` : ''}</h2><a href="#/dokumenty">${area ? `Celá oblast (${gs.length})` : `Všechny dokumenty (${gs.length})`}</a></div>
     ${ua.length ? `<div class="area-switch" role="group" aria-label="Oblast"><button type="button" class="chipb ${!area ? 'on' : ''}" data-area="">Všechny oblasti</button>${ua.map(a => `<button type="button" class="chipb ${area?.key === a.key ? 'on' : ''}" data-area="${esc(a.key)}">${esc(a.name)}</button>`).join('')}</div>` : ''}
     <div class="cards">${cards.map(([g, l]) => docCard(g, l)).join('')}</div>
