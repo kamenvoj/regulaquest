@@ -334,7 +334,7 @@ if(!u){const d=getDoc(selected);if(!d){selected=null;return renderReader()}const
 const d=getDoc(u.document_id);const related=db.units.filter(x=>x.parent_id===u.id&&!x.editor_archived);
 box.innerHTML=`<div class="hero-line"><span class="crumb">${esc(d.family)} / ${esc(d.language.toUpperCase())} / ${esc(u.locator||u.label)}</span>${u.editor_archived?'<span class="tag bad">Archivováno</span>':tag(u.text_status)}</div>
 ${u.editor_archived?`<div class="notice archived-note"><strong>Archivovaná část.</strong> Není v osnově ani ve čtečce${u.merged_into?' (sloučena do '+esc(unitPath(u.merged_into))+')':''}. Zůstává jen pro dohledání historie.${u.merged_into?'':' <button class="btn tiny" type="button" id="rqRestore">Obnovit</button>'}</div>`:''}
-<h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>${u.editor_archived?'':rqTagsRow(u)}${!u.editor_archived&&window.RQNews?RQNews.unitRow(u):''}${!u.editor_archived&&window.RQCases?RQCases.unitRow(u):''}${!u.editor_archived&&window.RQPres?RQPres.unitRow(u):''}
+<h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>${u.editor_archived?'':rqTagsRow(u)}${u.editor_archived?'':`<details class="rel-box" id="rqRelBox"${window.rqRelOpen?' open':''}><summary><span class="smallcaps">Souvisí</span> <span class="rel-sum" id="rqRelSum"></span></summary>${window.RQNews?RQNews.unitRow(u):''}${window.RQCases?RQCases.unitRow(u):''}${window.RQPres?RQPres.unitRow(u):''}</details>`}
 <div class="sourcebox"><strong>Zdroj:</strong> ${esc(d.title)}<br><strong>Verze:</strong> ${esc(d.version)} · ${esc(d.language.toUpperCase())}<br><strong>Umístění:</strong> ${esc(u.locator||u.label)}<br><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Porovnat s originálem ↗</a></div>
 ${u.content_blocks&&u.content_blocks.length?`<div class="rq-prepared-content" data-anchor-root><div class="section-kicker">REDAKČNĚ STRUKTUROVANÝ OBSAH A TABULKY · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>${rqRenderBlocks(u.content_blocks)}</div>`:''}
 ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚNÍ ZDROJE · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>
@@ -343,7 +343,7 @@ ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚ
 <div class="read-actions rq-structure-actions"><button class="btn accent" id="rqEditContent">▦ Editor textu a tabulek</button><button class="btn" id="rqEditStructure">Struktura</button><button class="btn" id="rqSplit" ${!u.body?'disabled':''}>Rozdělit</button><button class="btn" id="rqMove" ${!u.body?'disabled':''}>Přesunout text</button><button class="btn" id="rqMerge" ${!u.body?'disabled':''}>Sloučit</button><button class="btn" id="rqHistory">Historie změn</button><button class="btn" id="rqToPath" title="Přidat toto ustanovení jako krok trasy">⇢ Do trasy</button>${window.RQTerms&&RQNotes.parseDefinitions(u.body).length>=5?`<button class="btn" id="rqTerms">Pojmy z definic (${RQNotes.parseDefinitions(u.body).length})</button>`:''}<button class="btn danger" id="rqArchive">Archivovat</button>${u.body&&u.text_status!=='verified'?'<button class="btn accent" id="verifyText">Ověřil(a) jsem proti zdroji</button>':''}</div>
 ${u.source_note?`<p class="fine">Původ importu: ${esc(u.source_note)}</p>`:''}
 ${related.length?`<div class="soft-rule"></div><div class="section-kicker">PODŘAZENÉ ČÁSTI</div><div class="doc-outline">${related.map(x=>`<button class="outline-row" data-unit-open="${esc(x.id)}" style="text-align:left;cursor:pointer"><strong>${esc(x.label)} · ${esc(x.heading)}</strong><small>${esc(statusName[x.text_status])}</small></button>`).join('')}</div>`:''}`;
-rqAnchors(box,u);rqTagsBind(box,u);if(window.RQNews)RQNews.bindUnit(box,u);if(window.RQCases)RQCases.bindUnit(box,u);if(window.RQPres)RQPres.bindUnit(box,u);if(window.RQHome)RQHome.remember(u.id);
+rqAnchors(box,u);rqTagsBind(box,u);if(window.RQNews)RQNews.bindUnit(box,u);if(window.RQCases)RQCases.bindUnit(box,u);if(window.RQPres)RQPres.bindUnit(box,u);rqRelInit(box);if(window.RQHome)RQHome.remember(u.id);
 box.querySelector('#rqEditContent').onclick=()=>rqContentEditor(u);
 box.querySelector('#rqEditStructure').onclick=()=>rqStructureEditor(u);
 box.querySelector('#rqSplit').onclick=()=>rqSplit(u);
@@ -621,7 +621,7 @@ function renderPublish(){
  $('#publishInfo').innerHTML=`<strong>${verified.length} ověřených pasáží</strong>, ${comments.length} schválených komentářů a ${links.length} vazeb se dvěma ověřenými konci bude zahrnuto do publikace.<br><br><span class="fine">${rest} neověřených nebo rejstříkových pasáží se vynechá.</span>`;
  const p=db.publication;
  $('#publishCurrent').innerHTML=p?`Studenti nyní vidí verzi <strong>č. ${p.id}</strong> z ${esc(new Date(p.created_at).toLocaleString('cs-CZ'))}${p.note?' – '+esc(p.note):''}.`:'Zatím nebylo nic publikováno. Studenti vidí „Obsah se připravuje“.';
- loadPublications();
+ loadPublications();rqPubWarn(ids);
 }
 async function loadPublications(){
  const box=$('#publishHistory');
@@ -636,7 +636,7 @@ async function publishNow(){
  const note=$('#publishNote').value.trim();
  if(!confirm('Publikovat aktuální ověřený obsah pro studenty? Předchozí verze zůstane v historii.'))return;
  const btn=$('#publishBtn');btn.disabled=true;
- try{const r=await rpc('rq_publish',{p_note:note});$('#publishNote').value='';await refresh();const c=r&&r.changes||{};const parts=[c.units_new?`${c.units_new} nově zveřejněných částí`:'',c.units_changed?`${c.units_changed} změněných`:'',c.comments_new?`${c.comments_new} nových výkladů`:'',c.relations_new?`${c.relations_new} nových vazeb`:'',c.paths_new?`${c.paths_new} nových tras`:''].filter(Boolean);toast('Publikováno.'+(parts.length?' Změny: '+parts.join(', ')+'.':' Beze změn obsahu.')+' Studenti je uvidí v „Co je nového“.')}
+ try{const r=await rpc('rq_publish',{p_note:note});$('#publishNote').value='';await refresh();const c=r&&r.changes||{};const parts=[c.units_new?`${c.units_new} nově zveřejněných částí`:'',c.units_changed?`${c.units_changed} změněných`:'',c.comments_new?`${c.comments_new} nových výkladů`:'',c.relations_new?`${c.relations_new} nových vazeb`:'',c.paths_new?`${c.paths_new} nových tras`:'',c.cases_new?`${c.cases_new} nových řešených případů`:''].filter(Boolean);toast('Publikováno.'+(parts.length?' Změny: '+parts.join(', ')+'.':' Beze změn obsahu.')+' Studenti je uvidí v „Co je nového“.')}
  catch(e){toast(e.message,true)}finally{btn.disabled=false}
 }
 async function downloadBackup(){
@@ -1190,4 +1190,23 @@ function init(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()
 async function startEditor(rq){
  RQ=rq;init();
  try{await refresh()}catch(e){$('.content').innerHTML=`<div class="api-error">Nepodařilo se načíst data: ${esc(e.message)}</div>`}
+}
+
+function rqRelInit(box){
+ const d=box.querySelector('#rqRelBox');if(!d)return;
+ const sum=()=>{const n=id=>d.querySelectorAll('#'+id+' .role-chip').length;
+  const parts=[['rqNewsRow','aktualit'],['rqCasesRow','případů'],['rqPresRow','prezentací']].map(([id,w])=>[n(id),w]).filter(x=>x[0]);
+  const el=d.querySelector('#rqRelSum'),txt=parts.length?parts.map(([k,w])=>k+' '+(k===1?{'aktualit':'aktualita','případů':'případ','prezentací':'prezentace'}[w]:k<5?{'aktualit':'aktuality','případů':'případy','prezentací':'prezentace'}[w]:w)).join(' · '):'zatím nic – aktuality, řešené případy, prezentace';if(el&&el.textContent!==txt)el.textContent=txt;};
+ sum();d.ontoggle=()=>{window.rqRelOpen=d.open};
+ new MutationObserver(sum).observe(d,{childList:true,subtree:true});
+}
+
+async function rqPubWarn(ids){
+ const box=$('#publishWarn');if(!box)return;const name=id=>{const u=getUnit(id);return u?u.label:'smazaná část'};const out=[];
+ (db.cases||[]).filter(c=>c.status==='published').forEach(c=>{const us=[...(db.case_steps||[]).filter(s=>s.case_id===c.id&&s.unit_id).map(s=>s.unit_id),...(db.case_links||[]).filter(l=>l.case_id===c.id).map(l=>l.unit_id)];
+  const bad=[...new Set(us.filter(id=>!ids.has(id)))];if(bad.length)out.push(`Řešený případ <strong>${esc(c.title)}</strong> odkazuje na neověřené: ${bad.map(name).map(esc).join(', ')}`)});
+ if(window.RQPres)try{const A=await RQPres.load();(A.presentations||[]).filter(p=>p.status==='ready').forEach(p=>{
+  const bad=(A.slide_index||[]).filter(s=>s.presentation_id===p.id).flatMap(s=>s.units.filter(id=>!ids.has(id)).map(id=>`${s.n}: ${name(id)}`));
+  if(bad.length)out.push(`Prezentace <strong>${esc(p.title)}</strong> – snímky odkazují na neověřené části (${bad.slice(0,8).map(esc).join(', ')}${bad.length>8?' …':''})`)})}catch{}
+ box.innerHTML=out.length?`<div class="pub-warn"><strong>Odkazy, které studenti zatím neotevřou</strong> – část není ověřená (nebo byla smazána), takže v čtečce nebude klikatelná. Publikovat lze i tak.<ul>${out.map(x=>`<li>${x}</li>`).join('')}</ul></div>`:'';
 }

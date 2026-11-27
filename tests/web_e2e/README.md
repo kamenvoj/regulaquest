@@ -21,6 +21,7 @@ python3 tests/web_e2e/test_aktuality.py # aktuality: načtení (náhrada pg_net)
 python3 tests/web_e2e/test_pripady.py   # řešené případy: Studio, kroky, propojení z textu, čtečka (po test_anotace.py)
 python3 tests/web_e2e/test_odkazy.py    # užitečné odkazy: Studio a záložka Odkazy ve čtečce
 python3 tests/web_e2e/test_prezentace.py # prezentace: import .pptx, editor, odkazy, nová verze, čtečka (RQ_PPTX=cesta k ukázkové prezentaci; do gitu se nedává)
+python3 tests/web_e2e/test_napric.py   # hledání napříč obsahem, prezentace ve vyhledávači, pojmy ve snímku, Souvisí, upozornění před publikací (po test_prezentace.py)
 ```
 
 `test_import.py` naimportuje celé MDR (soubor `podklady/MDR_CS_20260719.html`, v gitu není) a pak upravenou kopii

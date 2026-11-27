@@ -81,10 +81,11 @@ async function renderPres(){
     <div class="pv-bottom"><button type="button" class="btn small" id="pvPrev2" ${n ? '' : 'disabled'}>‹ Předchozí</button><span class="pv-count">${n + 1} / ${slides.length}</span><button type="button" class="btn small acc" id="pvNext2" ${n < slides.length - 1 ? '' : 'disabled'}>Další ›</button></div>
     ${s.notes != null ? `<details class="pv-notes"${PR.notes ? ' open' : ''}><summary>Poznámky řečníka (vidí jen redakce)</summary><div>${plain(s.notes || '–')}</div></details>` : ''}`}</div>`;
   RQSlides.fit($('#panelText'));
+  slideTerms();
   const hashOf = t => `#/prezentace/${encodeURIComponent(PR.id)}/${encodeURIComponent(t.id)}`;
   // V režimu celé obrazovky se snímek vymění na místě (překreslení stránky by celou obrazovku ukončilo)
   const paint = k => { const t = slides[k]; PR.slide = t.id; history.replaceState(null, '', hashOf(t));
-    $('#pvStage').innerHTML = RQSlides.render(t.data, { ...opts, n: k + 1 }); RQSlides.fit($('#pvStage'));
+    $('#pvStage').innerHTML = RQSlides.render(t.data, { ...opts, n: k + 1 }); RQSlides.fit($('#pvStage')); slideTerms();
     document.querySelectorAll('.pv-count').forEach(c => c.textContent = `${k + 1} / ${slides.length}`); PR.keyN.n = k; savePresPos(PR.id, t.id); };
   const goN = k => { const t = slides[k]; if (!t) return; if (document.fullscreenElement) paint(k); else go(hashOf(t)); };
   ['pvPrev', 'pvPrev2'].forEach(x => { const b = $('#' + x); if (b) b.onclick = () => goN(n - 1); });
@@ -124,4 +125,24 @@ function presBackBar(u){
   const bar = document.createElement('div'); bar.className = 'cs-backbar';
   bar.innerHTML = `<a href="#/prezentace/${encodeURIComponent(b.pres)}/${encodeURIComponent(b.slide)}">← Zpět na prezentaci: <strong>${esc(r.p.title)}</strong> · snímek ${r.i + 1}</a>`;
   $('#panelText').prepend(bar);
+}
+
+/* Pojmy z definic i ve snímku: první výskyt podtržen, klepnutím definice v rámečku pod snímkem. */
+function slideTerms(){
+  const st = $('#pvStage'); if (!st || !window.RQNotes || !S.terms.length) return;
+  const cs = S.terms.filter(t => t.language === 'cs'), ts = cs.length ? cs : S.terms;
+  st.querySelectorAll('.sl-go .rq-term').forEach(x => x.replaceWith(...x.childNodes));
+  RQNotes.applyTerms(st, ts, presTerm);
+  st.querySelectorAll('.sl-go .rq-term').forEach(x => x.replaceWith(...x.childNodes));   // odkazy ve snímku mají přednost
+  $('#pvTerm')?.remove();
+}
+function presTerm(t){
+  const wrap = $('#pvStageWrap'); if (!wrap) return;
+  const old = $('#pvTerm'); if (old){ old.remove(); if (old.dataset.term === t.id) return; }
+  const du = S.units.get(t.unit_id), text = du ? RQNotes.definitionText(bodyOf(du), t.number) : '';
+  const box = document.createElement('div'); box.id = 'pvTerm'; box.className = 'pv-term'; box.dataset.term = t.id;
+  box.innerHTML = `<button type="button" class="x" aria-label="Zavřít">×</button><div class="h">${ICON('term')} ${esc(t.name)}${du ? ` · <a href="#/u/${encodeURIComponent(du.id)}">${esc(docShort(S.docs.get(du.document_id)))} ${esc(du.label)}, bod ${t.number}</a>` : ''}</div><div>${esc(text || t.name).replace(/\n/g, '<br>')}</div>`;
+  box.querySelector('.x').onclick = () => box.remove();
+  const a = box.querySelector('a'); if (a) a.addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); });
+  wrap.appendChild(box);
 }

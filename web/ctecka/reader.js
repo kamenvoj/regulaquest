@@ -438,15 +438,24 @@ function renderSearch(){
   const hits = ts.length ? S.data.units.filter(u => { if (u.navigation_only) return false; const f = fold([u.label,u.heading,u.locator,u.body].join(' ')); return ts.every(t => f.includes(t)); }) : [];
   const nhits = ts.length ? S.data.comments.filter(c => !['key',...HL].includes(c.kind) && ts.every(t => fold(c.body).includes(t))) : [];
   const termHits = ts.length ? S.terms.filter(t => ts.every(x => fold(t.name).includes(x))) : [];
+  const has = txt => ts.every(t => fold(txt).includes(t));
+  const slideHits = ts.length && typeof PR !== 'undefined' ? PR.list.flatMap(p => p.slides.map((sl, i) => ({ p, sl, i })).filter(x => has([x.sl.title, x.sl.kicker, x.sl.text].join(' ')))) : [];
+  const caseHits = ts.length ? (S.data.cases || []).filter(c => has([c.title, c.summary, c.assignment, c.conclusion, ...(c.steps || []).map(st => st.title + ' ' + st.body)].join(' '))) : [];
+  const linkHits = ts.length && typeof LK !== 'undefined' ? LK.list.filter(l => has([l.title, l.description, l.category].join(' '))) : [];
+  const newsHits = ts.length && typeof NW !== 'undefined' ? NW.list.filter(n => has([n.title, n.summary, n.comment].join(' '))) : [];
   hits.sort((a,b) => (a.document_id===S.docId?0:1)-(b.document_id===S.docId?0:1) || (kids(a.id).length?1:0)-(kids(b.id).length?1:0));
   const shown = hits.slice(0, 80);
   box.innerHTML = `<div class="eyebrow">Hledání</div><h1>„${esc(q)}“</h1>
-    <p class="lead">${hits.length ? `V textech: ${hits.length}${hits.length > 80 ? ' (zobrazeno 80)' : ''}` : 'V textech nic nenalezeno.'}${nhits.length ? ` · ve výkladech: ${nhits.length}` : ''}${termHits.length ? ` · pojmy: ${termHits.length}` : ''}. Hledá se ve všech dokumentech; zkuste i jiný jazyk.</p>
+    <p class="lead">${hits.length ? `V textech: ${hits.length}${hits.length > 80 ? ' (zobrazeno 80)' : ''}` : 'V textech nic nenalezeno.'}${nhits.length ? ` · ve výkladech: ${nhits.length}` : ''}${termHits.length ? ` · pojmy: ${termHits.length}` : ''}${slideHits.length ? ` · snímky prezentací: ${slideHits.length}` : ''}${caseHits.length ? ` · řešené případy: ${caseHits.length}` : ''}${linkHits.length ? ` · odkazy: ${linkHits.length}` : ''}${newsHits.length ? ` · aktuality: ${newsHits.length}` : ''}. Hledá se ve všech dokumentech; zkuste i jiný jazyk.</p>
     ${termHits.length ? `<h2 class="block-title">Pojmy</h2><div class="results">${termHits.slice(0, 8).map(t => `<a class="result" href="#/pojmy" data-term="${esc(t.name)}"><strong>${esc(t.name)}</strong><small>definice · ${esc(LANG_NAMES[t.language]||t.language)}</small></a>`).join('')}</div>` : ''}
     ${shown.length ? `<h2 class="block-title">V textech</h2><div class="results">${shown.map(u => { const d=S.docs.get(u.document_id);
       return `<a class="result" href="#/u/${encodeURIComponent(u.id)}" data-hl="1"><strong>${esc(u.label)}${headingOf(u)?' – '+esc(trim(headingOf(u),60)):''}</strong><small>${esc(docShort(d))}${ancestors(u).length?' › '+esc(ancestors(u).map(a=>a.label).join(' › ')):''}</small><small class="snip">${snippet(u.body,q)}</small></a>`; }).join('')}</div>` : ''}
+    ${caseHits.length ? `<h2 class="block-title">Řešené případy</h2><div class="results">${caseHits.slice(0, 10).map(c => `<a class="result" href="#/pripad/${encodeURIComponent(c.id)}"><strong>${esc(c.title)}</strong><small>řešený případ</small><small class="snip">${snippet([c.summary, c.assignment, ...(c.steps || []).map(st => st.body)].join(' '), q)}</small></a>`).join('')}</div>` : ''}
+    ${slideHits.length ? `<h2 class="block-title">Ve snímcích prezentací</h2><div class="results">${slideHits.slice(0, 20).map(x => `<a class="result" href="#/prezentace/${encodeURIComponent(x.p.id)}/${encodeURIComponent(x.sl.id)}"><strong>${esc(x.sl.title || 'Snímek ' + (x.i + 1))}</strong><small>${esc(x.p.title)} · snímek ${x.i + 1}</small><small class="snip">${snippet(x.sl.text || '', q)}</small></a>`).join('')}</div>` : ''}
     ${nhits.length ? `<h2 class="block-title">Ve výkladech redakce</h2><div class="results">${nhits.slice(0, 30).map(c => { const u = S.units.get(c.unit_id); if (!u) return ''; const d = S.docs.get(u.document_id);
       return `<a class="result" href="#/u/${encodeURIComponent(u.id)}"><strong>${esc(NOTE_NAMES[c.kind]||'Výklad')} · ${esc(u.label)}</strong><small>${esc(docShort(d))}</small><small class="snip">${snippet(c.body, q)}</small></a>`; }).join('')}</div>` : ''}`;
+  if (linkHits.length || newsHits.length) box.insertAdjacentHTML('beforeend', `${linkHits.length ? `<h2 class="block-title">Užitečné odkazy</h2><div class="results">${linkHits.slice(0, 10).map(l => `<a class="result" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"><strong>${esc(l.title)} ↗</strong><small>${esc(l.category)}</small>${l.description ? `<small class="snip">${esc(l.description)}</small>` : ''}</a>`).join('')}</div>` : ''}
+    ${newsHits.length ? `<h2 class="block-title">Aktuality</h2><div class="results">${newsHits.slice(0, 10).map(n => `<a class="result" href="${esc(n.url)}" target="_blank" rel="noopener noreferrer"><strong>${esc(n.title)} ↗</strong><small>${esc(fmtDate(n.published_at || n.published_on))} · ${esc(n.source || '')}</small>${n.comment ? `<small class="snip">${esc(n.comment)}</small>` : ''}</a>`).join('')}</div>` : ''}`);
   box.querySelectorAll('.result[data-hl]').forEach(a => a.addEventListener('click', () => { S.highlight = S.query; }));
   box.querySelectorAll('.result[data-term]').forEach(a => a.addEventListener('click', () => { S.termQuery = a.dataset.term; }));
   document.title = `Hledání: ${q} · RegulaQuest`;
@@ -747,7 +756,7 @@ function renderHome(){
   // Rozcestník
   const since = Date.now() - 14 * 864e5;
   const prs = typeof PR !== 'undefined' ? PR.list : [], prNew = prs.filter(p => p.visible_from && new Date(p.visible_from) >= since && !S.me.positions.some(x => x.doc_group === 'pres:' + p.id)).length;
-  const seen = (() => { try { return localStorage.getItem('rq-aktuality-videno') || ''; } catch { return ''; } })();
+  const seen = typeof newsSeenAt === 'function' ? newsSeenAt() : '';
   const nws = typeof NW !== 'undefined' ? NW.list : [], nwNew = nws.filter(n => (n.published_on || '') > seen).length;
   const lks = typeof LK !== 'undefined' ? LK.list : [], cases = S.data.cases || [];
   const pathOpen = S.paths.filter(p => { const k = progress(p); return k && k < p.steps.length; }).length;
@@ -864,12 +873,15 @@ function renderNews(){
   if (hist[0]) try { localStorage.setItem('rq-novinky-videno', String(S.data.history[0].id)); $('#navNews').classList.add('hidden'); } catch {}
   const pill = (n, a, b, c) => n ? `<span class="pill">+${pl(n, a, b, c)}</span>` : '';
   $('#panelText').innerHTML = `<div class="eyebrow">Co je nového</div><h1>Aktualizace obsahu</h1>
-    <p class="lead">Co redakce doplnila nebo změnila. Změněná ustanovení mají v osnově dva týdny značku NOVÉ.</p>
+    <p class="lead">Co redakce doplnila nebo změnila. Změněná ustanovení mají v osnově dva týdny značku NOVÉ. Aktuality z úřadů najdete v části <a href="#/aktuality">Aktuality</a>.</p>
+    ${(() => { const since = Date.now() - 60 * 864e5, xs = typeof PR !== 'undefined' ? PR.list.filter(p => p.visible_from && new Date(p.visible_from) >= since) : [];
+      return xs.length ? `<div class="news"><h3>Nově zpřístupněné prezentace</h3><ul>${xs.map(p => `<li><a href="#/prezentace/${encodeURIComponent(p.id)}">${esc(p.title)}</a> – od ${esc(fmtDate(p.visible_from))}</li>`).join('')}</ul></div>` : ''; })()}
     ${hist.length ? hist.map((h, i) => { const c = h.changes || {}, sm = c.summary || {};
       const items = (Array.isArray(c.items) ? c.items : []).filter(x => S.units.has(x.unit_id));
       return `<div class="news${i ? ' old' : ''}"><h3>${esc(fmtDate(h.published_at))}</h3>
         ${h.note ? `<div class="pb-note">${plain(h.note)}</div>` : ''}
-        ${c.first ? '<div class="muted">První zveřejnění obsahu.</div>' : `<div class="pills">${pill(sm.comments_new,'nový výklad','nové výklady','nových výkladů')}${pill(sm.relations_new,'nová vazba','nové vazby','nových vazeb')}${pill(sm.units_new,'nově zveřejněná část','nově zveřejněné části','nově zveřejněných částí')}${pill(sm.units_changed,'změněné ustanovení','změněná ustanovení','změněných ustanovení')}${pill(sm.paths_new,'nová trasa','nové trasy','nových tras')}</div>`}
+        ${c.first ? '<div class="muted">První zveřejnění obsahu.</div>' : `<div class="pills">${pill(sm.comments_new,'nový výklad','nové výklady','nových výkladů')}${pill(sm.relations_new,'nová vazba','nové vazby','nových vazeb')}${pill(sm.units_new,'nově zveřejněná část','nově zveřejněné části','nově zveřejněných částí')}${pill(sm.units_changed,'změněné ustanovení','změněná ustanovení','změněných ustanovení')}${pill(sm.paths_new,'nová trasa','nové trasy','nových tras')}${pill(sm.cases_new,'nový řešený případ','nové řešené případy','nových řešených případů')}</div>`}
+        ${(c.cases_new || []).length ? `<div class="muted">Nové řešené případy: ${c.cases_new.map(p => (S.data.cases || []).some(x => x.id === p.id) ? `<a href="#/pripad/${encodeURIComponent(p.id)}">${esc(p.title)}</a>` : esc(p.title)).join(', ')}</div>` : ''}
         ${(c.paths_new || []).length ? `<div class="muted">Nové trasy: ${c.paths_new.map(p => S.paths.some(x => x.id === p.id) ? `<a href="#/t/${encodeURIComponent(p.id)}">${esc(p.title)}</a>` : esc(p.title)).join(', ')}</div>` : ''}
         ${items.length ? `<ul>${items.slice(0, 30).map(x => { const u = S.units.get(x.unit_id), d = S.docs.get(u.document_id);
           return `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(docShort(d))} · ${esc(ancestors(u).map(a => a.label).concat(u.label).join(' › '))}</a> – ${esc(x.what)}</li>`; }).join('')}</ul>${items.length > 30 || (c.items_total || 0) > items.length ? `<div class="muted">…a další změny.</div>` : ''}` : ''}</div>`; }).join('')

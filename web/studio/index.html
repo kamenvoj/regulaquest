@@ -7,9 +7,9 @@
 <title>RegulaQuest Studio</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23142c38'/%3E%3Cpath d='M18 6L21.5 15L30 18L21 21.5L18 30L15 21.5L6 18L15 15Z' fill='%23E9CB90'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="sdilene/prihlaseni.css">
-<link rel="stylesheet" href="sdilene/anotace.css?v=0.32.0">
-<link rel="stylesheet" href="sdilene/snimky.css?v=0.32.0">
-<link rel="stylesheet" href="studio.css?v=0.32.0">
+<link rel="stylesheet" href="sdilene/anotace.css?v=0.34.0">
+<link rel="stylesheet" href="sdilene/snimky.css?v=0.34.0">
+<link rel="stylesheet" href="studio.css?v=0.34.0">
 </head>
 <body>
 <div id="app"><div class="rq-login"></div></div>
@@ -101,6 +101,11 @@
    </div><div id="commentList" class="review-stack"></div>
   </section>
   <section class="page hidden" id="page-publish"><div class="page-head"><div><div class="eyebrow">VÝSTUP / PUBLIKOVÁNÍ</div><h1>Publikování</h1><p>Studenti dostanou pouze ověřené právní texty a schválené vazby a komentáře.</p></div></div>
+   <div id="publishWarn"></div>
+   <details class="pub-info"><summary>Co jde přes publikaci a co se ukáže hned</summary><table>
+    <tr><th>Přes publikaci (studenti uvidí až po „Publikovat“)</th><td>ověřené texty, komentáře a výklady, vazby, pojmy z definic, štítky, oblasti dokumentů, trasy, řešené případy, otázky průvodce</td></tr>
+    <tr><th>Hned po uložení</th><td>aktuality (zveřejněné), užitečné odkazy (zveřejněné), prezentace (stav „Připraveno“ a skupina s datem zpřístupnění)</td></tr>
+    <tr><th>Pozor</th><td>odkaz ze snímku nebo z případu na neověřenou část je pro studenty neklikatelný, dokud ji neověříte a nepublikujete.</td></tr></table></details>
    <div class="publish-cols">
     <div class="publish-card"><div class="card-symbol">✓</div><h2>Co se publikuje</h2><p id="publishInfo">Načítání údajů…</p>
      <div class="notice" id="publishCurrent"></div>
@@ -130,30 +135,30 @@
 <script src="sdilene/supabase.js"></script>
 <script src="sdilene/config.js"></script>
 <script src="sdilene/prihlaseni.js"></script>
-<script src="sdilene/anotace.js?v=0.32.0"></script>
-<script src="sdilene/snimky.js?v=0.32.0"></script>
+<script src="sdilene/anotace.js?v=0.34.0"></script>
+<script src="sdilene/snimky.js?v=0.34.0"></script>
 <script src="vendor/qrcode.js"></script>
-<script src="js/import-eurlex.js?v=0.32.0"></script>
-<script src="js/reference-suggest.js?v=0.32.0"></script>
-<script src="js/related-search.js?v=0.32.0"></script>
-<script src="js/import-pdf.js?v=0.32.0"></script>
-<script src="js/editor.js?v=0.32.0"></script>
-<script src="js/structure-ui.js?v=0.32.0"></script>
-<script src="js/pojmy.js?v=0.32.0"></script>
-<script src="js/trasy.js?v=0.32.0"></script>
-<script src="js/pruvodce.js?v=0.32.0"></script>
-<script src="js/aktuality.js?v=0.32.0"></script>
-<script src="js/pripady.js?v=0.32.0"></script>
-<script src="js/odkazy.js?v=0.32.0"></script>
-<script src="js/pptx-import.js?v=0.32.0"></script>
-<script src="js/prezentace.js?v=0.32.0"></script>
-<script src="js/pokryti.js?v=0.32.0"></script>
-<script src="js/domov.js?v=0.32.0"></script>
-<script src="js/dokumenty.js?v=0.32.0"></script>
-<script src="js/oblasti.js?v=0.32.0"></script>
-<script src="js/napoveda.js?v=0.32.0"></script>
-<script src="js/pristupy.js?v=0.32.0"></script>
-<script>window.RQ_VERSION="0.32.0"</script>
-<script src="js/studio.js?v=0.32.0"></script>
+<script src="js/import-eurlex.js?v=0.34.0"></script>
+<script src="js/reference-suggest.js?v=0.34.0"></script>
+<script src="js/related-search.js?v=0.34.0"></script>
+<script src="js/import-pdf.js?v=0.34.0"></script>
+<script src="js/editor.js?v=0.34.0"></script>
+<script src="js/structure-ui.js?v=0.34.0"></script>
+<script src="js/pojmy.js?v=0.34.0"></script>
+<script src="js/trasy.js?v=0.34.0"></script>
+<script src="js/pruvodce.js?v=0.34.0"></script>
+<script src="js/aktuality.js?v=0.34.0"></script>
+<script src="js/pripady.js?v=0.34.0"></script>
+<script src="js/odkazy.js?v=0.34.0"></script>
+<script src="js/pptx-import.js?v=0.34.0"></script>
+<script src="js/prezentace.js?v=0.34.0"></script>
+<script src="js/pokryti.js?v=0.34.0"></script>
+<script src="js/domov.js?v=0.34.0"></script>
+<script src="js/dokumenty.js?v=0.34.0"></script>
+<script src="js/oblasti.js?v=0.34.0"></script>
+<script src="js/napoveda.js?v=0.34.0"></script>
+<script src="js/pristupy.js?v=0.34.0"></script>
+<script>window.RQ_VERSION="0.34.0"</script>
+<script src="js/studio.js?v=0.34.0"></script>
 </body>
 </html>

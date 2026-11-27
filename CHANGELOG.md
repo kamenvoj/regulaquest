@@ -1,5 +1,19 @@
 # Změny
 
+## 0.34.0 – 2026-11-27 · Hledání napříč obsahem
+- Čtečka – hledání nahoře prohledává i snímky prezentací (nadpisy a texty, bez poznámek řečníka), řešené případy,
+  užitečné odkazy a aktuality.
+- Čtečka – Najít předpisy vrací i prezentace (podle oblasti a štítků prezentace, odkazů snímků na nalezená ustanovení
+  a slova v textu snímků); výsledek vede rovnou na odpovídající snímek.
+- Čtečka – pojmy z definic jsou podtržené i ve snímcích; klepnutím se definice ukáže v rámečku pod snímkem
+  (funguje i na celé obrazovce).
+- Čtečka – Co je nového: nové řešené případy v přehledu publikace a seznam prezentací zpřístupněných za posledních 60 dní.
+- Čtečka – „přečtené aktuality“ se pamatují u účtu (ne jen v prohlížeči), takže značka nových aktualit platí i na jiném počítači.
+- Studio – u části textu jsou aktuality, řešené případy a prezentace v jednom rozbalovacím řádku „Souvisí“ se souhrnem počtů.
+- Studio – Publikování: přehled, co jde přes publikaci a co se ukáže hned, a upozornění na zveřejněné případy a připravené
+  prezentace, které odkazují na neověřené části (studenti je neotevřou). Hlášení po publikaci uvádí i nové případy.
+- Migrace 25_hledani_obsah.sql.
+
 ## 0.33.0 – 2026-11-27 · Kontrola návazností před čistým importem
 - Smazání dokumentu uklidí i odkazy z výukových částí na jeho ustanovení (kroky a vazby řešených případů – text kroku zůstane,
   ruční vazby prezentací, odkazy aktualit); když ve skupině jazykových verzí nezůstane žádný dokument, zruší se i její zařazení do oblastí.

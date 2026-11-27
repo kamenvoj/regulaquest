@@ -26,7 +26,7 @@ with sync_playwright() as pw:
     p.screenshot(path='/tmp/c1-studio.png', full_page=True)
     # propojení z textu dokumentu
     p.evaluate(f"openUnit('{unit2}')"); time.sleep(1)
-    p.click('#rqCaseAdd'); time.sleep(0.2); p.locator('[data-case-add]').first.click(); time.sleep(1)
+    p.click('#rqRelBox summary'); time.sleep(0.2); p.click('#rqCaseAdd'); time.sleep(0.2); p.locator('[data-case-add]').first.click(); time.sleep(1)
     print('u čl. 2:', p.locator('#rqCasesRow .role-chip').all_inner_texts())
     r = b.new_page(viewport={'width': 1440, 'height': 900}); r.on('pageerror', lambda e: errs.append('R ' + str(e)))
     r.goto('http://127.0.0.1:8765/ctecka/?nahled=pracovni#/pripady'); r.fill('#rqUser', 'vojta'); r.fill('#rqPass', 'Heslo12345AB'); r.click('button[type=submit]')

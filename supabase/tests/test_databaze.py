@@ -611,6 +611,8 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(self.call('rq_current_publication')['cases'], [])      # koncept studenti nevidí
         self.call('rq_save_case', c, {'title': 'Klasifikace aplikace', 'status': 'published', 'area_keys': ['zp']})
         self.call('rq_publish', 'druhá')
+        ch = self.sql("select changes from publications where is_current")[0][0]
+        self.assertEqual((ch['summary']['cases_new'], ch['cases_new'][0]['title']), (1, 'Klasifikace aplikace'))   # Co je nového
         pub = self.call('rq_current_publication')['cases'][0]
         self.assertEqual([s['unit_id'] for s in pub['steps']], [None, None])    # neověřené ustanovení se studentům nenabízí
         self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
@@ -668,6 +670,7 @@ class DatabaseTest(unittest.TestCase):
         self.as_user(STUDENT)
         lst = self.call('rq_reader_presentations')
         self.assertEqual(len(lst), 1); self.assertEqual(len(lst[0]['unit_links']), 1)
+        self.assertIsInstance(lst[0]['slides'][0]['text'], str)               # prostý text snímku pro hledání
         rp = self.call('rq_reader_presentation', pid)
         self.assertNotIn('notes', rp['slides'][0])                          # poznámky řečníka studenti nedostanou
         self.as_user(ADMIN)

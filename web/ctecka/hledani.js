@@ -112,6 +112,26 @@ function matchCases(units){
   }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).map(x => x.c);
 }
 
+// Prezentace: oblast a štítky prezentace, odkazy snímků na nalezená ustanovení, slovo v textu snímků
+function matchPres(units){
+  if (typeof PR === 'undefined') return [];
+  const qs = terms(F.q), hit = new Set(units.map(r => r.u.id));
+  return PR.list.map(p => {
+    let score = 0;
+    if ((p.area_keys || []).some(k => F.o.has(k))) score += 10;
+    score += (p.tags || []).filter(k => F.s.has(k)).length * 5;
+    const linked = p.slides.filter(sl => (sl.units || []).some(id => hit.has(id)));
+    score += Math.min(linked.length, 5) * 2;
+    let slide = linked[0] || null;
+    if (qs.length){
+      const m = p.slides.find(sl => qs.every(t => fold([sl.title, sl.kicker, sl.text].join(' ')).includes(t)));
+      if (m){ score += 8; slide = m; }
+      else if (!qs.every(t => fold([p.title, p.subtitle, p.description].join(' ')).includes(t))) score = 0;
+    }
+    return { p, slide, score };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+}
+
 /* ---------- stránka vyhledávače ---------- */
 function chip(field, key, label, n){
   const on = F[field].has(key);
@@ -146,10 +166,10 @@ function renderFinder(){
   if (finderEmpty()){
     results = `<div class="empty">Vyberte oblast, koho se to týká nebo vlastnosti – výsledky se ukážou hned. Nevíte, co zvolit? Zkuste <a href="#/pruvodce">průvodce otázkami</a>.</div>`;
   } else {
-    const units = matchUnits(ix), { docs, situ } = matchDocs(ix, units), paths = matchPaths(ix, units), cases = matchCases(units);
+    const units = matchUnits(ix), { docs, situ } = matchDocs(ix, units), paths = matchPaths(ix, units), cases = matchCases(units), pres = matchPres(units);
     const emptyAreas = [...F.o].filter(k => !areaKeys.has(k)).map(ix.areaName);
     const shownU = F.more ? units.slice(0, 300) : units.slice(0, 40);
-    results = `<div class="fr-sum"><span>${[pl(docs.length, 'dokument', 'dokumenty', 'dokumentů') || '0 dokumentů', pl(units.length, 'ustanovení', 'ustanovení', 'ustanovení'), pl(paths.length, 'trasa', 'trasy', 'tras'), pl(cases.length, 'řešený případ', 'řešené případy', 'řešených případů')].filter(Boolean).join(' · ')}</span>
+    results = `<div class="fr-sum"><span>${[pl(docs.length, 'dokument', 'dokumenty', 'dokumentů') || '0 dokumentů', pl(units.length, 'ustanovení', 'ustanovení', 'ustanovení'), pl(paths.length, 'trasa', 'trasy', 'tras'), pl(cases.length, 'řešený případ', 'řešené případy', 'řešených případů'), pl(pres.length, 'prezentace', 'prezentace', 'prezentací')].filter(Boolean).join(' · ')}</span>
         <button type="button" class="btn small" id="frCopy">Zkopírovat odkaz na výsledek</button><button type="button" class="btn small" id="frClear">Vymazat výběr</button></div>
       ${emptyAreas.length ? `<div class="fr-note">Do oblasti ${esc(emptyAreas.join(', '))} redakce zatím nezařadila žádné dokumenty.</div>` : ''}
       ${situ.length ? `<div class="fr-situ"><strong>Platí také ve specifických situacích</strong>${situ.map(({ g, x }) => `<div><a href="#/d/${encodeURIComponent(g.main.id)}">${esc(docTitle(g.main))}</a> <span class="muted">(${esc(ix.areaName(x.area_key))})</span> – <b>kdy:</b> ${esc(x.note)}</div>`).join('')}</div>` : ''}
@@ -159,11 +179,13 @@ function renderFinder(){
       <ul class="fr-list units">${shownU.map(({ u, hit }) => `<li><a href="#/u/${encodeURIComponent(u.id)}"><small>${esc(docTitle(S.docs.get(u.document_id)))}</small><strong>${esc(u.label)}${headingOf(u) ? ' – ' + esc(trim(headingOf(u), 90)) : ''}</strong></a>${hit.length ? `<div class="fr-why">${hit.map(k => `<span class="tg">${esc(roleName(k))}</span>`).join('')}</div>` : ''}</li>`).join('')}</ul>
       ${units.length > shownU.length ? `<button type="button" class="btn small" id="frMore">Zobrazit další (${units.length - shownU.length})</button>` : ''}` : ''}
       ${cases.length ? `<div class="sec"><h2>Řešené případy</h2></div><div class="cards">${cases.slice(0, 6).map(caseCard).join('')}</div>` : ''}
-      ${paths.length ? `<div class="sec"><h2>Trasy k tématu</h2></div><div class="cards">${paths.slice(0, 6).map(pathCard).join('')}</div>` : ''}`;
+      ${paths.length ? `<div class="sec"><h2>Trasy k tématu</h2></div><div class="cards">${paths.slice(0, 6).map(pathCard).join('')}</div>` : ''}
+      ${pres.length ? `<div class="sec"><h2>Prezentace</h2></div><ul class="fr-list">${pres.slice(0, 8).map(({ p, slide }) => { const i = slide ? p.slides.indexOf(slide) : -1;
+        return `<li><a href="#/prezentace/${encodeURIComponent(p.id)}${slide ? '/' + encodeURIComponent(slide.id) : ''}"><span class="kind">Prezentace</span><strong>${esc(p.title)}</strong>${slide ? `<small>snímek ${i + 1}: ${esc(slide.title || '')}</small>` : ''}</a></li>`; }).join('')}</ul>` : ''}`;
   }
 
   $('#panelText').innerHTML = `<div class="finder"><div class="eyebrow">Najít předpisy</div><h1>Najít předpisy</h1>
-    <p class="lead">Nevíte přesně, který dokument hledat? Vyberte, čeho se situace týká – ukážeme dokumenty, konkrétní ustanovení a trasy. Volby lze kombinovat.</p>
+    <p class="lead">Nevíte přesně, který dokument hledat? Vyberte, čeho se situace týká – ukážeme dokumenty, konkrétní ustanovení, trasy, řešené případy a prezentace. Volby lze kombinovat.</p>
     ${F.from === 'pruvodce' ? `<div class="fr-guide">Výsledek průvodce. Výběr níže můžete dál upravit. <a href="#/pruvodce">Upravit odpovědi</a> · <a href="#/pruvodce" data-restart>Začít znovu</a></div>`
       : `<div class="fr-guide soft">Máte konkrétní situaci a nevíte, co zvolit? <a class="btn small acc" href="#/pruvodce">Projít průvodce otázkami</a></div>`}
     <div class="fform">

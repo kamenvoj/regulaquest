@@ -24,7 +24,7 @@ window.RQReaderHelp = (function () {
     ['paths', 'Trasy', `<p>Trasa vás provede několika místy v daném pořadí s komentářem redakce. Tlačítky <b>Zpět / Další krok</b> se posouváte, prošlé kroky se ukládají k účtu (✓).</p>`],
     ['terms', 'Pojmy', `<p>Slovník definic z definičních článků (čl. 2 MDR…) česky i anglicky, s odkazem na přesné místo v předpisu.</p>`],
     ['news', 'Co je nového', `<p>Přehled aktualizací obsahu: shrnutí od redakce a seznam změněných ustanovení, nových výkladů, vazeb a tras.</p>`],
-    ['search', 'Hledání', `<p>Pole nahoře hledá ve všech dokumentech – v textech, výkladech redakce i pojmech. Nezáleží na diakritice. Po otevření výsledku je hledaný výraz v textu zvýrazněný.</p>`],
+    ['search', 'Hledání', `<p>Pole nahoře hledá ve všech dokumentech – v textech, výkladech redakce a pojmech – a také ve snímcích prezentací, řešených případech, užitečných odkazech a aktualitách. Nezáleží na diakritice. Po otevření výsledku je hledaný výraz v textu zvýrazněný.</p>`],
   ];
   const VIEW = { home: 'home', docs: 'docs', doc: 'docs', unit: 'docs', path: 'paths', paths: 'paths', terms: 'terms', marks: 'marks', news: 'news', search: 'search', finder: 'finder', guide: 'finder', updates: 'updates', cases: 'cases', case: 'cases', links: 'links', prlist: 'prlist', pres: 'prlist' };
   function open(view) {

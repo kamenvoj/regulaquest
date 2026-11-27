@@ -4,15 +4,25 @@
 const NW = { list:[], q:'', area:'', src:'', sort:'new', page:0 };
 const NW_PER = 10;
 
+// Kdy si student aktuality naposledy prohlédl – u účtu (stejně jako místo ve čtení), záložně v prohlížeči
+function newsSeenAt(){
+  const acc = S.me && (S.me.positions || []).find(p => p.doc_group === 'news:seen');
+  let loc = ''; try { loc = localStorage.getItem('rq-aktuality-videno') || ''; } catch {}
+  return [acc ? acc.unit_id : '', loc].sort().pop();
+}
 async function loadNews(){
   try { const { data, error } = await RQ.client.rpc('rq_reader_news'); if (!error && Array.isArray(data)) NW.list = data; } catch {}
-  const seen = (() => { try { return localStorage.getItem('rq-aktuality-videno') || ''; } catch { return ''; } })();
+  const seen = newsSeenAt();
   const fresh = NW.list.filter(n => (n.published_on || '') > seen).length;
   const el = $('#navUpd'); if (el) el.textContent = fresh ? String(fresh) : '';
 }
 function newsSeen(){
   const max = NW.list.map(n => n.published_on || '').sort().pop();
-  if (max) try { localStorage.setItem('rq-aktuality-videno', max); } catch {}
+  if (max && max > newsSeenAt()){
+    try { localStorage.setItem('rq-aktuality-videno', max); } catch {}
+    if (S.me){ const ex = S.me.positions.find(p => p.doc_group === 'news:seen'); if (ex) ex.unit_id = max; else S.me.positions.push({ doc_group: 'news:seen', unit_id: max, updated_at: new Date(0).toISOString() }); }
+    RQ.client.rpc('rq_set_position', { p_doc_group: 'news:seen', p_unit_id: max }).then(() => {}, () => {});
+  }
   const el = $('#navUpd'); if (el) el.textContent = '';
 }
 const newsDate = n => fmtDate(n.published_at || n.published_on);

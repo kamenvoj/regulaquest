@@ -42,7 +42,7 @@ with sync_playwright() as pw:
     p.click('#nwSources'); time.sleep(0.3); print('zdroje:', p.locator('.nw-src[data-id]').count()); p.click('#nsClose')
     # propojení z textu dokumentu
     p.evaluate(f"openUnit('{unit}')"); time.sleep(1)
-    p.click('#rqNewsAdd'); time.sleep(0.3); p.fill('#rqNewsQ', 'EUDAMED'); time.sleep(0.2); p.locator('[data-news-add]').first.click(); time.sleep(1)
+    p.click('#rqRelBox summary'); time.sleep(0.2); p.click('#rqNewsAdd'); time.sleep(0.3); p.fill('#rqNewsQ', 'EUDAMED'); time.sleep(0.2); p.locator('[data-news-add]').first.click(); time.sleep(1)
     print('u ustanovení:', p.locator('#rqNewsRow .role-chip').all_inner_texts())
     p.screenshot(path='/tmp/a2-unit.png')
     r = b.new_page(viewport={'width': 1440, 'height': 900}); r.on('pageerror', lambda e: errs.append('R ' + str(e)))
