@@ -494,3 +494,20 @@ dialog:has(#docAreas){width:min(860px,calc(100vw - 24px));max-width:min(860px,ca
 .nw-pick button small{display:block;font-size:10.5px;color:#5b6f75}
 .nw-filters{grid-template-columns:220px 200px minmax(200px,1fr) 170px 190px;max-width:1250px}
 .nw-pager{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin:12px 0;max-width:1250px}
+
+/* ---------- 0.27 Řešené případy ---------- */
+.linkish{border:0;background:none;padding:0;font:inherit;color:var(--teal);cursor:pointer;text-align:left}
+.cs-row .nw-title{font-size:14px}
+.cs-form{max-width:1100px}
+.cs-steps{list-style:none;margin:10px 0 0;padding:0}
+.cs-step{display:flex;justify-content:space-between;gap:14px;border-top:1px solid #eef3f3;padding:11px 0}
+.cs-step.editing{display:block}
+.cs-step strong{font-size:13px}
+.cs-ulink{font-size:11.5px;color:#135f62;font-weight:700;margin-top:2px}
+.cs-upick{position:relative}
+.cs-ucur{margin-bottom:6px}
+.cs-ulist{position:absolute;z-index:25;left:0;right:0;top:calc(100% + 3px);background:#fff;border:1px solid #cbdcdd;border-radius:9px;box-shadow:0 12px 40px #16343a24;padding:5px;max-height:300px;overflow:auto}
+.cs-ulist button{display:block;width:100%;text-align:left;border:0;background:none;border-radius:6px;padding:6px 8px;font-size:12px;color:#254047;cursor:pointer}
+.cs-ulist button:hover{background:#eff7f5}
+.role-chip .cs-go{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:0}
+.gq-head h2{margin:0}

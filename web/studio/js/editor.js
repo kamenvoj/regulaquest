@@ -115,7 +115,7 @@ async function act(data){
  return {editor:result,result};
 }
 function safeAct(obj,cb){act(obj).then(()=>cb&&cb()).catch(e=>toast(e.message,true))}
-function setPage(p){page=p;if(p==='access')RQ.renderAccess();if(p!=='paths'&&window.RQPaths)RQPaths.leave();if(p!=='guide'&&window.RQGuide)RQGuide.leave();if(p!=='news'&&window.RQNews&&document.querySelector('#page-news:not(.hidden)'))RQNews.leave();document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.page===(p==='verified'?'library':p)));document.querySelectorAll('.page').forEach(e=>e.classList.toggle('hidden',e.id!=='page-'+p));render()}
+function setPage(p){page=p;if(p==='access')RQ.renderAccess();if(p!=='paths'&&window.RQPaths)RQPaths.leave();if(p!=='guide'&&window.RQGuide)RQGuide.leave();if(p!=='cases'&&window.RQCases)RQCases.leave();if(p!=='news'&&window.RQNews&&document.querySelector('#page-news:not(.hidden)'))RQNews.leave();document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.page===(p==='verified'?'library':p)));document.querySelectorAll('.page').forEach(e=>e.classList.toggle('hidden',e.id!=='page-'+p));render()}
 function documentStats(docId){
  const units=db.units.filter(u=>u.document_id===docId&&!u.editor_archived),idset=new Set(units.map(u=>u.id));
  const withText=units.filter(u=>String(u.body||'').trim()).length;
@@ -174,6 +174,7 @@ function render(){
  if(page==='coverage'&&window.RQCoverage)RQCoverage.render();
  if(page==='guide'&&window.RQGuide)RQGuide.render();
  if(page==='news'&&window.RQNews)RQNews.render();
+ if(page==='cases'&&window.RQCases)RQCases.render();
  if(window.RQNews&&!window.rqNewsInit){window.rqNewsInit=1;RQNews.load().catch(()=>{})}
  if(page==='library'){renderDocumentMetrics();renderList();renderReader();renderContext();rqLoadFigures($('#reader'))}
  if(page==='documents')renderDocumentsOverview();if(page==='verified')renderVerifiedOverview();if(page==='review')renderReview();if(page==='relations')renderRelations();if(page==='comments')renderComments();if(page==='publish')renderPublish();
@@ -331,7 +332,7 @@ if(!u){const d=getDoc(selected);if(!d){selected=null;return renderReader()}const
 const d=getDoc(u.document_id);const related=db.units.filter(x=>x.parent_id===u.id&&!x.editor_archived);
 box.innerHTML=`<div class="hero-line"><span class="crumb">${esc(d.family)} / ${esc(d.language.toUpperCase())} / ${esc(u.locator||u.label)}</span>${u.editor_archived?'<span class="tag bad">Archivováno</span>':tag(u.text_status)}</div>
 ${u.editor_archived?`<div class="notice archived-note"><strong>Archivovaná část.</strong> Není v osnově ani ve čtečce${u.merged_into?' (sloučena do '+esc(unitPath(u.merged_into))+')':''}. Zůstává jen pro dohledání historie.${u.merged_into?'':' <button class="btn tiny" type="button" id="rqRestore">Obnovit</button>'}</div>`:''}
-<h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>${u.editor_archived?'':rqTagsRow(u)}${!u.editor_archived&&window.RQNews?RQNews.unitRow(u):''}
+<h2>${esc(u.label)}</h2><p class="section-sub">${esc(u.heading||d.title)}</p>${u.editor_archived?'':rqTagsRow(u)}${!u.editor_archived&&window.RQNews?RQNews.unitRow(u):''}${!u.editor_archived&&window.RQCases?RQCases.unitRow(u):''}
 <div class="sourcebox"><strong>Zdroj:</strong> ${esc(d.title)}<br><strong>Verze:</strong> ${esc(d.version)} · ${esc(d.language.toUpperCase())}<br><strong>Umístění:</strong> ${esc(u.locator||u.label)}<br><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Porovnat s originálem ↗</a></div>
 ${u.content_blocks&&u.content_blocks.length?`<div class="rq-prepared-content" data-anchor-root><div class="section-kicker">REDAKČNĚ STRUKTUROVANÝ OBSAH A TABULKY · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>${rqRenderBlocks(u.content_blocks)}</div>`:''}
 ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚNÍ ZDROJE · ${u.text_status==='verified'?'OVĚŘENO':'NUTNO OVĚŘIT'}</div>
@@ -340,7 +341,7 @@ ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚ
 <div class="read-actions rq-structure-actions"><button class="btn accent" id="rqEditContent">▦ Editor textu a tabulek</button><button class="btn" id="rqEditStructure">Struktura</button><button class="btn" id="rqSplit" ${!u.body?'disabled':''}>Rozdělit</button><button class="btn" id="rqMove" ${!u.body?'disabled':''}>Přesunout text</button><button class="btn" id="rqMerge" ${!u.body?'disabled':''}>Sloučit</button><button class="btn" id="rqHistory">Historie změn</button><button class="btn" id="rqToPath" title="Přidat toto ustanovení jako krok trasy">⇢ Do trasy</button>${window.RQTerms&&RQNotes.parseDefinitions(u.body).length>=5?`<button class="btn" id="rqTerms">Pojmy z definic (${RQNotes.parseDefinitions(u.body).length})</button>`:''}<button class="btn danger" id="rqArchive">Archivovat</button>${u.body&&u.text_status!=='verified'?'<button class="btn accent" id="verifyText">Ověřil(a) jsem proti zdroji</button>':''}</div>
 ${u.source_note?`<p class="fine">Původ importu: ${esc(u.source_note)}</p>`:''}
 ${related.length?`<div class="soft-rule"></div><div class="section-kicker">PODŘAZENÉ ČÁSTI</div><div class="doc-outline">${related.map(x=>`<button class="outline-row" data-unit-open="${esc(x.id)}" style="text-align:left;cursor:pointer"><strong>${esc(x.label)} · ${esc(x.heading)}</strong><small>${esc(statusName[x.text_status])}</small></button>`).join('')}</div>`:''}`;
-rqAnchors(box,u);rqTagsBind(box,u);if(window.RQNews)RQNews.bindUnit(box,u);if(window.RQHome)RQHome.remember(u.id);
+rqAnchors(box,u);rqTagsBind(box,u);if(window.RQNews)RQNews.bindUnit(box,u);if(window.RQCases)RQCases.bindUnit(box,u);if(window.RQHome)RQHome.remember(u.id);
 box.querySelector('#rqEditContent').onclick=()=>rqContentEditor(u);
 box.querySelector('#rqEditStructure').onclick=()=>rqStructureEditor(u);
 box.querySelector('#rqSplit').onclick=()=>rqSplit(u);

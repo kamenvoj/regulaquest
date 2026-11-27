@@ -568,6 +568,39 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(self.sql("select source_id, source_name from news_items where id = %s", ek['id'])[0], (None, 'EK'))
         self.assertIn('news_items', self.call('rq_backup'))
 
+    def test_cases(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        self.fails('název', 'rq_save_case', None, {'title': ' '})
+        c = self.call('rq_save_case', None, {'title': 'Klasifikace aplikace', 'summary': 'Krátce', 'assignment': 'Aplikace hodnotí znaménka.',
+                                             'conclusion': 'Třída IIa', 'status': 'draft', 'area_keys': ['zp'], 'tags': ['typ_software']})
+        s1 = self.call('rq_save_case_step', None, c, {'title': 'Je to MDSW?', 'body': 'Ano.'})
+        s2 = self.call('rq_save_case_step', None, c, {'title': 'Pravidlo 11', 'unit_id': 'mdr-cs-rule-11'})
+        self.fails('prázdný', 'rq_save_case_step', None, c, {})
+        self.call('rq_move_case_step', s2, -1)
+        self.assertEqual([r[0] for r in self.sql("select id from case_steps where case_id=%s order by sort", c)], [s2, s1])
+        self.call('rq_link_case_unit', c, 'mdr-cs-rule-11', True)
+        self.call('rq_link_case_unit', c, 'mdr-cs-rule-11', True)
+        self.assertEqual(self.sql("select count(*) from case_links")[0][0], 1)
+        pv = self.call('rq_draft_preview')
+        self.assertEqual(pv['cases'][0]['steps'][0]['unit_id'], 'mdr-cs-rule-11')   # v náhledu i neověřené
+        self.call('rq_publish', 'první')
+        self.assertEqual(self.call('rq_current_publication')['cases'], [])      # koncept studenti nevidí
+        self.call('rq_save_case', c, {'title': 'Klasifikace aplikace', 'status': 'published', 'area_keys': ['zp']})
+        self.call('rq_publish', 'druhá')
+        pub = self.call('rq_current_publication')['cases'][0]
+        self.assertEqual([s['unit_id'] for s in pub['steps']], [None, None])    # neověřené ustanovení se studentům nenabízí
+        self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
+        self.call('rq_publish', 'třetí')
+        pub = self.call('rq_current_publication')['cases'][0]
+        self.assertEqual(pub['steps'][0]['unit_id'], 'mdr-cs-rule-11'); self.assertEqual(pub['unit_ids'], ['mdr-cs-rule-11'])
+        self.assertIn('case_steps', self.call('rq_studio_state')); self.assertIn('cases', self.call('rq_backup'))
+        self.as_user(STUDENT)
+        self.fails('', 'rq_save_case', c, {'title': 'X'})
+        self.as_user(ADMIN)
+        self.call('rq_delete_case', c)
+        self.assertEqual(self.sql("select count(*) from case_steps")[0][0], 0)
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)

@@ -8,6 +8,7 @@ window.RQReaderHelp = (function () {
     ['finder', 'Najít předpisy a průvodce', `<p><b>Najít předpisy</b> pomůže, když nevíte, který dokument hledat. Vyberte oblast (např. zdravotnické prostředky, metrologie), koho se to týká a další vlastnosti – výsledky se ukážou hned: dokumenty seřazené podle shody (s důvodem, proč se ukazují), konkrétní ustanovení a trasy. Zvlášť jsou uvedené předpisy, které platí jen ve <b>specifických situacích</b>, s vysvětlením kdy. Volby lze kombinovat; odkaz na výsledek můžete zkopírovat a poslat.</p>
       <p><b>Průvodce otázkami</b> je pro situaci, kdy máte konkrétní problém („firma chce dovážet tlakoměr“). Odpovíte na několik otázek, další otázky se přizpůsobí předchozím odpovědím a na konci se otevře vyhledávač s předvyplněným výběrem, který můžete dál upravit.</p>
       <p>Výsledky jsou tak dobré, jak podrobně redakce dokumenty zařadila a oštítkovala – berte je jako rozcestník, ne jako úplný právní rozbor.</p>`],
+    ['cases', 'Řešené případy', `<p>Konkrétní situace rozebrané krok za krokem (např. klasifikace aplikace). U kroku tlačítko <b>Číst v předpisu</b> otevře ustanovení, o které se krok opírá; lištou nahoře se vrátíte zpět na případ. U ustanovení najdete odkaz na případy v Souvislostech, případy se ukazují i ve výsledcích Najít předpisy.</p>`],
     ['updates', 'Aktuality', `<p>Novinky z úřadů a institucí (SÚKL, Evropská komise…), které redakce vybrala a okomentovala. Filtrovat můžete podle oblasti a zdroje, hledat a řadit. Odkaz otevře původní zdroj. Aktuality propojené s ustanovením uvidíte i v Souvislostech u něj; počet nových od vaší poslední návštěvy ukazuje navigace.</p>`],
     ['marks', 'Záložky', `<p>U ustanovení klepněte na <b>Přidat záložku</b> a napište krátký popisek. Záložky a místo, kde jste naposledy četli, se ukládají k vašemu účtu – uvidíte je na každém zařízení. Nikdo jiný je nevidí.</p>`],
     ['layers', 'Značky v textu', `<ul><li><span class="rq-hl hl-key">žlutě</span> klíčová pasáž · <span class="rq-hl hl-duty">zeleně</span> povinnost · <span class="rq-hl hl-deadline">fialově</span> lhůta / číslo · <span class="rq-hl hl-exception">růžově</span> výjimka / podmínka</li>
@@ -21,7 +22,7 @@ window.RQReaderHelp = (function () {
     ['news', 'Co je nového', `<p>Přehled aktualizací obsahu: shrnutí od redakce a seznam změněných ustanovení, nových výkladů, vazeb a tras.</p>`],
     ['search', 'Hledání', `<p>Pole nahoře hledá ve všech dokumentech – v textech, výkladech redakce i pojmech. Nezáleží na diakritice. Po otevření výsledku je hledaný výraz v textu zvýrazněný.</p>`],
   ];
-  const VIEW = { home: 'home', docs: 'docs', doc: 'docs', unit: 'docs', path: 'paths', paths: 'paths', terms: 'terms', marks: 'marks', news: 'news', search: 'search', finder: 'finder', guide: 'finder', updates: 'updates' };
+  const VIEW = { home: 'home', docs: 'docs', doc: 'docs', unit: 'docs', path: 'paths', paths: 'paths', terms: 'terms', marks: 'marks', news: 'news', search: 'search', finder: 'finder', guide: 'finder', updates: 'updates', cases: 'cases', case: 'cases' };
   function open(view) {
     let el = document.getElementById('rqHelp');
     if (!el) {

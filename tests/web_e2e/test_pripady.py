@@ -1,0 +1,45 @@
+"""Řešené případy: založení ve Studiu, kroky s ustanovením, propojení z textu dokumentu, čtečka (po test_anotace.py)."""
+import time, psycopg
+from playwright.sync_api import sync_playwright
+with psycopg.connect('host=/tmp/pg port=5544 user=postgres dbname=rqe2e', autocommit=True) as c:
+    c.execute('delete from cases')
+    unit2 = c.execute("select id from units where label = 'Článek 2' limit 1").fetchone()[0]
+errs = []
+with sync_playwright() as pw:
+    b = pw.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
+    p = b.new_page(viewport={'width': 1440, 'height': 900}); p.on('pageerror', lambda e: errs.append(str(e))); p.on('dialog', lambda d: d.accept())
+    p.goto('http://127.0.0.1:8765/studio/'); p.fill('#rqUser', 'vojta'); p.fill('#rqPass', 'Heslo12345AB'); p.click('button[type=submit]')
+    p.wait_for_selector('#page-home'); time.sleep(0.6)
+    p.click('.nav-item[data-page=cases]'); time.sleep(0.4); p.click('#csNew'); time.sleep(0.3)
+    p.fill('#csTitle', 'Klasifikace aplikace pro hodnocení znamének'); p.fill('#csSummary', 'Je aplikace MDSW a do jaké třídy patří?')
+    p.fill('#csAssign', 'Aplikace fotí kožní znaménka a odhaduje riziko melanomu.\n\n- uživatel: pacient\n- výstup: doporučení navštívit lékaře')
+    p.fill('#csConcl', '| Otázka | Odpověď |\n|---|---|\n| MDSW? | Ano |\n| Třída | IIa |')
+    p.locator('[data-pick=ca] summary').click(); p.locator('[data-pick=ca] input[value=zp]').check(); p.locator('[data-pick=ca] summary').click()
+    p.select_option('#csStatus', 'published'); p.click('#csSave'); time.sleep(0.9)
+    print('založeno:', p.inner_text('#casesContent h1'))
+    p.click('#csAddStep'); time.sleep(0.2); p.fill('[data-st]', 'Je software zdravotnickým prostředkem?'); p.fill('[data-sb]', 'Ano – má zdravotnický účel.')
+    p.fill('#csStepUnit [data-uq]', 'článek 10'); time.sleep(0.3); p.locator('#csStepUnit [data-pick-unit]').first.click(); time.sleep(0.2)
+    p.click('[data-ssave]'); time.sleep(0.9)
+    p.click('#csAddStep'); time.sleep(0.2); p.fill('[data-st]', 'Určení třídy'); p.fill('[data-sb]', 'Podle pravidla 11.'); p.click('[data-ssave]'); time.sleep(0.9)
+    p.locator('.cs-step').nth(1).locator('[data-up]').click(); time.sleep(0.8)
+    print('kroky:', p.locator('.cs-step strong').all_inner_texts())
+    p.screenshot(path='/tmp/c1-studio.png', full_page=True)
+    # propojení z textu dokumentu
+    p.evaluate(f"openUnit('{unit2}')"); time.sleep(1)
+    p.click('#rqCaseAdd'); time.sleep(0.2); p.locator('[data-case-add]').first.click(); time.sleep(1)
+    print('u čl. 2:', p.locator('#rqCasesRow .role-chip').all_inner_texts())
+    r = b.new_page(viewport={'width': 1440, 'height': 900}); r.on('pageerror', lambda e: errs.append('R ' + str(e)))
+    r.goto('http://127.0.0.1:8765/ctecka/?nahled=pracovni#/pripady'); r.fill('#rqUser', 'vojta'); r.fill('#rqPass', 'Heslo12345AB'); r.click('button[type=submit]')
+    r.wait_for_selector('.casecard'); time.sleep(0.3)
+    print('seznam:', r.locator('.casecard strong').all_inner_texts())
+    r.locator('.casecard').first.click(); time.sleep(0.4)
+    print('případ: kroky', r.locator('.cs-steps > li').count(), '| tabulka', r.locator('.cs-box.concl table').count(), '| odrážky', r.locator('.cs-box.assign li').count(), '| souvisí', r.locator('.fr-list.units li').count())
+    r.screenshot(path='/tmp/c2-reader.png', full_page=True)
+    r.locator('.cs-read').first.click(); time.sleep(0.5)
+    print('lišta zpět:', r.locator('.cs-backbar').inner_text()[:40], '| souvislosti:', 'Řešené případy' in r.inner_text('.context'))
+    r.screenshot(path='/tmp/c3-unit.png')
+    r.click('.cs-backbar a'); time.sleep(0.3); print('zpět na případ:', r.inner_text('.case h1'))
+    r.goto('http://127.0.0.1:8765/ctecka/?nahled=pracovni#/najit?o=zp'); time.sleep(0.6)
+    print('vyhledávač:', [t for t in r.locator('.sec h2').all_inner_texts()])
+    b.close()
+print('chyby:', errs or 'žádné')

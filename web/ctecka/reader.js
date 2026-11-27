@@ -209,8 +209,9 @@ function route(){
   }
   else if ((m = h.match(/^\/u\/(.+)$/)) && S.units.has(m[1])){ S.view = 'unit'; S.unitId = m[1]; S.docId = S.units.get(m[1]).document_id; ancestors(S.units.get(S.unitId)).forEach(a => S.expanded.add(a.id)); }
   else if ((m = h.match(/^\/d\/(.+)$/)) && S.docs.has(m[1])){ S.view = 'doc'; S.docId = m[1]; }
+  else if ((m = h.match(/^\/pripad\/(.+)$/))){ S.view = 'case'; S.caseId = m[1]; }
   else if ((m = h.match(/^\/hledat\/(.+)$/))){ S.view = 'search'; S.query = m[1]; if ($('#search').value.trim() !== S.query) $('#search').value = S.query; }
-  else S.view = ({'/dokumenty':'docs', '/trasy':'paths', '/pojmy':'terms', '/zalozky':'marks', '/novinky':'news', '/aktuality':'updates'})[h] || 'home';
+  else S.view = ({'/dokumenty':'docs', '/trasy':'paths', '/pojmy':'terms', '/zalozky':'marks', '/novinky':'news', '/aktuality':'updates', '/pripady':'cases'})[h] || 'home';
   if (S.view !== 'search' && document.activeElement !== $('#search')) { $('#search').value = ''; S.query = ''; }
   render();
   setTab('text', false);
@@ -225,14 +226,14 @@ function setTab(t, scroll=true){
 function render(){
   const v = S.view, reading = v === 'unit' || v === 'doc' || (v === 'path' && S.unitId);
   document.querySelectorAll('.appnav [data-nav]').forEach(x => x.classList.toggle('on',
-    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news', updates:'updates'})[v]));
+    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news', updates:'updates', cases:'cases', case:'cases'})[v]));
   $('#navMarks').textContent = S.me.marks.filter(m => !m.unit_id.startsWith('doc:')).length || '';
   renderNav();
   renderPathNav();
   layoutPanels();
   document.body.classList.toggle('no-ctx', !(v === 'unit' || (v === 'path' && S.unitId)));
   if (v === 'path') renderStep();
-  else if (v === 'unit') renderUnit(S.units.get(S.unitId));
+  else if (v === 'unit'){ renderUnit(S.units.get(S.unitId)); if (typeof caseBackBar === 'function') caseBackBar(S.units.get(S.unitId)); }
   else if (v === 'doc') renderDoc(S.docs.get(S.docId));
   else if (v === 'docs') renderDocs();
   else if (v === 'paths') renderPaths();
@@ -240,6 +241,8 @@ function render(){
   else if (v === 'marks') renderMarks();
   else if (v === 'news') renderNews();
   else if (v === 'updates') renderUpdates();
+  else if (v === 'cases') renderCases();
+  else if (v === 'case') renderCase(caseOf(S.caseId));
   else if (v === 'search') renderSearch();
   else if (v === 'finder') renderFinder();
   else if (v === 'guide') renderGuide();
@@ -874,9 +877,10 @@ function renderContext(){
     section('Související ustanovení', related, relCard) +
     section('Příklady', examples, noteCard) +
     section('Klíčové pasáže', keys, noteCard) +
+    (typeof casesCtx === 'function' ? casesCtx(u) : '') +
     (typeof newsCtx === 'function' ? newsCtx(u) : '') +
     (childInfo.length ? `<div class="ctx-section"><h3>V jednotlivých částech</h3>${childInfo.map(x => `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(x.c.id)}"><strong>${esc(x.c.label)}</strong><small>${[x.n?`${x.n}× výklad`:'',x.r?`${x.r}× souvislost`:''].filter(Boolean).join(' · ')}</small></a></div>`).join('')}</div>` : '') +
-    (total || childInfo.length || (typeof newsFor === 'function' && newsFor(u).length) ? '' : '<div class="ctx-empty">K tomuto ustanovení zatím nejsou zveřejněné výklady ani vazby.</div>') + disclaimer();
+    (total || childInfo.length || (typeof newsFor === 'function' && newsFor(u).length) || (typeof casesFor === 'function' && casesFor(u).length) ? '' : '<div class="ctx-empty">K tomuto ustanovení zatím nejsou zveřejněné výklady ani vazby.</div>') + disclaimer();
   $('#tabCount').textContent = total ? String(total) : '';
   box.querySelectorAll('[data-focus]').forEach(c => c.addEventListener('click', e => {
     if (e.target.closest('a, button:not(.anchor-q)')) return;

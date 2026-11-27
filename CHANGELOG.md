@@ -1,5 +1,15 @@
 # Změny
 
+## 0.27.0 – 2026-11-27 · Řešené případy
+- **Studio – Výuka → Řešené případy:** případ = název, krátký popis, zadání, kroky, závěr, stav (koncept / zveřejněný /
+  archivovaný), oblasti a štítky. Kroky s textem a odkazem na ustanovení (hledání podle označení a nadpisu), pořadí šipkami.
+  Jednoduchý formát textu: odstavce, odrážky „- “, tabulky „| a | b |“. Propojená ustanovení a náhled ve čtečce.
+- V textu dokumentu pod nadpisem řádek „Případy“ s „+ Případ“ (propojení s existujícím případem).
+- **Čtečka:** položka Řešené případy (seznam s filtrem oblasti), stránka případu (zadání, číslovaný postup, závěr, související
+  ustanovení), u kroku „Číst v předpisu“ a nad ustanovením lišta „Zpět na řešený případ“; u ustanovení v Souvislostech odkaz;
+  případy i ve výsledcích Najít předpisy. Studenti vidí zveřejněné případy po publikaci.
+- Migrace 21_pripady.sql. Úklid testovacích dat smaže i případy.
+
 ## 0.26.0 – 2026-11-27 · Řazení a stránkování aktualit
 - Studio → Aktuality: řazení (nejnovější / nejstarší nahoře), počet na stránku (10 / 25 / 50 / vše – pamatuje si prohlížeč)
   a stránkování dole. „Vybrat“ a hromadné akce platí jen pro aktuální stránku.
