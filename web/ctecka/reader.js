@@ -16,7 +16,8 @@ const S = {
   data:null, draft:false,
   units:new Map(), docs:new Map(), children:new Map(),
   rels:new Map(), notes:new Map(), order:new Map(),
-  terms:[], off:loadOff(), focus:null, role:loadRole(), tagNames:new Map(), paths:[], path:null, navMode:'osnova',
+  terms:[], off:loadOff(), focus:null, role:loadRole(), tagNames:new Map(), paths:[], path:null,
+  view:'home', me:{ marks:[], positions:[], progress:[] }, newUnits:new Map(), docFilter:'all', docQuery:'', termQuery:'',
   docId:null, unitId:null, query:'', highlight:'', expanded:new Set(), tab:'text'
 };
 
@@ -52,8 +53,23 @@ async function load(rq){
     return;
   }
   index(d);
+  await loadMe();
   route();
   window.addEventListener('hashchange', route);
+}
+
+/* Osobní data čtenáře (záložky, kde skončil, prošlé kroky tras) – u účtu, vidí je jen on. */
+async function loadMe(){
+  try { const { data, error } = await RQ.client.rpc('rq_my_reader_state'); if (!error && data) S.me = data; } catch {}
+}
+async function meCall(fn, args){
+  try { const { data, error } = await RQ.client.rpc(fn, args); if (error) throw new Error(error.message); return data ?? true; }
+  catch(e){ toast(RQ.czError ? RQ.czError(e) : e.message); return null; }
+}
+function toast(msg){
+  let t = document.getElementById('rqToast');
+  if (!t){ t = document.createElement('div'); t.id = 'rqToast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 3200);
 }
 
 /* Obrázky z úložiště: dočasné podepsané odkazy (platí hodinu), jen pro přihlášené. */
@@ -99,25 +115,18 @@ function index(d){
   if (deniedDraft) $('#draftBanner').textContent = 'Pracovní náhled je jen pro redakci. Zobrazuje se publikovaný obsah pro studenty.';
   document.body.classList.toggle('has-banner', S.draft || deniedDraft);
   $('#draftBanner').classList.toggle('hidden', !(S.draft || deniedDraft));
-  $('#docSelect').innerHTML = d.documents.map(x => `<option value="${esc(x.id)}">${esc(docShort(x))}</option>`).join('');
-  $('#docSelect').onchange = e => go('#/d/' + e.target.value);
   let timer;
-  $('#search').oninput = e => { clearTimeout(timer); timer = setTimeout(() => { S.query = e.target.value.trim(); renderNav(); }, 140); };
+  $('#search').oninput = e => { clearTimeout(timer); timer = setTimeout(() => { const q = e.target.value.trim(); if (q.length >= 2) go('#/hledat/' + encodeURIComponent(q)); }, 300); };
+  $('#searchForm').onsubmit = e => { e.preventDefault(); const q = $('#search').value.trim(); if (q) go('#/hledat/' + encodeURIComponent(q)); };
   document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
-  /* Pohled podle štítku (role, třída rizika, typ…): jen štítky, které jsou u publikovaných částí použité. */
   (d.tags || []).forEach(t => S.tagNames.set(t.key, t.name));
-  const rs = $('#roleSelect'), used = new Set(d.units.flatMap(u => u.tags || []));
-  if (S.role && !used.has(S.role)) S.role = '';
-  rs.innerHTML = '<option value="">Všechna ustanovení</option>' + (d.tag_groups || []).map(g => {
-    const ts = (d.tags || []).filter(t => t.group_key === g.key && used.has(t.key));
-    return ts.length ? `<optgroup label="${esc(g.name)}">${ts.map(t => `<option value="${esc(t.key)}">${esc(t.name)}</option>`).join('')}</optgroup>` : ''; }).join('');
-  rs.closest('.role-pick').classList.toggle('hidden', !used.size);
-  rs.value = S.role;
-  rs.onchange = () => { S.role = rs.value; try { localStorage.setItem('rq-stitek', S.role); } catch {} renderNav(); const u = S.units.get(S.unitId); if (u) { renderUnit(u); } };
-  $('#navMode').classList.toggle('hidden', !S.paths.length);
-  $('#navMode').querySelectorAll('button').forEach(b => b.onclick = () => { S.navMode = b.dataset.mode; renderNav(); });
-  document.querySelectorAll('#legendPanel .lg').forEach(e => e.innerHTML = ICON(e.dataset.i));
-  $('#legendBtn').onclick = () => { const p = $('#legendPanel'), open = p.classList.toggle('hidden'); $('#legendBtn').setAttribute('aria-expanded', String(!open)); };
+  // Nově změněné části z poslední publikace (značka NOVÉ v osnově 14 dní)
+  const last = (d.history || [])[0];
+  if (last && Date.now() - new Date(last.published_at) < 14 * 864e5) (Array.isArray(last.changes?.items) ? last.changes.items : []).forEach(i => S.newUnits.set(i.unit_id, i.what));
+  const seen = +(localStorage.getItem('rq-novinky-videno') || 0);
+  $('#navNews').classList.toggle('hidden', !last || last.id <= seen || !!last.changes?.first);
+  const help = () => window.RQReaderHelp && RQReaderHelp.open(S.view);
+  $('#helpBtn').onclick = help; $('#navHelp').onclick = help;
 }
 
 const kids = id => S.children.get(id) || [];
@@ -177,30 +186,24 @@ function mirrorRelations(list){
 
 /* ---------- Routing ---------- */
 function route(){
-  S.focus = null; S.path = null;
-  const h = decodeURIComponent(location.hash.slice(1));
-  const t = h.match(/^\/t\/([^/]+)(?:\/(\d+))?$/);
-  if (t){
-    const p = S.paths.find(x => x.id === t[1]);
-    if (p){
-      const n = Math.min(+(t[2] || 0), p.steps.length), st = n ? p.steps[n-1] : null;
-      S.path = { p, n }; S.navMode = 'trasy';
-      S.unitId = st && st.unit_id && S.units.has(st.unit_id) ? st.unit_id : null;
-      if (S.unitId){ S.docId = S.units.get(S.unitId).document_id; ancestors(S.units.get(S.unitId)).forEach(a => S.expanded.add(a.id)); $('#docSelect').value = S.docId; }
-      if (n) markDone(p.id, st.id);
-      render(false); setTab('text', false); return;
-    }
+  S.focus = null; S.path = null; S.unitId = null;
+  const h = decodeURIComponent(location.hash.slice(1)) || '/';
+  let m;
+  if ((m = h.match(/^\/t\/([^/]+)(?:\/(\d+))?$/)) && S.paths.find(x => x.id === m[1])){
+    const p = S.paths.find(x => x.id === m[1]);
+    const n = Math.min(+(m[2] || 0), p.steps.length), st = n ? p.steps[n-1] : null;
+    S.path = { p, n }; S.view = 'path';
+    S.unitId = st && st.unit_id && S.units.has(st.unit_id) ? st.unit_id : null;
+    if (S.unitId){ S.docId = S.units.get(S.unitId).document_id; ancestors(S.units.get(S.unitId)).forEach(a => S.expanded.add(a.id)); }
+    if (n) markDone(p.id, st.id);
   }
-  const m = h.match(/^\/(u|d)\/(.+)$/);
-  S.unitId = null;
-  if (m && m[1] === 'u' && S.units.has(m[2])){ S.unitId = m[2]; S.docId = S.units.get(m[2]).document_id; }
-  else if (m && m[1] === 'd' && S.docs.has(m[2])){ S.docId = m[2]; }
-  else S.docId = S.docId || S.data.documents[0]?.id || null;
-  if (S.unitId){ ancestors(S.units.get(S.unitId)).forEach(a => S.expanded.add(a.id)); }
-  if (S.docId) $('#docSelect').value = S.docId;
-  const home = !m;
-  render(home);
-  if (S.unitId || (m && m[1]==='d')) setTab('text', false);
+  else if ((m = h.match(/^\/u\/(.+)$/)) && S.units.has(m[1])){ S.view = 'unit'; S.unitId = m[1]; S.docId = S.units.get(m[1]).document_id; ancestors(S.units.get(S.unitId)).forEach(a => S.expanded.add(a.id)); }
+  else if ((m = h.match(/^\/d\/(.+)$/)) && S.docs.has(m[1])){ S.view = 'doc'; S.docId = m[1]; }
+  else if ((m = h.match(/^\/hledat\/(.+)$/))){ S.view = 'search'; S.query = m[1]; if ($('#search').value.trim() !== S.query) $('#search').value = S.query; }
+  else S.view = ({'/dokumenty':'docs', '/trasy':'paths', '/pojmy':'terms', '/zalozky':'marks', '/novinky':'news'})[h] || 'home';
+  if (S.view !== 'search' && document.activeElement !== $('#search')) { $('#search').value = ''; S.query = ''; }
+  render();
+  setTab('text', false);
 }
 
 function setTab(t, scroll=true){
@@ -209,16 +212,28 @@ function setTab(t, scroll=true){
   if (scroll) window.scrollTo(0,0);
 }
 
-function render(home){
+function render(){
+  const v = S.view, reading = v === 'unit' || v === 'doc' || (v === 'path' && S.unitId);
+  document.querySelectorAll('.appnav [data-nav]').forEach(x => x.classList.toggle('on',
+    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news'})[v]));
+  $('#navMarks').textContent = S.me.marks.filter(m => !m.unit_id.startsWith('doc:')).length || '';
   renderNav();
-  if (S.path) renderStep();
-  else if (home) renderHome();
-  else if (S.unitId) renderUnit(S.units.get(S.unitId));
-  else renderDoc(S.docs.get(S.docId));
+  renderPathNav();
+  document.body.classList.toggle('no-ctx', !(v === 'unit' || (v === 'path' && S.unitId)));
+  if (v === 'path') renderStep();
+  else if (v === 'unit') renderUnit(S.units.get(S.unitId));
+  else if (v === 'doc') renderDoc(S.docs.get(S.docId));
+  else if (v === 'docs') renderDocs();
+  else if (v === 'paths') renderPaths();
+  else if (v === 'terms') renderTerms();
+  else if (v === 'marks') renderMarks();
+  else if (v === 'news') renderNews();
+  else if (v === 'search') renderSearch();
+  else renderHome();
   renderContext();
-  $('#panelText').scrollTop = 0;
+  $('#panelText').scrollTop = 0; window.scrollTo(0, 0);
   const cur = document.querySelector('.node a.current');
-  if (cur) cur.scrollIntoView({block:'nearest'});
+  if (cur && reading) cur.scrollIntoView({block:'nearest'});
 }
 
 /* ---------- Text formatting & search ---------- */
@@ -320,22 +335,34 @@ function snippet(text, q){
 }
 
 /* ---------- Left panel ---------- */
+/* Osnova otevřeného dokumentu pod položkou Dokumenty (s přepínačem jazyka a filtrem štítků). */
 function renderNav(){
-  const box = $('#navBody');
-  $('#navMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === S.navMode)));
-  $('#panelNav').classList.toggle('mode-trasy', S.navMode === 'trasy');
-  if (S.navMode === 'trasy' && S.query.length < 2) return renderPathList(box);
-  if (S.query.length >= 2) return renderResults(box);
-  const doc = S.docs.get(S.docId);
-  if (!doc){ box.innerHTML = ''; return; }
+  const box = $('#navDoc'), doc = S.docs.get(S.docId);
+  const show = doc && ['doc', 'unit', 'search'].includes(S.view);
+  box.classList.toggle('hidden', !show);
+  if (!show){ box.innerHTML = ''; return; }
+  const sib = groupDocs(doc);
+  const used = new Set(S.data.units.filter(u => u.document_id === doc.id).flatMap(u => u.tags || []));
+  if (S.role && !used.has(S.role)) S.role = '';
+  const tagOpts = (S.data.tag_groups || []).map(g => { const ts = (S.data.tags || []).filter(t => t.group_key === g.key && used.has(t.key));
+    return ts.length ? `<optgroup label="${esc(g.name)}">${ts.map(t => `<option value="${esc(t.key)}" ${t.key===S.role?'selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>` : ''; }).join('');
   const top = roleFilter(kids('doc:' + doc.id));
-  if (S.role && !top.length){ box.innerHTML = `<div class="nav-empty">V tomto dokumentu zatím nejsou ustanovení se štítkem „${esc(roleName(S.role))}“.</div>`; return; }
   const groups = doc.document_type === 'regulation'
     ? [['Články', top.filter(u => u.kind === 'article')], ['Přílohy', top.filter(u => u.kind === 'annex')], ['Ostatní', top.filter(u => !['article','annex'].includes(u.kind))]]
     : [['Obsah', top]];
-  box.innerHTML = groups.filter(g => g[1].length).map(([name, list]) => `<div class="nav-group">${esc(name)}</div>${tree(list)}`).join('');
+  box.innerHTML = `<div class="nd-head"><a href="#/d/${encodeURIComponent(doc.id)}" class="nd-title">${esc(docTitle(doc))}</a>
+    ${sib.length > 1 ? `<span class="langs" role="group" aria-label="Jazyk dokumentu">${sib.map(x => `<a class="lang ${x.id===doc.id?'on':''}" href="${langHref(x)}" title="${esc(LANG_NAMES[x.language]||x.language)}">${esc(x.language.toUpperCase())}</a>`).join('')}</span>` : ''}</div>
+    ${used.size ? `<label class="role-pick"><span>Jen:</span><select id="roleSelect" aria-label="Zobrazit jen ustanovení se štítkem"><option value="">Všechna ustanovení</option>${tagOpts}</select></label>` : ''}
+    ${S.role && !top.length ? `<div class="nav-empty">V tomto dokumentu nejsou ustanovení se štítkem „${esc(roleName(S.role))}“.</div>` : ''}
+    ${groups.filter(g => g[1].length).map(([name, list]) => `<div class="nav-group">${esc(name)}</div>${tree(list)}`).join('')}`;
   box.querySelectorAll('.caret').forEach(b => b.onclick = () => { const id=b.dataset.id; S.expanded.has(id) ? S.expanded.delete(id) : S.expanded.add(id); renderNav(); });
+  const rs = box.querySelector('#roleSelect');
+  if (rs) rs.onchange = () => { S.role = rs.value; try { localStorage.setItem('rq-stitek', S.role); } catch {} renderNav(); const u = S.units.get(S.unitId); if (u && S.view === 'unit') renderUnit(u); };
 }
+/* Jazykové verze téhož dokumentu; přepnutí jazyka vede na stejné ustanovení, pokud je otevřené. */
+function groupDocs(d){ return [...S.docs.values()].filter(x => (x.group_key || x.id) === (d.group_key || d.id)).sort((a, b) => (a.language === 'cs' ? 0 : 1) - (b.language === 'cs' ? 0 : 1)); }
+function langHref(x){ const u = S.units.get(S.unitId); if (u && u.document_id !== x.id){ const e = equivalentIn(u, x.id); if (e) return '#/u/' + encodeURIComponent(e.id); } return '#/d/' + encodeURIComponent(x.id); }
+const docTitle = d => d.short_title || d.family;
 /* Pohled podle štítku: ustanovení se štítkem, jejich nadřazené části a celé podřazené části. */
 const hasRole = u => (u.tags || []).includes(S.role);
 function roleHit(u){ if (hasRole(u)) return true; return kids(u.id).some(roleHit); }
@@ -347,10 +374,11 @@ function tree(list){
     const marks = outlineMarks(u);
     const heading = headingOf(u) ? `<span class="h">${esc(trim(headingOf(u),60))}</span>` : '';
     return `<li><div class="node">${ch.length ? `<button class="caret" data-id="${esc(u.id)}" aria-label="${open?'Sbalit':'Rozbalit'}" aria-expanded="${open}">${open?'▼':'▶'}</button>` : '<span class="caret-space"></span>'}
-      <a href="#/u/${encodeURIComponent(u.id)}" class="${u.id===S.unitId?'current':''} ${u.navigation_only?'locked':''} ${S.role&&!hasRole(u)&&!inRoleBranch(u)?'role-dim':''}">${esc(u.label)}${marks}${heading}</a></div>
+      <a href="#/u/${encodeURIComponent(u.id)}" class="${u.id===S.unitId?'current':''} ${u.navigation_only?'locked':''} ${S.role&&!hasRole(u)&&!inRoleBranch(u)?'role-dim':''}">${esc(u.label)}${marks}${isNew(u)?`<span class="newb" title="${esc(S.newUnits.get(u.id) || 'změna v poslední aktualizaci')}">NOVÉ</span>`:''}${heading}</a></div>
       ${ch.length && open ? tree(ch) : ''}</li>`;
   }).join('')}</ul>`;
 }
+function isNew(u){ if (S.newUnits.has(u.id)) return true; return kids(u.id).some(isNew); }
 function outlineMarks(u){
   const ns = S.notes.get(u.id) || [], rs = S.rels.get(u.id) || [];
   const out = [];
@@ -367,17 +395,23 @@ function isGuidanceLink(u, r){
 }
 const trim = (s,n) => s.length > n ? s.slice(0,n-1) + '…' : s;
 
-function renderResults(box){
-  const q = S.query, ts = terms(q);
+function renderSearch(){
+  const q = S.query, ts = terms(q), box = $('#panelText');
   const hits = ts.length ? S.data.units.filter(u => { if (u.navigation_only) return false; const f = fold([u.label,u.heading,u.locator,u.body].join(' ')); return ts.every(t => f.includes(t)); }) : [];
-  // Přednost mají nejmenší části (odstavec před celým článkem).
+  const nhits = ts.length ? S.data.comments.filter(c => !['key',...HL].includes(c.kind) && ts.every(t => fold(c.body).includes(t))) : [];
+  const termHits = ts.length ? S.terms.filter(t => ts.every(x => fold(t.name).includes(x))) : [];
   hits.sort((a,b) => (a.document_id===S.docId?0:1)-(b.document_id===S.docId?0:1) || (kids(a.id).length?1:0)-(kids(b.id).length?1:0));
   const shown = hits.slice(0, 80);
-  $('#panelNav').scrollTop = 0;
-  box.innerHTML = `<div class="results-head">${hits.length ? `Nalezeno ${hits.length}${hits.length>80?' (zobrazeno 80)':''}` : 'Nic nenalezeno. Zkuste jiný výraz nebo jiný jazyk dokumentu.'}</div>` +
-    shown.map(u => { const d=S.docs.get(u.document_id);
-      return `<a class="result" href="#/u/${encodeURIComponent(u.id)}" data-hl="1"><strong>${esc(u.label)}${headingOf(u)?' – '+esc(trim(headingOf(u),50)):''}</strong><small>${esc(docShort(d))}${ancestors(u).length?' › '+esc(ancestors(u).map(a=>a.label).join(' › ')):''}</small><small>${snippet(u.body,q)}</small></a>`; }).join('');
-  box.querySelectorAll('.result').forEach(a => a.addEventListener('click', e => { S.highlight = S.query; if (a.getAttribute('href') === location.hash){ e.preventDefault(); route(); } }));
+  box.innerHTML = `<div class="eyebrow">Hledání</div><h1>„${esc(q)}“</h1>
+    <p class="lead">${hits.length ? `V textech: ${hits.length}${hits.length > 80 ? ' (zobrazeno 80)' : ''}` : 'V textech nic nenalezeno.'}${nhits.length ? ` · ve výkladech: ${nhits.length}` : ''}${termHits.length ? ` · pojmy: ${termHits.length}` : ''}. Hledá se ve všech dokumentech; zkuste i jiný jazyk.</p>
+    ${termHits.length ? `<h2 class="block-title">Pojmy</h2><div class="results">${termHits.slice(0, 8).map(t => `<a class="result" href="#/pojmy" data-term="${esc(t.name)}"><strong>${esc(t.name)}</strong><small>definice · ${esc(LANG_NAMES[t.language]||t.language)}</small></a>`).join('')}</div>` : ''}
+    ${shown.length ? `<h2 class="block-title">V textech</h2><div class="results">${shown.map(u => { const d=S.docs.get(u.document_id);
+      return `<a class="result" href="#/u/${encodeURIComponent(u.id)}" data-hl="1"><strong>${esc(u.label)}${headingOf(u)?' – '+esc(trim(headingOf(u),60)):''}</strong><small>${esc(docShort(d))}${ancestors(u).length?' › '+esc(ancestors(u).map(a=>a.label).join(' › ')):''}</small><small class="snip">${snippet(u.body,q)}</small></a>`; }).join('')}</div>` : ''}
+    ${nhits.length ? `<h2 class="block-title">Ve výkladech redakce</h2><div class="results">${nhits.slice(0, 30).map(c => { const u = S.units.get(c.unit_id); if (!u) return ''; const d = S.docs.get(u.document_id);
+      return `<a class="result" href="#/u/${encodeURIComponent(u.id)}"><strong>${esc(NOTE_NAMES[c.kind]||'Výklad')} · ${esc(u.label)}</strong><small>${esc(docShort(d))}</small><small class="snip">${snippet(c.body, q)}</small></a>`; }).join('')}</div>` : ''}`;
+  box.querySelectorAll('.result[data-hl]').forEach(a => a.addEventListener('click', () => { S.highlight = S.query; }));
+  box.querySelectorAll('.result[data-term]').forEach(a => a.addEventListener('click', () => { S.termQuery = a.dataset.term; }));
+  document.title = `Hledání: ${q} · RegulaQuest`;
 }
 
 /* ---------- Center panel ---------- */
@@ -395,6 +429,7 @@ function renderUnit(u){
   const status = S.draft && u.text_status !== 'verified' && !u.navigation_only ? ' <span class="chip warn">Neověřený text</span>' : '';
   let html = crumbs(u) + `<div class="title-row"><h1>${esc(u.label)}${status}${headingOf(u) ? `<span class="heading">${esc(headingOf(u))}</span>` : ''}</h1>
     ${cp ? `<a class="lang-btn" href="#/u/${encodeURIComponent(cp.unit.id)}" title="Stejné ustanovení v jazyce ${esc(LANG_NAMES[cp.doc.language]||cp.doc.language)}">${esc(cp.doc.language.toUpperCase())}</a>` : ''}</div>`;
+  html += markBox(u);
   const known = k => S.tagNames.has(k);
   const own = (u.tags || []).filter(known), inh = own.length ? [] : [...new Set(ancestors(u).flatMap(a => a.tags || []))].filter(known);
   if (own.length || inh.length) html += `<div class="roles-row"><span>Štítky:</span>${(own.length ? own : inh).map(k => `<span class="role-chip${k===S.role?' on':''}">${esc(roleName(k))}</span>`).join('')}${inh.length ? '<small>(podle nadřazené části)</small>' : ''}</div>`;
@@ -420,7 +455,42 @@ function renderUnit(u){
     if (el) requestAnimationFrame(() => el.scrollIntoView({block:'center', behavior:'smooth'}));
   }
   resolveFigures();
+  bindMarkBox(u);
+  savePosition(u);
   document.title = `${u.label} · ${docShort(d)} · RegulaQuest`;
+}
+
+/* ---------- Záložky a pozice (u účtu) ---------- */
+const markOf = id => S.me.marks.find(m => m.unit_id === id);
+function markBox(u){
+  const m = markOf(u.id);
+  return `<div class="markbox" id="markBox">${m
+    ? `<span class="marked">${ICON_MARK(true)} V záložkách${m.label ? `: <strong>${esc(m.label)}</strong>` : ''}</span><button type="button" class="mini" data-mk="edit">Upravit popisek</button><button type="button" class="mini" data-mk="del">Odebrat</button>`
+    : `<button type="button" class="mini" data-mk="add">${ICON_MARK(false)} Přidat záložku</button>`}</div>`;
+}
+const ICON_MARK = on => `<svg width="14" height="14" viewBox="0 0 24 24" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>`;
+function bindMarkBox(u){
+  const box = $('#markBox'); if (!box) return;
+  const m = markOf(u.id);
+  const form = () => { box.innerHTML = `<label class="sr" for="mkLabel">Popisek záložky</label><input id="mkLabel" maxlength="80" placeholder="Popisek, např. PMCF u třídy I" value="${esc(m?.label || headingOf(u) || '')}"><button type="button" class="mini acc" id="mkSave">Uložit záložku</button><button type="button" class="mini" id="mkCancel">Zrušit</button>`;
+    const inp = box.querySelector('#mkLabel'); inp.focus(); inp.select();
+    const save = async () => { const id = await meCall('rq_save_mark', { p_unit_id: u.id, p_label: inp.value });
+      if (id != null){ const ex = markOf(u.id); if (ex) ex.label = inp.value.trim(); else S.me.marks.unshift({ id, unit_id: u.id, label: inp.value.trim(), created_at: new Date().toISOString() });
+        toast('Záložka uložena.'); refreshMarkBox(u); } };
+    box.querySelector('#mkSave').onclick = save; inp.onkeydown = e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') refreshMarkBox(u); };
+    box.querySelector('#mkCancel').onclick = () => refreshMarkBox(u); };
+  box.querySelectorAll('[data-mk]').forEach(b => b.onclick = async () => {
+    if (b.dataset.mk === 'del'){ if (await meCall('rq_delete_mark', { p_id: m.id }) !== null){ S.me.marks = S.me.marks.filter(x => x.id !== m.id); toast('Záložka odebrána.'); refreshMarkBox(u); } }
+    else form(); });
+}
+function refreshMarkBox(u){ const box = $('#markBox'); if (!box) return; box.outerHTML = markBox(u); bindMarkBox(u); $('#navMarks').textContent = S.me.marks.filter(m => !m.unit_id.startsWith('doc:')).length || ''; }
+let posTimer;
+function savePosition(u){
+  const d = S.docs.get(u.document_id), g = d.group_key || d.id;
+  const ex = S.me.positions.find(p => p.doc_group === g);
+  if (ex){ ex.unit_id = u.id; ex.updated_at = new Date().toISOString(); } else S.me.positions.unshift({ doc_group: g, unit_id: u.id, updated_at: new Date().toISOString() });
+  S.me.positions.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  clearTimeout(posTimer); posTimer = setTimeout(() => { RQ.client.rpc('rq_set_position', { p_doc_group: g, p_unit_id: u.id }).then(() => {}, () => {}); }, 1500);
 }
 
 /* Poznámky ukotvené k textu: podtržení + ikonka; klepnutím se poznámka rozbalí přímo pod řádkem. */
@@ -508,26 +578,56 @@ function pager(u){
 function renderDoc(d){
   if (!d){ renderHome(); return; }
   const units = S.data.units.filter(u => u.document_id === d.id && !u.navigation_only);
-  const withNotes = units.filter(u => S.notes.has(u.id));
-  $('#panelText').innerHTML = `<div class="crumbs">Dokument</div><h1>${esc(d.title)}</h1>
-    <p>${esc(d.family)} · ${esc(LANG_NAMES[d.language]||d.language)}${d.version?' · '+esc(versionText(d.version)):''}</p>
-    <div class="note">V aplikaci je zatím <strong>${units.length}</strong> ověřených částí tohoto dokumentu${S.draft?' (v pracovním náhledu i neověřené)':''}. Vyberte část v obsahu vlevo nebo použijte hledání.</div>
-    ${withNotes.length ? `<div class="subparts"><h2>Části s odborným výkladem</h2><ul class="list-plain">${withNotes.map(u => `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(u.label)}<small>${esc(ancestors(u).map(a=>a.label).join(' › '))}</small></a></li>`).join('')}</ul></div>` : ''}
+  const withNotes = units.filter(u => (S.notes.get(u.id) || []).some(c => !['key', ...HL].includes(c.kind)));
+  const upd = (S.data.doc_updated || {})[d.id];
+  const pos = S.me.positions.find(p => p.doc_group === (d.group_key || d.id));
+  const pu = pos && S.units.get(pos.unit_id);
+  $('#panelText').innerHTML = `<div class="eyebrow">${esc(DOC_KIND[d.document_type] || 'Dokument')} · ${esc(LANG_NAMES[d.language]||d.language)}</div><h1>${esc(docTitle(d))}</h1>
+    <p class="lead">${esc(d.title)}${d.version?' · '+esc(versionText(d.version)):''}</p>
+    <div class="facts">${upd ? `<span class="fact">Aktualizováno ${esc(fmtDate(upd))}</span>` : ''}<span class="fact">${units.length} ověřených částí${S.draft?' (v náhledu i neověřené)':''}</span>${withNotes.length ? `<span class="fact">${withNotes.length} částí s výkladem</span>` : ''}</div>
+    ${pu && pu.document_id === d.id ? `<p><a class="btn acc" href="#/u/${encodeURIComponent(pu.id)}">Pokračovat: ${esc(pu.label)}</a></p>` : ''}
+    <div class="note">Vyberte část v osnově vlevo nebo použijte hledání nahoře.</div>
+    ${withNotes.length ? `<div class="subparts"><h2>Části s odborným výkladem</h2><ul class="list-plain">${withNotes.slice(0, 40).map(u => `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(u.label)}${headingOf(u)?' – '+esc(trim(headingOf(u),60)):''}<small>${esc(ancestors(u).map(a=>a.label).join(' › '))}</small></a></li>`).join('')}</ul></div>` : ''}
     ${(d.topics||[]).length ? `<div class="subparts"><h2>Témata</h2><div class="chips">${d.topics.map(t => `<span class="topic">${esc(t)}</span>`).join('')}</div></div>` : ''}
     ${sourceLine(d)}`;
-  document.title = `${docShort(d)} · RegulaQuest`;
+  document.title = `${docTitle(d)} · RegulaQuest`;
 }
 
 /* ---------- Trasy ---------- */
-function doneMap(){ try { return JSON.parse(localStorage.getItem('rq-trasy-hotovo')) || {}; } catch { return {}; } }
-function markDone(pid, sid){ const m = doneMap(); m[pid] = [...new Set([...(m[pid] || []), sid])]; try { localStorage.setItem('rq-trasy-hotovo', JSON.stringify(m)); } catch {} }
-function progress(p){ const d = new Set(doneMap()[p.id] || []); return p.steps.filter(s => d.has(s.id)).length; }
+function doneSet(pid){
+  const out = new Set(S.me.progress.filter(x => x.path_id === pid).map(x => x.step_id));
+  try { (JSON.parse(localStorage.getItem('rq-trasy-hotovo')) || {})[pid]?.forEach(x => out.add(x)); } catch {}
+  return out;
+}
+function doneMap(){ const m = {}; S.paths.forEach(p => m[p.id] = [...doneSet(p.id)]); return m; }
+function markDone(pid, sid){
+  if (doneSet(pid).has(sid)) return;
+  S.me.progress.push({ path_id: pid, step_id: sid });
+  RQ.client.rpc('rq_step_done', { p_path_id: pid, p_step_id: sid }).then(() => {}, () => {});
+}
+function progress(p){ const d = doneSet(p.id); return p.steps.filter(s => d.has(s.id)).length; }
 function stepLabel(s){ const u = s.unit_id && S.units.get(s.unit_id); return s.title || (u ? `${docShort(S.docs.get(u.document_id))} › ${u.label}${headingOf(u) ? ' – ' + trim(headingOf(u), 50) : ''}` : 'Text'); }
-function renderPathList(box){
-  box.innerHTML = `<div class="nav-group">Trasy</div>` + S.paths.map(p => { const k = progress(p), n = p.steps.length;
-    return `<a class="path-card${S.path?.p.id===p.id?' current':''}" href="#/t/${encodeURIComponent(p.id)}"><strong>${esc(p.title)}</strong>
-      <span>${n} ${n===1?'krok':n<5?'kroky':'kroků'}${k ? ` · prošli jste ${k}` : ''}</span><i class="pbar"><b style="width:${Math.round(k/n*100)}%"></b></i></a>
-      ${S.path?.p.id===p.id ? `<ol class="path-steps">${p.steps.map((s, i) => `<li class="${S.path.n===i+1?'current':''} ${(doneMap()[p.id]||[]).includes(s.id)?'done':''}"><a href="#/t/${encodeURIComponent(p.id)}/${i+1}">${esc(stepLabel(s))}</a></li>`).join('')}</ol>` : ''}`; }).join('');
+const pl = (n, a, b, c) => n ? `${n} ${n === 1 ? a : n >= 2 && n <= 4 ? b : c}` : '';
+const kroku = n => `${n} ${n===1?'krok':n>=2&&n<=4?'kroky':'kroků'}`;
+/* Kroky otevřené trasy pod položkou Trasy v levém panelu. */
+function renderPathNav(){
+  const box = $('#navPath'), P = S.path?.p;
+  box.classList.toggle('hidden', !P);
+  if (!P){ box.innerHTML = ''; return; }
+  const done = doneSet(P.id);
+  box.innerHTML = `<div class="nd-head"><a class="nd-title" href="#/t/${encodeURIComponent(P.id)}">${esc(P.title)}</a></div>
+    <ol class="path-steps">${P.steps.map((st, i) => `<li class="${S.path.n===i+1?'current':''} ${done.has(st.id)?'done':''}"><a href="#/t/${encodeURIComponent(P.id)}/${i+1}">${esc(stepLabel(st))}</a></li>`).join('')}</ol>`;
+}
+function pathCard(p){
+  const k = progress(p), n = p.steps.length;
+  return `<a class="card path" href="#/t/${encodeURIComponent(p.id)}${k && k < n ? '/' + Math.min(n, k + 1) : ''}"><strong>${esc(p.title)}</strong><span>${esc(trim(p.description || '', 120))}</span>
+    <i class="pbar"><b style="width:${Math.round(k/n*100)}%"></b></i><em>${k === n ? 'Hotovo ✓' : k ? `Prošli jste ${k} z ${n}` : kroku(n)}</em></a>`;
+}
+function renderPaths(){
+  $('#panelText').innerHTML = `<div class="eyebrow">Trasy</div><h1>Trasy</h1>
+    <p class="lead">Průchody několika místy předpisů a metodik k jednomu tématu, s komentářem redakce ke každému kroku. Prošlé kroky se ukládají k vašemu účtu.</p>
+    ${S.paths.length ? `<div class="cards">${S.paths.map(pathCard).join('')}</div>` : '<div class="empty">Redakce zatím nezveřejnila žádnou trasu.</div>'}`;
+  document.title = 'Trasy · RegulaQuest';
 }
 function renderStep(){
   const { p, n } = S.path, panel = $('#panelText'), st = n ? p.steps[n-1] : null;
@@ -558,19 +658,130 @@ function renderStep(){
   }
   document.title = `${p.title} – krok ${n} · RegulaQuest`;
 }
+/* ---------- Přehled a stránky ---------- */
+function docGroups(){
+  const m = new Map();
+  S.data.documents.forEach(d => { const k = d.group_key || d.id; if (!m.has(k)) m.set(k, []); m.get(k).push(d); });
+  return [...m.entries()].map(([key, ds]) => { ds.sort((a, b) => (a.language === 'cs' ? 0 : 1) - (b.language === 'cs' ? 0 : 1));
+    return { key, docs: ds, main: ds[0], featured: ds.some(d => d.featured), sort: Math.min(...ds.map(d => d.featured_sort ?? 100)) }; });
+}
+const docUpdated = g => g.docs.map(d => (S.data.doc_updated || {})[d.id]).filter(Boolean).sort().pop();
+function docCard(g, label){
+  const n = g.docs.reduce((a, d) => a + S.data.units.filter(u => u.document_id === d.id && !u.navigation_only).length, 0);
+  const ids = new Set(S.data.units.filter(u => g.docs.some(d => d.id === u.document_id)).map(u => u.id));
+  const notes = S.data.comments.filter(c => ids.has(c.unit_id) && !['key', ...HL].includes(c.kind)).length;
+  const pinned = S.me.marks.some(m => m.unit_id === 'doc:' + g.key), upd = docUpdated(g);
+  return `<div class="card doccard"><div class="dc-top"><span class="kind">${esc(label || DOC_KIND[g.main.document_type] || 'Dokument')}</span>
+      <button type="button" class="pin${pinned ? ' on' : ''}" data-pin="${esc(g.key)}" aria-pressed="${pinned}" title="${pinned ? 'Odepnout z Přehledu' : 'Připnout na Přehled'}">${pinned ? '★' : '☆'}</button></div>
+    <a class="dc-title" href="#/d/${encodeURIComponent(g.main.id)}">${esc(docTitle(g.main))}</a>
+    <div class="muted">${esc(trim(g.main.title, 120))}</div>
+    <div class="facts">${upd ? `<span class="fact">Aktualizováno ${esc(fmtDate(upd))}</span>` : ''}<span class="fact">${n} ${n===1?'část':n<5?'části':'částí'}</span>${notes ? `<span class="fact">${notes} výkladů</span>` : ''}</div>
+    <div class="dc-langs">${g.docs.map(d => `<a class="btn small${d === g.main ? ' acc' : ''}" href="#/d/${encodeURIComponent(d.id)}">${g.docs.length > 1 ? esc(LANG_NAMES[d.language] || d.language) : 'Otevřít'}</a>`).join('')}</div></div>`;
+}
+const DOC_KIND = { regulation:'Nařízení', directive:'Směrnice', law:'Zákon', decree:'Vyhláška', guidance:'Metodika', standard:'Norma', other:'Dokument' };
+function bindPins(box){
+  box.querySelectorAll('[data-pin]').forEach(b => b.onclick = async () => {
+    const key = 'doc:' + b.dataset.pin, ex = S.me.marks.find(m => m.unit_id === key);
+    if (ex){ if (await meCall('rq_delete_mark', { p_id: ex.id }) !== null) S.me.marks = S.me.marks.filter(m => m !== ex); }
+    else { const id = await meCall('rq_save_mark', { p_unit_id: key, p_label: '' }); if (id != null) S.me.marks.unshift({ id, unit_id: key, label: '', created_at: new Date().toISOString() }); }
+    render();
+  });
+}
 function renderHome(){
-  const docs = S.data.documents;
-  const annotated = S.data.units.filter(u => S.notes.has(u.id));
-  $('#panelText').innerHTML = `<div class="hero"><div class="kicker">Výuková čtečka · FBMI ČVUT</div>
-    <h1>Evropská regulace zdravotnických prostředků</h1>
-    <p>Ověřené texty nařízení MDR a metodik MDCG, doplněné odbornými výklady a vazbami mezi ustanoveními. Aplikace je studijní pomůckou, ne oficiálním zdrojem práva.</p>
-    <div class="cards">${docs.map(d => { const n = S.data.units.filter(u => u.document_id===d.id && !u.navigation_only).length;
-      return `<a class="card" href="#/d/${encodeURIComponent(d.id)}"><strong>${esc(docShort(d))}</strong><span>${esc(d.title)}</span><em>${n} ${n===1?'část':n<5?'části':'částí'} k dispozici →</em></a>`; }).join('')}</div>
-    ${S.paths.length ? `<h2 class="block-title">Trasy</h2><div class="cards">${S.paths.map(p => { const k = progress(p);
-      return `<a class="card path" href="#/t/${encodeURIComponent(p.id)}"><strong>⇢ ${esc(p.title)}</strong><span>${esc(trim(p.description || '', 140))}</span><em>${p.steps.length} ${p.steps.length===1?'krok':p.steps.length<5?'kroky':'kroků'}${k ? ` · prošli jste ${k}` : ''} →</em></a>`; }).join('')}</div>` : ''}
-    ${annotated.length ? `<h2 class="block-title">S odborným výkladem</h2><ul class="list-plain">${annotated.map(u => { const d=S.docs.get(u.document_id); return `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(docShort(d))} › ${esc(ancestors(u).map(a=>a.label).concat(u.label).join(' › '))}<small>${esc(trim(S.notes.get(u.id)[0].body.replace(/\s+/g,' '),140))}</small></a></li>`; }).join('')}</ul>` : ''}
-    <div class="source">${esc(S.data.notice||'')} Data k ${esc(fmtDate(S.data.published_at))}.</div></div>`;
+  const gs = docGroups(), last = (S.data.history || [])[0];
+  const pinned = gs.filter(g => S.me.marks.some(m => m.unit_id === 'doc:' + g.key));
+  const featured = gs.filter(g => g.featured && !pinned.includes(g)).sort((a, b) => a.sort - b.sort);
+  const recentKeys = S.me.positions.map(p => p.doc_group);
+  const recent = recentKeys.map(k => gs.find(g => g.key === k)).filter(g => g && !pinned.includes(g) && !featured.includes(g));
+  let cards = [...pinned.map(g => [g, 'Připnuté']), ...featured.map(g => [g, 'Doporučené']), ...recent.map(g => [g, 'Naposledy otevřené'])].slice(0, 6);
+  if (!cards.length) cards = gs.slice(0, 6).map(g => [g, '']);
+  const pos = S.me.positions.map(p => S.units.get(p.unit_id)).find(Boolean);
+  const openPath = S.paths.find(p => { const k = progress(p); return k && k < p.steps.length; });
+  const sm = last?.changes?.summary || {};
+  const news = last && !last.changes?.first ? [pl(sm.comments_new, 'nový výklad', 'nové výklady', 'nových výkladů'), pl(sm.relations_new, 'nová vazba', 'nové vazby', 'nových vazeb'), pl(sm.units_changed, 'změněné ustanovení', 'změněná ustanovení', 'změněných ustanovení'), pl(sm.units_new, 'nově zveřejněná část', 'nově zveřejněné části', 'nově zveřejněných částí'), pl(sm.paths_new, 'nová trasa', 'nové trasy', 'nových tras')].filter(Boolean).join(', ') : '';
+  const marks = S.me.marks.filter(m => !m.unit_id.startsWith('doc:') && S.units.has(m.unit_id)).slice(0, 4);
+  $('#panelText').innerHTML = `<div class="home">
+    <div class="eyebrow">Výuková čtečka · FBMI ČVUT</div>
+    <h1>Regulace zdravotnických prostředků</h1>
+    <p class="lead">Ověřené texty předpisů a metodik s odbornými výklady redakce, vazbami mezi ustanoveními a trasami k jednotlivým tématům. Studijní pomůcka, ne oficiální zdroj práva.</p>
+    <div class="status"><span class="sdot"></span>Obsah aktualizován <strong>${esc(fmtDate(S.data.published_at))}</strong>${news ? ` · ${esc(news)}` : ''} <a href="#/novinky">Co je nového</a></div>
+    ${pos || openPath ? `<div class="grid2">
+      ${pos ? `<div class="card"><div class="kind">Pokračovat ve čtení</div><h3>${esc(docShort(S.docs.get(pos.document_id)))} · ${esc(pos.label)}</h3><div class="muted">${esc(headingOf(pos) || ancestors(pos).map(a => a.label).join(' › '))}</div><a class="btn acc" href="#/u/${encodeURIComponent(pos.id)}">Pokračovat</a></div>` : ''}
+      ${openPath ? `<div class="card"><div class="kind">Rozpracovaná trasa</div><h3>${esc(openPath.title)}</h3><i class="pbar"><b style="width:${Math.round(progress(openPath)/openPath.steps.length*100)}%"></b></i><div class="muted">Prošli jste ${progress(openPath)} z ${openPath.steps.length}</div><a class="btn" href="#/t/${encodeURIComponent(openPath.id)}/${Math.min(openPath.steps.length, progress(openPath) + 1)}">Pokračovat v trase</a></div>` : ''}
+    </div>` : ''}
+    <div class="sec"><h2>Dokumenty</h2><a href="#/dokumenty">Všechny dokumenty (${gs.length})</a></div>
+    <div class="cards">${cards.map(([g, l]) => docCard(g, l)).join('')}</div>
+    ${S.paths.length ? `<div class="sec"><h2>Trasy</h2><a href="#/trasy">Všechny trasy</a></div><div class="cards">${S.paths.slice(0, 3).map(pathCard).join('')}</div>` : ''}
+    ${marks.length ? `<div class="sec"><h2>Moje záložky</h2><a href="#/zalozky">Všechny</a></div><div class="card marklist">${marks.map(markRow).join('')}</div>` : ''}
+    <div class="source">${esc(S.data.notice||'')}</div></div>`;
+  bindPins($('#panelText'));
   document.title = 'RegulaQuest · Čtečka regulace zdravotnických prostředků';
+}
+function renderDocs(){
+  const q = fold(S.docQuery), f = S.docFilter;
+  const gs = docGroups().filter(g => (f === 'all' || (f === 'guide' ? g.main.document_type === 'guidance' : g.main.document_type !== 'guidance'))
+    && (!q || g.docs.some(d => fold([d.title, d.family, d.short_title, ...(d.topics || [])].join(' ')).includes(q))))
+    .sort((a, b) => (a.main.document_type === 'guidance' ? 1 : 0) - (b.main.document_type === 'guidance' ? 1 : 0) || docTitle(a.main).localeCompare(docTitle(b.main), 'cs'));
+  $('#panelText').innerHTML = `<div class="eyebrow">Dokumenty</div><h1>Všechny dokumenty</h1>
+    <p class="lead">Předpisy a metodiky s ověřeným textem a výklady. Hvězdičkou si dokument připnete na Přehled.</p>
+    <div class="toolbar"><input type="search" id="docQ" placeholder="Hledat dokument (název, zkratka, téma)…" aria-label="Hledat dokument" value="${esc(S.docQuery)}">
+      <span class="langs" role="group" aria-label="Druh">${[['all','Vše'],['law','Předpisy'],['guide','Metodiky']].map(([k,l]) => `<button type="button" class="lang ${f===k?'on':''}" data-f="${k}">${l}</button>`).join('')}</span></div>
+    ${gs.length ? `<div class="cards">${gs.map(g => docCard(g)).join('')}</div>` : '<div class="empty">Žádný dokument neodpovídá hledání.</div>'}`;
+  const qi = $('#docQ'); qi.oninput = () => { S.docQuery = qi.value; const pos = qi.selectionStart; renderDocs(); const n = $('#docQ'); n.focus(); n.setSelectionRange(pos, pos); };
+  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.docFilter = b.dataset.f; renderDocs(); });
+  bindPins($('#panelText'));
+  document.title = 'Dokumenty · RegulaQuest';
+}
+function markRow(m){
+  const u = S.units.get(m.unit_id); if (!u) return '';
+  const d = S.docs.get(u.document_id);
+  return `<div class="mk">${ICON_MARK(true)}<a href="#/u/${encodeURIComponent(u.id)}"><strong>${esc(m.label || headingOf(u) || u.label)}</strong><span>${esc(docShort(d))} · ${esc(ancestors(u).map(a => a.label).concat(u.label).join(' › '))}</span></a>
+    <button type="button" class="mini" data-del-mark="${m.id}" aria-label="Odebrat záložku">Odebrat</button></div>`;
+}
+function renderMarks(){
+  const ms = S.me.marks.filter(m => !m.unit_id.startsWith('doc:'));
+  const ok = ms.filter(m => S.units.has(m.unit_id)), gone = ms.length - ok.length;
+  $('#panelText').innerHTML = `<div class="eyebrow">Záložky</div><h1>Moje záložky</h1>
+    <p class="lead">Uložené k vašemu účtu – uvidíte je na počítači i na telefonu. Vidíte je jen vy. Záložku přidáte tlačítkem „Přidat záložku“ u ustanovení.</p>
+    ${ok.length ? `<div class="card marklist">${ok.map(markRow).join('')}</div>` : '<div class="empty">Zatím nemáte žádnou záložku.</div>'}
+    ${gone ? `<p class="muted">${gone} záložek míří na ustanovení, které teď ve čtečce není (např. po aktualizaci obsahu).</p>` : ''}`;
+  document.querySelectorAll('[data-del-mark]').forEach(b => b.onclick = async () => { const id = +b.dataset.delMark;
+    if (await meCall('rq_delete_mark', { p_id: id }) !== null){ S.me.marks = S.me.marks.filter(m => m.id !== id); render(); } });
+  document.title = 'Záložky · RegulaQuest';
+}
+function renderTerms(){
+  const q = fold(S.termQuery);
+  const byLang = {}; S.terms.forEach(t => (byLang[t.language] = byLang[t.language] || []).push(t));
+  const cs = (byLang.cs || []).slice().sort((a, b) => a.number - b.number);
+  const twin = t => (byLang[t.language === 'cs' ? 'en' : 'cs'] || []).find(x => x.number === t.number && S.docs.get(S.units.get(x.unit_id)?.document_id)?.group_key === S.docs.get(S.units.get(t.unit_id)?.document_id)?.group_key);
+  const base = cs.length ? cs : (byLang.en || []);
+  const rows = base.map(t => ({ t, o: twin(t) })).filter(({ t, o }) => !q || fold(t.name + ' ' + (o?.name || '')).includes(q));
+  const def = t => { const u = S.units.get(t.unit_id); return u ? RQNotes.definitionText(bodyOf(u), t.number) : ''; };
+  $('#panelText').innerHTML = `<div class="eyebrow">Pojmy</div><h1>Slovník pojmů</h1>
+    <p class="lead">Definice z definičních článků (např. čl. 2 MDR) česky a anglicky. V textech jsou tyto pojmy podtržené – klepnutím zobrazíte definici.</p>
+    <div class="toolbar"><input type="search" id="termQ" placeholder="Hledat pojem (česky i anglicky)…" aria-label="Hledat pojem" value="${esc(S.termQuery)}"></div>
+    ${rows.length ? `<div class="card terms">${rows.map(({ t, o }) => { const u = S.units.get(t.unit_id);
+      return `<div class="trow"><div><strong>${esc(t.name)}</strong>${o ? `<div class="muted">${esc(o.language.toUpperCase())}: ${esc(o.name)}</div>` : ''}<div class="muted">${u ? `<a href="#/u/${encodeURIComponent(u.id)}">${esc(docShort(S.docs.get(u.document_id)))} · ${esc(u.label)}, bod ${t.number}</a>` : ''}</div></div><p>${esc(trim(def(t).replace(/^\(?\d+\)\s*/, ''), 420))}</p></div>`; }).join('')}</div>`
+      : `<div class="empty">${S.terms.length ? 'Žádný pojem neodpovídá hledání.' : 'Redakce zatím nezveřejnila slovník pojmů.'}</div>`}`;
+  const qi = $('#termQ'); qi.oninput = () => { S.termQuery = qi.value; const pos = qi.selectionStart; renderTerms(); const n = $('#termQ'); n.focus(); n.setSelectionRange(pos, pos); };
+  document.title = 'Pojmy · RegulaQuest';
+}
+function renderNews(){
+  const hist = (S.data.history || []).filter(h => !h.changes?.first || h.note);
+  if (hist[0]) try { localStorage.setItem('rq-novinky-videno', String(S.data.history[0].id)); $('#navNews').classList.add('hidden'); } catch {}
+  const pill = (n, a, b, c) => n ? `<span class="pill">+${pl(n, a, b, c)}</span>` : '';
+  $('#panelText').innerHTML = `<div class="eyebrow">Co je nového</div><h1>Aktualizace obsahu</h1>
+    <p class="lead">Co redakce doplnila nebo změnila. Změněná ustanovení mají v osnově dva týdny značku NOVÉ.</p>
+    ${hist.length ? hist.map((h, i) => { const c = h.changes || {}, sm = c.summary || {};
+      const items = (Array.isArray(c.items) ? c.items : []).filter(x => S.units.has(x.unit_id));
+      return `<div class="news${i ? ' old' : ''}"><h3>${esc(fmtDate(h.published_at))}</h3>
+        ${h.note ? `<div class="pb-note">${plain(h.note)}</div>` : ''}
+        ${c.first ? '<div class="muted">První zveřejnění obsahu.</div>' : `<div class="pills">${pill(sm.comments_new,'nový výklad','nové výklady','nových výkladů')}${pill(sm.relations_new,'nová vazba','nové vazby','nových vazeb')}${pill(sm.units_new,'nově zveřejněná část','nově zveřejněné části','nově zveřejněných částí')}${pill(sm.units_changed,'změněné ustanovení','změněná ustanovení','změněných ustanovení')}${pill(sm.paths_new,'nová trasa','nové trasy','nových tras')}</div>`}
+        ${(c.paths_new || []).length ? `<div class="muted">Nové trasy: ${c.paths_new.map(p => S.paths.some(x => x.id === p.id) ? `<a href="#/t/${encodeURIComponent(p.id)}">${esc(p.title)}</a>` : esc(p.title)).join(', ')}</div>` : ''}
+        ${items.length ? `<ul>${items.slice(0, 30).map(x => { const u = S.units.get(x.unit_id), d = S.docs.get(u.document_id);
+          return `<li><a href="#/u/${encodeURIComponent(u.id)}">${esc(docShort(d))} · ${esc(ancestors(u).map(a => a.label).concat(u.label).join(' › '))}</a> – ${esc(x.what)}</li>`; }).join('')}</ul>${items.length > 30 || (c.items_total || 0) > items.length ? `<div class="muted">…a další změny.</div>` : ''}` : ''}</div>`; }).join('')
+      : '<div class="empty">Zatím žádná aktualizace.</div>'}`;
+  document.title = 'Co je nového · RegulaQuest';
 }
 function fmtDate(s){ const d = new Date(s); return isNaN(d) ? '' : d.toLocaleDateString('cs-CZ'); }
 

@@ -1,5 +1,20 @@
 # Změny
 
+## 0.21.0 – 2026-11-27 · Nová čtečka pro studenty
+- Rozložení: hlavní navigace vlevo (Přehled, Dokumenty s osnovou otevřeného dokumentu, Trasy s kroky, Pojmy, Záložky, Co je nového,
+  Značky a nápověda), hledání v horní liště, panel Souvislosti jen při čtení ustanovení. Nápověda v bočním panelu (? Nápověda).
+- **Přehled:** stav obsahu (datum poslední aktualizace a souhrn), Pokračovat ve čtení, rozpracovaná trasa, dokumenty
+  (připnuté ☆, doporučené redakcí, naposledy otevřené; jazykové verze na jedné kartě), trasy, moje záložky.
+- **Dokumenty:** všechny dokumenty s hledáním a filtrem předpisy / metodiky; v osnově přepínač CS / EN (na stejné místo) a filtr štítků.
+- **Co je nového:** shrnutí redakce + seznam změn, který se spočítá sám při publikaci (nové výklady, vazby, změněná a nově zveřejněná
+  ustanovení, nové trasy); značka NOVÉ v osnově 14 dní, upozornění „nové“ v menu.
+- **Pojmy:** slovník definic CS / EN s hledáním a odkazem na místo v předpisu.
+- **Hledání** ve všech dokumentech: texty, výklady redakce i pojmy.
+- **Záložky s popiskem, poslední pozice v dokumentech a prošlé kroky tras se ukládají k účtu** (vidí je jen student; mažou se s účtem).
+- Studio: u dokumentu „Krátký název pro studenty“ a „Doporučit studentům“ (s pořadím); poznámka k publikaci = shrnutí pro „Co je nového“;
+  po publikaci Studio ukáže souhrn změn.
+- Migrace 17_ctecka.sql. Úklidový skript maže i záložky a postup studentů.
+
 ## 0.20.0 – 2026-11-27 · Moje dokumenty, katalog po skupinách, kontrast
 - Přehled: místo úplného seznamu **Moje dokumenty** – připnuté (☆/★, každý admin sám, v prohlížeči) a 5 naposledy upravovaných;
   rychlé hledání (Enter otevře katalog s výsledkem) a odkaz „Všech N dokumentů v katalogu“.

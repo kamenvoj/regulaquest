@@ -77,7 +77,7 @@ async function refresh(){
 const field_=(d,keys)=>Object.fromEntries(keys.filter(k=>d[k]!==undefined).map(k=>[k,d[k]]));
 const ACTIONS={
  new_document:d=>['rq_new_document',{p:field_(d,['title','family','kind','language','version','url','valid_date','publisher','jurisdiction','document_type','group_key','topics'])}],
- update_document_metadata:d=>['rq_update_document',{p_id:d.document_id,p:field_(d,['title','family','version','publisher','url','jurisdiction','document_type','topics'])}],
+ update_document_metadata:d=>['rq_update_document',{p_id:d.document_id,p:field_(d,['title','family','version','publisher','url','jurisdiction','document_type','topics','short_title','featured','featured_sort'])}],
  new_unit:d=>['rq_new_unit',{p:field_(d,['document_id','parent_id','kind','label','heading','locator'])}],
  verify_unit:d=>['rq_verify_unit',{p_unit_id:d.unit_id,p_expected:getUnit(d.unit_id)?.updated_at||null}],
  save_unit_content:d=>['rq_save_unit_content',{p_unit_id:d.unit_id,p_blocks:d.blocks,p_expected:d.expected_updated_at,p_reason:d.reason||undefined}],
@@ -630,7 +630,7 @@ async function publishNow(){
  const note=$('#publishNote').value.trim();
  if(!confirm('Publikovat aktuální ověřený obsah pro studenty? Předchozí verze zůstane v historii.'))return;
  const btn=$('#publishBtn');btn.disabled=true;
- try{await rpc('rq_publish',{p_note:note});$('#publishNote').value='';await refresh();toast('Publikováno. Studenti uvidí novou verzi po obnovení čtečky.')}
+ try{const r=await rpc('rq_publish',{p_note:note});$('#publishNote').value='';await refresh();const c=r&&r.changes||{};const parts=[c.units_new?`${c.units_new} nově zveřejněných částí`:'',c.units_changed?`${c.units_changed} změněných`:'',c.comments_new?`${c.comments_new} nových výkladů`:'',c.relations_new?`${c.relations_new} nových vazeb`:'',c.paths_new?`${c.paths_new} nových tras`:''].filter(Boolean);toast('Publikováno.'+(parts.length?' Změny: '+parts.join(', ')+'.':' Beze změn obsahu.')+' Studenti je uvidí v „Co je nového“.')}
  catch(e){toast(e.message,true)}finally{btn.disabled=false}
 }
 async function downloadBackup(){
@@ -649,6 +649,9 @@ function dialogDocumentMetadata(id){
  <label class="form-field"><span>Název</span><textarea class="textarea" name="title" required>${esc(d.title)}</textarea></label>
  <div class="rq-meta-grid"><label class="form-field"><span>Zkratka / rodina</span><input class="input" name="family" required value="${esc(d.family)}"></label>
  <label class="form-field"><span>Revize / časová verze</span><input class="input" name="version" value="${esc(d.version)}"></label></div>
+ <label class="form-field"><span>Krátký název pro studenty</span><input class="input" name="short_title" maxlength="120" value="${esc(d.short_title||'')}" placeholder="Např. MDR – Nařízení o zdravotnických prostředcích"><small class="form-hint">Zobrazí se ve čtečce na kartách a v seznamu dokumentů. Prázdné = zkratka a jazyk.</small></label>
+ <div class="rq-meta-grid"><label class="form-field rq-check"><span>Doporučit studentům</span><label class="inline-check"><input type="checkbox" name="featured" ${d.featured?'checked':''}> zobrazit na úvodní stránce čtečky</label></label>
+ <label class="form-field"><span>Pořadí mezi doporučenými</span><input class="input" name="featured_sort" type="number" min="0" max="999" value="${esc(d.featured_sort??100)}"></label></div>
  <label class="form-field"><span>Vydavatel</span><input class="input" name="publisher" value="${esc(d.publisher)}" placeholder="Např. Evropský parlament a Rada"></label>
  <label class="form-field"><span>Oficiální URL</span><input class="input" name="url" type="url" value="${esc(d.url)}" placeholder="https://…"></label>
  ${select('Původ / jurisdikce','jurisdiction',Object.entries(jurisdictions),d.jurisdiction||'other')}
@@ -663,7 +666,7 @@ function dialogDocumentMetadata(id){
   try{await rpc('rq_archive_document',{p_id:id,p_archived:true});modal.close();await refresh();setPage('home');toast('Dokument archivován.')}catch(e){toast(e.message,true)}};
  f.querySelector('#deleteDoc').onclick=()=>{modal.close();setTimeout(()=>rqDeleteDocument(id),0)};
  f.onsubmit=e=>{e.preventDefault();const raw=Object.fromEntries(new FormData(f).entries());const topics=[...new Set(String(raw.topics||'').split(',').map(t=>t.trim()).filter(Boolean))];if(topics.length>40){toast('Maximálně 40 tagů',true);return}
- safeAct({action:'update_document_metadata',document_id:id,title:raw.title,family:raw.family,version:raw.version,publisher:raw.publisher,url:raw.url,jurisdiction:raw.jurisdiction,document_type:raw.document_type,topics});modal.close();};
+ safeAct({action:'update_document_metadata',document_id:id,title:raw.title,family:raw.family,version:raw.version,publisher:raw.publisher,url:raw.url,jurisdiction:raw.jurisdiction,document_type:raw.document_type,topics,short_title:raw.short_title||'',featured:!!raw.featured,featured_sort:Number(raw.featured_sort)||100});modal.close();};
  modal.showModal();
 }
 function dialogRelation(u,preset=null,anchor=null){

@@ -409,3 +409,4 @@ dialog.wide{width:min(1100px,calc(100vw - 24px));max-width:min(1100px,calc(100vw
 .lang-prog strong{font-size:12px;color:#28474f}.lang-prog small{display:block;font-size:11px;color:#5b6f75;margin-top:3px}
 .lang-prog .progress-track{margin-top:4px}
 @media(max-width:1100px){.doc-group{grid-template-columns:30px 1fr}.dg-langs{grid-column:2}}
+.inline-check{display:flex!important;align-items:center;gap:8px;font-weight:500!important;font-size:12px!important;color:#28474f!important;margin-top:9px}

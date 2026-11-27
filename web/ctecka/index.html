@@ -7,52 +7,46 @@
 <title>RegulaQuest · Čtečka regulace zdravotnických prostředků</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23142c38'/%3E%3Cpath d='M18 6L21.5 15L30 18L21 21.5L18 30L15 21.5L6 18L15 15Z' fill='%23E9CB90'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="sdilene/prihlaseni.css">
-<link rel="stylesheet" href="sdilene/anotace.css">
-<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="sdilene/anotace.css?v=0.21.0">
+<link rel="stylesheet" href="reader.css?v=0.21.0">
 </head>
 <body>
 <div id="app"><div class="rq-login"></div></div>
 
 <template id="readerTpl">
 <header class="top">
- <a class="brand" href="#/" aria-label="RegulaQuest – úvod">
+ <a class="brand" href="#/" aria-label="RegulaQuest – přehled">
   <svg width="30" height="30" viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="17" r="12.5" stroke="#E9CB90" stroke-width="1.5"/><path d="M18 5L22 15L30 18L20 22L17 30L14 20L6 17L16 14Z" fill="#E9CB90"/><circle cx="18" cy="17" r="3.3" fill="#153240" stroke="#E9CB90" stroke-width="1.3"/></svg>
-  <span><strong>RegulaQuest</strong><small>Čtečka regulace ZP</small></span>
+  <span><strong>RegulaQuest</strong><small>Čtečka regulace zdravotnických prostředků</small></span>
  </a>
- <div class="top-grow"></div>
- <label class="doc-switch"><span class="sr">Dokument</span><select id="docSelect" aria-label="Vybrat dokument"></select></label>
- <button class="legend-btn" id="legendBtn" type="button" aria-expanded="false" title="Co znamenají značky v textu">Značky</button>
+ <form class="top-search" id="searchForm" role="search"><label class="sr" for="search">Hledat</label>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  <input id="search" type="search" placeholder="Hledat v textech a výkladech…" autocomplete="off"></form>
  <span class="user" id="userName"></span>
- <button class="logout" id="logoutBtn" type="button">Odhlásit</button>
+ <button class="top-btn" id="helpBtn" type="button" aria-expanded="false" title="Jak čtečka funguje">? Nápověda</button>
+ <button class="top-btn" id="logoutBtn" type="button">Odhlásit</button>
 </header>
-<div class="legend-panel hidden" id="legendPanel"><div class="rq-legend">
- <span><span class="rq-hl hl-key">žlutě</span> klíčová pasáž</span>
- <span><span class="rq-hl hl-duty">zeleně</span> povinnost</span>
- <span><span class="rq-hl hl-deadline">fialově</span> lhůta / číslo</span>
- <span><span class="rq-hl hl-exception">růžově</span> výjimka / podmínka</span>
- <span><span class="rq-term">plně podtržené</span> pojem s definicí</span>
- <span><span class="rq-anc">tečkovaně podtržené</span> poznámka – klepněte na ni</span>
- <span><span class="lg" data-i="explanation"></span> výklad</span><span><span class="lg" data-i="warning" style="color:#b5761c"></span> na co si dát pozor</span>
- <span><span class="lg" data-i="definition"></span> definice</span><span><span class="lg" data-i="example"></span> příklad</span>
- <span><span class="lg" data-i="guidance"></span> metodický výklad (MDCG)</span><span><span class="lg" data-i="references"></span> odkaz v předpisu</span>
- <span><span class="lg" data-i="related"></span> související ustanovení</span><span><mark>hledaný výraz</mark> výsledek hledání</span>
- <span class="lg-note">Barevná zvýraznění zapnete nebo vypnete nad textem.</span>
-</div></div>
 <div class="draft-banner hidden" id="draftBanner" role="note">Pracovní náhled ze Studia: obsahuje i neověřené texty a neschválené návrhy. Není určeno studentům.</div>
 <div class="layout" id="layout">
- <nav class="panel nav" id="panelNav" aria-label="Obsah dokumentu">
-  <div class="nav-mode hidden" id="navMode" role="tablist" aria-label="Zobrazení v levém panelu"><button type="button" data-mode="osnova" role="tab">Osnova</button><button type="button" data-mode="trasy" role="tab">Trasy</button></div>
-  <div class="search-box">
-   <input id="search" type="search" placeholder="Hledat v textech…" aria-label="Hledat v textech" autocomplete="off">
-   <label class="role-pick"><span>Jen:</span><select id="roleSelect" aria-label="Zobrazit jen ustanovení se štítkem"></select></label>
+ <nav class="panel nav" id="panelNav" aria-label="Navigace">
+  <div class="appnav">
+   <a class="navb" data-nav="home" href="#/"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Přehled</a>
+   <a class="navb" data-nav="docs" href="#/dokumenty"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2zM22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>Dokumenty</a>
+   <div class="nav-sub hidden" id="navDoc"></div>
+   <a class="navb" data-nav="paths" href="#/trasy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>Trasy</a>
+   <div class="nav-sub hidden" id="navPath"></div>
+   <a class="navb" data-nav="terms" href="#/pojmy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/></svg>Pojmy</a>
+   <a class="navb" data-nav="marks" href="#/zalozky"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Záložky<span class="cnt" id="navMarks"></span></a>
+   <a class="navb" data-nav="news" href="#/novinky"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Co je nového<span class="cnt new hidden" id="navNews">nové</span></a>
+   <div class="nav-k">Pomoc</div>
+   <button class="navb" type="button" id="navHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01"/></svg>Značky a nápověda</button>
   </div>
-  <div class="nav-body" id="navBody"></div>
  </nav>
  <main class="panel text" id="panelText" tabindex="-1"></main>
  <aside class="panel context" id="panelContext" aria-label="Souvislosti a výklad"></aside>
 </div>
 <nav class="tabbar" aria-label="Přepínání panelů">
- <button type="button" data-tab="nav">Obsah</button>
+ <button type="button" data-tab="nav">Menu</button>
  <button type="button" data-tab="text">Text</button>
  <button type="button" data-tab="context">Souvislosti <span class="tab-count" id="tabCount"></span></button>
 </nav>
@@ -61,7 +55,8 @@
 <script src="sdilene/supabase.js"></script>
 <script src="sdilene/config.js"></script>
 <script src="sdilene/prihlaseni.js"></script>
-<script src="sdilene/anotace.js"></script>
-<script src="reader.js"></script>
+<script src="sdilene/anotace.js?v=0.21.0"></script>
+<script src="napoveda.js?v=0.21.0"></script>
+<script src="reader.js?v=0.21.0"></script>
 </body>
 </html>
