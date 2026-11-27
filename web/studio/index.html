@@ -7,8 +7,8 @@
 <title>RegulaQuest Studio</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23142c38'/%3E%3Cpath d='M18 6L21.5 15L30 18L21 21.5L18 30L15 21.5L6 18L15 15Z' fill='%23E9CB90'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="sdilene/prihlaseni.css">
-<link rel="stylesheet" href="sdilene/anotace.css?v=0.18.0">
-<link rel="stylesheet" href="studio.css?v=0.18.0">
+<link rel="stylesheet" href="sdilene/anotace.css?v=0.19.0">
+<link rel="stylesheet" href="studio.css?v=0.19.0">
 </head>
 <body>
 <div id="app"><div class="rq-login"></div></div>
@@ -16,7 +16,7 @@
 <header class="topbar">
  <div class="brand"><div class="brandmark"><svg width="30" height="30" viewBox="0 0 36 36" fill="none" aria-hidden="true"><circle cx="18" cy="17" r="12.5" stroke="#E9CB90" stroke-width="1.5"/><path d="M18 5L22 15L30 18L20 22L17 30L14 20L6 17L16 14Z" fill="#E9CB90"/><circle cx="18" cy="17" r="3.3" fill="#153240" stroke="#E9CB90" stroke-width="1.3"/><path d="M24 24L32 32" stroke="#E9CB90" stroke-width="2.5" stroke-linecap="round"/></svg></div><div><strong>RegulaQuest</strong><span>STUDIO</span></div></div>
  <div class="top-sep"></div><div class="environment">Sdílené redakční prostředí <span class="dot"></span> <span id="whoName"></span></div>
- <div class="grow"></div><button class="btn btn-top" id="refreshTop" type="button" title="Načíst změny ostatních adminů">⟳ Obnovit</button><a class="btn btn-top" data-reader="" target="_blank" rel="noopener" title="Čtečka tak, jak ji vidí studenti">▣ Pohled studenta ↗</a><button class="btn btn-top" id="logoutTop" type="button">Odhlásit</button>
+ <div class="grow"></div><button class="btn btn-top" id="helpTop" type="button" title="Návod k funkcím Studia">? Nápověda</button><button class="btn btn-top" id="refreshTop" type="button" title="Načíst změny ostatních adminů">⟳ Obnovit</button><a class="btn btn-top" data-reader="" target="_blank" rel="noopener" title="Čtečka tak, jak ji vidí studenti">▣ Pohled studenta ↗</a><button class="btn btn-top" id="logoutTop" type="button">Odhlásit</button>
 </header>
 <div class="shell">
  <nav class="rail" aria-label="Sekce aplikace">
@@ -42,6 +42,7 @@
    <div class="page-head"><div><div class="eyebrow">REGULAQUEST / PRACOVIŠTĚ</div><h1>Přehled Studia</h1><p>Souhrn všech dokumentů a postup ověřování. Vyberte zdroj pro odbornou redakci.</p></div>
     <div class="head-actions"><button class="btn accent" id="goCatalog">Otevřít katalog dokumentů ↗</button><button class="btn" id="homeNewDoc">+ Nový dokument</button><button class="btn" id="homeImport">↧ Import dokumentu</button></div></div>
    <div id="homeSummary" class="global-cards"></div>
+   <div id="homeExtras" class="home-extras"></div>
    <div class="section-head"><h2>Dokumenty a jejich stav</h2><p>Po otevření dokumentu uvidíte jeho vlastní statistiky, ustanovení, vazby a komentáře.</p></div>
    <div id="homeDocuments" class="document-home-list"></div>
   </section>
@@ -118,19 +119,21 @@
 <script src="sdilene/supabase.js"></script>
 <script src="sdilene/config.js"></script>
 <script src="sdilene/prihlaseni.js"></script>
-<script src="sdilene/anotace.js?v=0.18.0"></script>
+<script src="sdilene/anotace.js?v=0.19.0"></script>
 <script src="vendor/qrcode.js"></script>
-<script src="js/import-eurlex.js?v=0.18.0"></script>
-<script src="js/reference-suggest.js?v=0.18.0"></script>
-<script src="js/related-search.js?v=0.18.0"></script>
-<script src="js/import-pdf.js?v=0.18.0"></script>
-<script src="js/editor.js?v=0.18.0"></script>
-<script src="js/structure-ui.js?v=0.18.0"></script>
-<script src="js/pojmy.js?v=0.18.0"></script>
-<script src="js/trasy.js?v=0.18.0"></script>
-<script src="js/pokryti.js?v=0.18.0"></script>
-<script src="js/pristupy.js?v=0.18.0"></script>
-<script>window.RQ_VERSION="0.18.0"</script>
-<script src="js/studio.js?v=0.18.0"></script>
+<script src="js/import-eurlex.js?v=0.19.0"></script>
+<script src="js/reference-suggest.js?v=0.19.0"></script>
+<script src="js/related-search.js?v=0.19.0"></script>
+<script src="js/import-pdf.js?v=0.19.0"></script>
+<script src="js/editor.js?v=0.19.0"></script>
+<script src="js/structure-ui.js?v=0.19.0"></script>
+<script src="js/pojmy.js?v=0.19.0"></script>
+<script src="js/trasy.js?v=0.19.0"></script>
+<script src="js/pokryti.js?v=0.19.0"></script>
+<script src="js/domov.js?v=0.19.0"></script>
+<script src="js/napoveda.js?v=0.19.0"></script>
+<script src="js/pristupy.js?v=0.19.0"></script>
+<script>window.RQ_VERSION="0.19.0"</script>
+<script src="js/studio.js?v=0.19.0"></script>
 </body>
 </html>

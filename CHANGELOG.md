@@ -1,5 +1,10 @@
 # Změny
 
+## 0.19.0 – 2026-11-27 · Úvodní stránka a nápověda
+- Přehled Studia: **Pokračovat, kde jsem skončil** (poslední otevřené ustanovení v tomto prohlížeči, počet vlastních konceptů),
+  **Rychlé cesty** a **Poslední aktivita** (kdo co udělal a kde – z existující historie, bez nových dat v databázi).
+- Horní lišta: **? Nápověda** – postranní panel s návodem ke všem částem Studia, otevírá se u části, kde právě pracujete.
+
 ## 0.18.0 – 2026-11-27 · Přehled pokrytí
 - Nová stránka **Pokrytí** (Redakce): tabulka článků / příloh / pravidel vybraného dokumentu včetně jejich odstavců –
   ověřený text, štítky, výklady, zvýraznění, vazby, vazby na metodiku (MDCG), kroky tras. Souhrn nahoře, filtry

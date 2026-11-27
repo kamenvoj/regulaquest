@@ -155,6 +155,7 @@ function renderHome(){
  if(ad.length){$('#homeDocuments').insertAdjacentHTML('beforeend',`<details class="home-archived"><summary>Archivované dokumenty (${ad.length})</summary>${ad.map(d=>`<div class="home-doc-row arch"><div class="home-doc-ident"><strong>${esc(d.family)} · ${esc(d.language.toUpperCase())}</strong><span>${esc(d.title)}</span></div><button type="button" class="btn tiny" data-restore-doc="${esc(d.id)}">Obnovit</button></div>`).join('')}</details>`);
   $('#homeDocuments').querySelectorAll('[data-restore-doc]').forEach(b=>b.onclick=async()=>{try{await rpc('rq_archive_document',{p_id:b.dataset.restoreDoc,p_archived:false});await refresh();toast('Dokument obnoven.')}catch(e){toast(e.message,true)}});}
  $('#homeDocuments').querySelectorAll('[data-home-document]').forEach(b=>b.onclick=()=>selectDocument(b.dataset.homeDocument));
+ if(window.RQHome)RQHome.render();
 }
 function renderDocumentMetrics(){
  renderDocumentSelector();const st=documentStats(activeDocId);
@@ -334,7 +335,7 @@ ${u.content_blocks&&u.content_blocks.length?'':`<div class="section-kicker">ZNĚ
 <div class="read-actions rq-structure-actions"><button class="btn accent" id="rqEditContent">▦ Editor textu a tabulek</button><button class="btn" id="rqEditStructure">Struktura</button><button class="btn" id="rqSplit" ${!u.body?'disabled':''}>Rozdělit</button><button class="btn" id="rqMove" ${!u.body?'disabled':''}>Přesunout text</button><button class="btn" id="rqMerge" ${!u.body?'disabled':''}>Sloučit</button><button class="btn" id="rqHistory">Historie změn</button><button class="btn" id="rqToPath" title="Přidat toto ustanovení jako krok trasy">⇢ Do trasy</button>${window.RQTerms&&RQNotes.parseDefinitions(u.body).length>=5?`<button class="btn" id="rqTerms">Pojmy z definic (${RQNotes.parseDefinitions(u.body).length})</button>`:''}<button class="btn danger" id="rqArchive">Archivovat</button>${u.body&&u.text_status!=='verified'?'<button class="btn accent" id="verifyText">Ověřil(a) jsem proti zdroji</button>':''}</div>
 ${u.source_note?`<p class="fine">Původ importu: ${esc(u.source_note)}</p>`:''}
 ${related.length?`<div class="soft-rule"></div><div class="section-kicker">PODŘAZENÉ ČÁSTI</div><div class="doc-outline">${related.map(x=>`<button class="outline-row" data-unit-open="${esc(x.id)}" style="text-align:left;cursor:pointer"><strong>${esc(x.label)} · ${esc(x.heading)}</strong><small>${esc(statusName[x.text_status])}</small></button>`).join('')}</div>`:''}`;
-rqAnchors(box,u);rqTagsBind(box,u);
+rqAnchors(box,u);rqTagsBind(box,u);if(window.RQHome)RQHome.remember(u.id);
 box.querySelector('#rqEditContent').onclick=()=>rqContentEditor(u);
 box.querySelector('#rqEditStructure').onclick=()=>rqStructureEditor(u);
 box.querySelector('#rqSplit').onclick=()=>rqSplit(u);
@@ -436,6 +437,7 @@ function renderRelations(){
 }
 function openUnit(id){
  const u=getUnit(id);if(!u){toast('Ustanovení nebylo nalezeno',true);return}
+ if(window.RQHome)RQHome.remember(id);
  activeDocId=u.document_id;selected=id;openedDocuments.add(u.document_id);
  let parent=getUnit(u.parent_id),n=0;while(parent&&n++<20){openedUnits.add(parent.id);parent=getUnit(parent.parent_id)}
  setPage('library');
