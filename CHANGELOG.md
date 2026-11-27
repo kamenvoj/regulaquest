@@ -1,5 +1,18 @@
 # Změny
 
+## 0.25.0 – 2026-11-27 · Aktuality
+- **Studio – Výuka → Aktuality:** novinky ze zdrojů RSS/Atom (výchozí: SÚKL – Aktuality ZP, Evropská komise – Medical devices:
+  latest updates) a ručně přidané odkazy (EUDAMED, MDCG, MZ ČR…). Stavy Nové / Přečtené / Zveřejněné / Zamítnuté, filtr podle
+  zdroje a oblasti, hledání, hromadné akce. Úprava: komentář redakce pro studenty, oblasti, štítky, dokumenty a ustanovení.
+  Správa zdrojů (adresa, oblasti, zapnutí, stav posledního načtení). Odznak s počtem nových v levém panelu.
+- Propojení z textu dokumentu: pod nadpisem ustanovení řádek „Aktuality“ s tlačítkem „+ Aktualita“.
+- Načítání přímo v Supabase (pg_net + pg_cron, 5:50 a 13:50 UTC) nebo tlačítkem „Načíst nové“. Ukládá se jen název,
+  výtah a odkaz. Nevyřízené po 90 dnech mezi zamítnuté, zamítnuté po roce smazány.
+- **Čtečka – Aktuality:** zveřejněné hned (bez publikace obsahu), filtr podle oblasti a zdroje, hledání, řazení, komentář
+  redakce, odkazy na dokumenty a ustanovení; počet nových od poslední návštěvy v navigaci; nejnovější tři na Přehledu;
+  u propojených ustanovení v Souvislostech.
+- Migrace 20_aktuality.sql. Úklid testovacích dat aktuality ponechá (zruší jen vazby na ustanovení).
+
 ## 0.24.0 – 2026-11-27 · Osnova ve vlastním panelu
 - Čtečka: při čtení dokumentu nebo trasy se hlavní navigace zúží na pruh ikon (název po najetí myší, počet záložek
   jako odznak) a osnova dokumentu / kroky trasy mají vlastní panel s vlastním posuvníkem. Trasy a ostatní stránky jsou tak

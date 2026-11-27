@@ -30,11 +30,14 @@ window.RQHelp = (function () {
       <p><b>Pole vyhledávače</b> = skupiny štítků. U každé určete, pro které oblasti platí (třída rizika jen u ZP); bez oblasti se ukazuje vždy. Nabízí se jen štítky použité u zveřejněných částí.</p>
       <p><b>Průvodce</b>: otázky v pořadí, každá odpověď může přidat oblasti a štítky. Otázka s oblastí se ukáže, jen když tu oblast přidala některá dřívější odpověď – tak se průvodce větví. Na konci se otevře vyhledávač s výběrem ze všech odpovědí. Vyzkoušejte v pracovním náhledu; studenti změny uvidí po publikaci.</p>
       <p>Kvalita výsledků stojí na tom, jak důsledně jsou dokumenty zařazené do oblastí (Údaje dokumentu → Oblasti) a ustanovení oštítkovaná (filtr <b>Bez štítků</b> v Pokrytí).</p>`],
+    ['news', 'Aktuality', `<p>Novinky ze zdrojů (RSS – SÚKL, Evropská komise…) se načítají samy dvakrát denně; <b>⟳ Načíst nové</b> je načte hned. Zdroje bez RSS (EUDAMED, pokyny MDCG, MZ ČR) přidejte přes <b>+ Přidat ručně</b>.</p>
+      <p>Postup: <b>Nové</b> → přečíst (klepnutím na název se otevře zdroj a položka se označí jako přečtená) → <b>Upravit</b> (komentář redakce pro studenty, oblasti, štítky, dokumenty) → <b>Zveřejnit</b>. Zveřejněné studenti vidí <b>hned</b> v záložce Aktuality, bez publikace obsahu. Nerelevantní <b>Zamítnout</b> (lze hromadně zaškrtnutím). Nevyřízené se po 90 dnech samy přesunou mezi zamítnuté, zamítnuté se po roce smažou.</p>
+      <p>S ustanovením propojíte aktualitu přímo v textu dokumentu: pod nadpisem <b>+ Aktualita</b>. Studenti ji pak uvidí v Souvislostech u toho ustanovení.</p>`],
     ['paths', 'Trasy', `<p>Průchod několika místy v daném pořadí s komentářem ke každému kroku. Kroky přidáte z textu (<b>⇢ Do trasy</b>), pořadí šipkami, „+ Krok jen s textem“ pro úvod a shrnutí. Stav <b>Zveřejněná</b> = studenti trasu uvidí po příští publikaci (kroky na neověřená ustanovení se vynechají).</p>`],
     ['publish', 'Publikování', `<p>Studenti nevidí Studio, ale <b>publikaci</b> – pevný snímek ověřených textů a schválených položek. Po práci tedy vždy <b>⇪ Publikovat pro studenty</b>. Pracovní náhled ukáže i rozpracované věci (jen admini). Databáze se zálohuje každou noc; ruční záloha stáhne JSON.</p>`],
     ['access', 'Přístupy', `<p>Účty adminů a skupiny studentů (skupinový přístup bez osobních údajů). Hesla se nikde nezobrazují znovu – při vytvoření si je uložte.</p>`],
   ];
-  const PAGE = { home: 'home', documents: 'documents', library: 'library', verified: 'library', review: 'review', relations: 'relations', comments: 'comments', coverage: 'coverage', paths: 'paths', guide: 'guide', publish: 'publish', access: 'access' };
+  const PAGE = { home: 'home', documents: 'documents', library: 'library', verified: 'library', review: 'review', relations: 'relations', comments: 'comments', coverage: 'coverage', paths: 'paths', guide: 'guide', news: 'news', publish: 'publish', access: 'access' };
 
   function open(section) {
     let el = document.getElementById('rqHelp');

@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
 
 DSN = os.environ.get('RQ_PG_DSN')
 ROOT = Path(__file__).resolve().parents[1]
-FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('[01][0-9]_*.sql'))
+FILES = [ROOT / 'tests/00_lokalni_napodobeni_supabase.sql'] + sorted((ROOT / 'migrations').glob('[0-9][0-9]_*.sql'))
 
 OWNER, ADMIN, STUDENT, STUDENT2 = (str(uuid.UUID(int=i)) for i in (1, 2, 3, 4))
 
@@ -498,6 +498,75 @@ class DatabaseTest(unittest.TestCase):
         self.call('rq_delete_guide_question', q)
         self.assertIn('guide_questions', self.call('rq_backup'))
         self.assertIn('guide_questions', self.call('rq_studio_state'))
+
+    def test_news(self):
+        self.setup_doc()
+        rss = ('<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>EK</title>'
+               '<item><title>MDCG 2020-16 rev.5 - Guidance on Classification</title><link>https://health.ec.europa.eu/a_en</link>'
+               '<guid>https://health.ec.europa.eu/a_en</guid><description>&lt;p&gt;MDCG 2020-16 &amp;amp; IVD&lt;/p&gt;</description>'
+               '<pubDate>Wed, 09 Sep 2026 15:03:30 +0200</pubDate></item>'
+               '<item><title><![CDATA[Upozornění na stahování šarží]]></title><link>https://sukl.gov.cz/b/</link>'
+               '<description><![CDATA[<p>SÚKL upozorňuje…</p>]]></description><pubDate>Thu, 26 Nov 2026 12:14:01 +0000</pubDate></item>'
+               '<item><title>Bez odkazu</title></item></channel></rss>')
+        atom = ('<feed xmlns="http://www.w3.org/2005/Atom"><title>X</title><entry><title>Atom zpráva</title>'
+                '<link rel="alternate" href="https://example.org/c"/><id>urn:c</id><updated>2026-10-01T10:00:00Z</updated>'
+                '<summary>Krátce</summary></entry></feed>')
+        # náhrada pg_net: požadavek hned „odpoví“ obsahem podle adresy
+        self.con.execute('reset role')
+        self.con.execute("create schema if not exists net")
+        self.con.execute("create table net._http_response(id bigint, status_code int, content text, timed_out boolean, error_msg text)")
+        self.con.execute("create table net.fake(url text, body text, code int)")
+        self.con.execute("""create function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds int) returns bigint
+            language plpgsql as $f$ declare i bigint := (select coalesce(max(id),0)+1 from net._http_response); begin
+            insert into net._http_response select i, f.code, f.body, false, null from net.fake f where f.url = http_get.url; return i; end $f$""")
+        self.as_user(ADMIN)
+        rss_src = self.call('rq_save_news_source', None, 'EK', 'https://ex.eu/rss', ['zp'], True)
+        atom_src = self.call('rq_save_news_source', None, 'Atom', 'https://ex.eu/atom', [], True)
+        bad_src = self.call('rq_save_news_source', None, 'Rozbitý', 'https://ex.eu/html', [], True)
+        self.fails('už existuje', 'rq_save_news_source', None, 'EK2', 'https://ex.eu/rss', [], True)
+        self.sql("with x as (update news_sources set active=false where url like 'https://sukl%%' or url like 'https://health%%' returning 1) select count(*) from x")
+        self.sql("with x as (insert into net.fake values ('https://ex.eu/rss', %s, 200), ('https://ex.eu/atom', %s, 200), ('https://ex.eu/html', '<html><body>nic', 200) returning 1) select count(*) from x", rss, atom)
+        self.as_user(ADMIN)
+        self.assertEqual(self.call('rq_news_fetch_now'), 3)
+        n = self.call('rq_news_collect_now')
+        self.assertEqual(n, 3)
+        self.assertEqual(self.call('rq_news_fetch_now'), 3)
+        self.assertEqual(self.call('rq_news_collect_now'), 0)      # podruhé nic nového
+        st = self.call('rq_news_admin')
+        items = {i['title']: i for i in st['items']}
+        self.assertEqual(sorted(items), ['Atom zpráva', 'MDCG 2020-16 rev.5 - Guidance on Classification', 'Upozornění na stahování šarží'])
+        ek = items['MDCG 2020-16 rev.5 - Guidance on Classification']
+        self.assertEqual(ek['summary'], 'MDCG 2020-16 & IVD'); self.assertEqual(ek['area_keys'], ['zp']); self.assertEqual(ek['source_name'], 'EK')
+        self.assertTrue(ek['published_at'].startswith('2026-09-09'))
+        self.assertEqual(items['Upozornění na stahování šarží']['summary'], 'SÚKL upozorňuje…')
+        self.assertEqual(items['Atom zpráva']['url'], 'https://example.org/c')
+        self.assertIn('RSS/Atom', next(s for s in st['sources'] if s['id'] == bad_src)['last_error'])
+        # úprava, propojení s ustanovením, zveřejnění
+        self.call('rq_save_news_item', ek['id'], {'comment': 'Nová revize pokynu', 'tags': ['role_vyrobce'], 'area_keys': ['zp']})
+        self.call('rq_news_link_unit', ek['id'], 'mdr-cs-rule-11', True)
+        self.fails('Neznámý štítek', 'rq_save_news_item', ek['id'], {'tags': ['nic']})
+        man = self.call('rq_save_news_item', None, {'url': 'https://example.org/rucne', 'title': 'Ručně přidaná', 'source_name': 'MZ ČR'})
+        self.fails('už mezi', 'rq_save_news_item', None, {'url': 'https://example.org/rucne', 'title': 'Znovu'})
+        self.assertEqual(self.call('rq_news_set_status', [ek['id'], man], 'published'), 2)
+        self.call('rq_news_set_status', [items['Atom zpráva']['id']], 'rejected')
+        self.as_user(STUDENT)
+        self.fails('', 'rq_news_admin')
+        self.fails('', 'rq_news_set_status', [man], 'rejected')
+        rn = self.call('rq_reader_news')
+        self.assertEqual([x['title'] for x in rn], ['MDCG 2020-16 rev.5 - Guidance on Classification', 'Ručně přidaná'] if rn[0]['published_at'] < rn[1]['published_at'] else [x['title'] for x in rn])
+        e = next(x for x in rn if x['id'] == ek['id'])
+        self.assertEqual(e['unit_ids'], ['mdr-cs-rule-11']); self.assertEqual(e['comment'], 'Nová revize pokynu'); self.assertEqual(len(e['group_keys']), 1)
+        self.assertEqual(len(rn), 2)
+        # úklid: staré nevyřízené → zamítnuté, staré zamítnuté pryč
+        self.sql("with x as (update news_items set fetched_at = now() - interval '100 days', status = 'new' where id = %s returning 1) select count(*) from x", items['Upozornění na stahování šarží']['id'])
+        self.sql("with x as (update news_items set updated_at = now() - interval '400 days' where id = %s returning 1) select count(*) from x", items['Atom zpráva']['id'])
+        self.sql("select rq_private.news_cleanup()")
+        self.assertEqual(self.sql("select status from news_items where id = %s", items['Upozornění na stahování šarží']['id'])[0][0], 'rejected')
+        self.assertEqual(self.sql("select count(*) from news_items where id = %s", items['Atom zpráva']['id'])[0][0], 0)
+        self.as_user(ADMIN)
+        self.call('rq_delete_news_source', rss_src)
+        self.assertEqual(self.sql("select source_id, source_name from news_items where id = %s", ek['id'])[0], (None, 'EK'))
+        self.assertIn('news_items', self.call('rq_backup'))
 
     def test_structure_editor(self):
         self.setup_doc()

@@ -452,3 +452,18 @@ div.card:hover{box-shadow:none;border-color:var(--line)}
  body[data-tab="nav"] .outline{display:block;border-right:0;border-top:1px solid var(--line)}
  .ol-close{display:none}
 }
+
+/* ---------- 0.25 Aktuality ---------- */
+.upd-list{display:flex;flex-direction:column;gap:10px;max-width:900px;margin:12px 0}
+.upd{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 16px}
+.upd.small{padding:11px 14px}
+.ctx-card .upd{border:0;padding:0;background:none}
+.upd-meta{font-size:11.5px;color:var(--muted)}
+.upd-title{display:inline-block;margin:3px 0 2px;font-weight:700;font-size:15px;color:#16313c;text-decoration:none;line-height:1.35}
+.upd.small .upd-title{font-size:13.5px}
+.upd-title:hover{color:var(--teal);text-decoration:underline}
+.upd-sum{margin:4px 0;font-size:13.5px;color:#3d565d}
+.upd-com{margin:6px 0 2px;font-size:13px;color:#4d3a12;background:var(--gold-soft);border-radius:8px;padding:6px 9px}
+.upd-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.upd-doc{font-size:12px;font-weight:700;border:1px solid #cfe1df;border-radius:999px;padding:2px 9px;text-decoration:none}
+.toolbar select{border:1px solid #cfdcde;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;background:#fff;color:#21414a}

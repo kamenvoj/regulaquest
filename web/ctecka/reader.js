@@ -55,6 +55,7 @@ async function load(rq){
   }
   index(d);
   await loadMe();
+  if (typeof loadNews === 'function') await loadNews();
   route();
   window.addEventListener('hashchange', route);
 }
@@ -209,7 +210,7 @@ function route(){
   else if ((m = h.match(/^\/u\/(.+)$/)) && S.units.has(m[1])){ S.view = 'unit'; S.unitId = m[1]; S.docId = S.units.get(m[1]).document_id; ancestors(S.units.get(S.unitId)).forEach(a => S.expanded.add(a.id)); }
   else if ((m = h.match(/^\/d\/(.+)$/)) && S.docs.has(m[1])){ S.view = 'doc'; S.docId = m[1]; }
   else if ((m = h.match(/^\/hledat\/(.+)$/))){ S.view = 'search'; S.query = m[1]; if ($('#search').value.trim() !== S.query) $('#search').value = S.query; }
-  else S.view = ({'/dokumenty':'docs', '/trasy':'paths', '/pojmy':'terms', '/zalozky':'marks', '/novinky':'news'})[h] || 'home';
+  else S.view = ({'/dokumenty':'docs', '/trasy':'paths', '/pojmy':'terms', '/zalozky':'marks', '/novinky':'news', '/aktuality':'updates'})[h] || 'home';
   if (S.view !== 'search' && document.activeElement !== $('#search')) { $('#search').value = ''; S.query = ''; }
   render();
   setTab('text', false);
@@ -224,7 +225,7 @@ function setTab(t, scroll=true){
 function render(){
   const v = S.view, reading = v === 'unit' || v === 'doc' || (v === 'path' && S.unitId);
   document.querySelectorAll('.appnav [data-nav]').forEach(x => x.classList.toggle('on',
-    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news'})[v]));
+    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news', updates:'updates'})[v]));
   $('#navMarks').textContent = S.me.marks.filter(m => !m.unit_id.startsWith('doc:')).length || '';
   renderNav();
   renderPathNav();
@@ -238,6 +239,7 @@ function render(){
   else if (v === 'terms') renderTerms();
   else if (v === 'marks') renderMarks();
   else if (v === 'news') renderNews();
+  else if (v === 'updates') renderUpdates();
   else if (v === 'search') renderSearch();
   else if (v === 'finder') renderFinder();
   else if (v === 'guide') renderGuide();
@@ -748,6 +750,7 @@ function renderHome(){
     <div class="sec"><h2>Dokumenty${area ? ` · ${esc(area.name)}` : ''}</h2><a href="#/dokumenty">${area ? `Celá oblast (${gs.length})` : `Všechny dokumenty (${gs.length})`}</a></div>
     ${ua.length ? `<div class="area-switch" role="group" aria-label="Oblast"><button type="button" class="chipb ${!area ? 'on' : ''}" data-area="">Všechny oblasti</button>${ua.map(a => `<button type="button" class="chipb ${area?.key === a.key ? 'on' : ''}" data-area="${esc(a.key)}">${esc(a.name)}</button>`).join('')}</div>` : ''}
     <div class="cards">${cards.map(([g, l]) => docCard(g, l)).join('')}</div>
+    ${typeof homeNews === 'function' ? homeNews() : ''}
     ${S.paths.length ? `<div class="sec"><h2>Trasy</h2><a href="#/trasy">Všechny trasy</a></div><div class="cards">${S.paths.slice(0, 3).map(pathCard).join('')}</div>` : ''}
     ${marks.length ? `<div class="sec"><h2>Moje záložky</h2><a href="#/zalozky">Všechny</a></div><div class="card marklist">${marks.map(markRow).join('')}</div>` : ''}
     <div class="source">${esc(S.data.notice||'')}</div></div>`;
@@ -871,8 +874,9 @@ function renderContext(){
     section('Související ustanovení', related, relCard) +
     section('Příklady', examples, noteCard) +
     section('Klíčové pasáže', keys, noteCard) +
+    (typeof newsCtx === 'function' ? newsCtx(u) : '') +
     (childInfo.length ? `<div class="ctx-section"><h3>V jednotlivých částech</h3>${childInfo.map(x => `<div class="ctx-card"><a class="ctx-link" href="#/u/${encodeURIComponent(x.c.id)}"><strong>${esc(x.c.label)}</strong><small>${[x.n?`${x.n}× výklad`:'',x.r?`${x.r}× souvislost`:''].filter(Boolean).join(' · ')}</small></a></div>`).join('')}</div>` : '') +
-    (total || childInfo.length ? '' : '<div class="ctx-empty">K tomuto ustanovení zatím nejsou zveřejněné výklady ani vazby.</div>') + disclaimer();
+    (total || childInfo.length || (typeof newsFor === 'function' && newsFor(u).length) ? '' : '<div class="ctx-empty">K tomuto ustanovení zatím nejsou zveřejněné výklady ani vazby.</div>') + disclaimer();
   $('#tabCount').textContent = total ? String(total) : '';
   box.querySelectorAll('[data-focus]').forEach(c => c.addEventListener('click', e => {
     if (e.target.closest('a, button:not(.anchor-q)')) return;
