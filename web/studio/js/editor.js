@@ -155,6 +155,7 @@ function renderHome(){
  if(ad.length){$('#homeDocuments').insertAdjacentHTML('beforeend',`<details class="home-archived"><summary>Archivované dokumenty (${ad.length})</summary>${ad.map(d=>`<div class="home-doc-row arch"><div class="home-doc-ident"><strong>${esc(d.family)} · ${esc(d.language.toUpperCase())}</strong><span>${esc(d.title)}</span></div><button type="button" class="btn tiny" data-restore-doc="${esc(d.id)}">Obnovit</button></div>`).join('')}</details>`);
   $('#homeDocuments').querySelectorAll('[data-restore-doc]').forEach(b=>b.onclick=async()=>{try{await rpc('rq_archive_document',{p_id:b.dataset.restoreDoc,p_archived:false});await refresh();toast('Dokument obnoven.')}catch(e){toast(e.message,true)}});}
  $('#homeDocuments').querySelectorAll('[data-home-document]').forEach(b=>b.onclick=()=>selectDocument(b.dataset.homeDocument));
+ if(window.RQDocs)RQDocs.renderHome();
  if(window.RQHome)RQHome.render();
 }
 function renderDocumentMetrics(){
@@ -180,6 +181,7 @@ function openDocumentFromOverview(id){
  selectDocument(id);
 }
 function renderDocumentsOverview(){
+ if(window.RQDocs)return RQDocs.renderCatalog();
  const holder=$('#documentOverview'),q=docOverviewSearch.trim().toLocaleLowerCase('cs');
  $('#catalogJurisdiction').value=catalogJurisdiction;$('#catalogType').value=catalogType;
  const docs=db.documents.filter(d=>

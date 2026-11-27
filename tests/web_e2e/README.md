@@ -14,6 +14,7 @@ python3 tests/web_e2e/test_dokumenty.py # archivace a smazání dokumentu
 python3 tests/web_e2e/test_trasy.py     # trasy ve Studiu a ve čtečce
 python3 tests/web_e2e/test_pokryti.py   # přehled pokrytí (spouštět po test_anotace.py)
 python3 tests/web_e2e/test_domov.py     # úvodní stránka a nápověda (spouštět po test_anotace.py)
+python3 tests/web_e2e/test_prehled.py   # moje dokumenty, připnutí, katalog se stavem
 ```
 
 `test_import.py` naimportuje celé MDR (soubor `podklady/MDR_CS_20260719.html`, v gitu není) a pak upravenou kopii

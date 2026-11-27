@@ -44,7 +44,7 @@ window.RQCoverage = (function () {
     const pct = n => rows.length ? Math.round(n / rows.length * 100) : 0;
     const sum = [['Ověřený text', tot(s => s.text && s.verified === s.text)], ['Se štítky', tot(s => s.tags)], ['S výkladem', tot(s => s.notes.length)],
       ['S vazbou', tot(s => s.rel)], ['S metodikou', tot(s => s.guidance)]];
-    box.innerHTML = `<div class="page-head"><div><div class="eyebrow">02 / ODBORNÁ PRÁCE</div><h1>Pokrytí</h1>
+    box.innerHTML = `<div class="page-head"><div><div class="eyebrow">REDAKCE / POKRYTÍ</div><h1>Pokrytí</h1>
       <p>Kde už je hotovo a kde pokračovat. Čísla zahrnují i odstavce a body daného článku (pravidla, přílohy). Archivované a zamítnuté položky se nepočítají.</p></div>
       <label class="form-field cov-doc"><span>Dokument</span><select class="select" id="covDoc">${db.documents.map(x => `<option value="${esc(x.id)}" ${x.id === docId ? 'selected' : ''}>${esc(x.family)} · ${esc(x.language.toUpperCase())} – ${esc(x.title.slice(0, 60))}</option>`).join('')}</select></label></div>
       ${d ? `<div class="cov-summary">${sum.map(([l, n]) => `<div class="cov-metric"><span>${l}</span><strong>${n} / ${rows.length}</strong><i><b style="width:${pct(n)}%"></b></i></div>`).join('')}</div>

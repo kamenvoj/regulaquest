@@ -22,7 +22,7 @@ window.RQPaths = (function () {
     if (current && !paths().some(p => p.id === current)) current = null;
     if (!current && paths().length) current = paths()[0].id;
     const p = paths().find(x => x.id === current);
-    box.innerHTML = `<div class="page-head"><div><div class="eyebrow">04 / VÝUKA</div><h1>Trasy</h1>
+    box.innerHTML = `<div class="page-head"><div><div class="eyebrow">VÝUKA / TRASY</div><h1>Trasy</h1>
       <p>Průchod několika místy předpisů a metodik v daném pořadí, s vaším komentářem ke každému kroku – např. „Klasifikace softwaru: čl. 2 → příloha VIII → pravidlo 11 → MDCG 2019-11“.
       Kroky přidáte i přímo z textu ustanovení tlačítkem <strong>⇢ Do trasy</strong> (celé ustanovení) nebo z lišty po označení textu (konkrétní místo).</p></div>
       <button class="btn accent" id="pNew" type="button">+ Nová trasa</button></div>

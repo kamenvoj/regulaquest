@@ -1,6 +1,6 @@
 :root{--read:46rem}
 :root{
- --navy:#142c38;--ink:#203843;--muted:#66797e;--line:#dde6e6;--bg:#f4f7f6;--paper:#fff;
+ --navy:#142c38;--ink:#203843;--muted:#566a70;--line:#dde6e6;--bg:#f4f7f6;--paper:#fff;
  --teal:#176f75;--teal-soft:#e6f1f0;--gold:#d5a654;--gold-soft:#fbf4e6;--warn:#a5651b;--warn-soft:#fdf1e2;
  --serif:Charter,"Iowan Old Style",Georgia,"Times New Roman",serif;
  --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -50,7 +50,7 @@ body.has-banner .layout{height:calc(100vh - var(--top) - 37px)}
 .node a.current{background:var(--teal);color:#fff}
 .node a .h{display:block;font-size:12px;color:#71868b}
 .node a.current .h{color:#d6ecea}
-.node a.locked{color:#8a9b9f}
+.node a.locked{color:#5b6f75}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-left:6px;vertical-align:middle}
 .results-head{font-size:12px;color:var(--muted);padding:6px 10px 8px}
 .result{display:block;padding:9px 10px;border-radius:9px;text-decoration:none;color:var(--ink);font-size:13px}
@@ -177,7 +177,7 @@ h1 .heading{display:block;font-size:18px;font-weight:600;color:#4a6168;letter-sp
 .legend-panel{background:#fff;border-bottom:1px solid var(--line);padding:10px 18px}
 .legend-panel .rq-ico{width:14px;height:14px;color:#1d7d83}
 .tree .marks{display:inline-flex;gap:2px;margin-left:6px;vertical-align:-2px}
-.tree .m{display:inline-flex;color:#7c9095}
+.tree .m{display:inline-flex;color:#5b6f75}
 .tree .m .rq-ico{width:12px;height:12px}
 .tree .m-key{color:#b8902a}.tree .m-warning{color:#b5761c}.tree .m-guidance{color:#1d7d83}
 .ctx-card .meta .k{display:inline-flex;align-items:center;gap:5px}
@@ -188,14 +188,14 @@ h1 .heading{display:block;font-size:18px;font-weight:600;color:#4a6168;letter-sp
 .ctx-card.warning{border-left-color:#b5761c}
 
 /* Pohled role (0.15) */
-.role-pick{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:#5d7177}
+.role-pick{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:#5b6f75}
 .role-pick select{flex:1;border:1px solid #cfdcde;border-radius:8px;padding:6px 8px;font:inherit;font-size:12.5px;background:#fff;color:#21414a}
 .tree a.role-dim{opacity:.55}
-.nav-empty{padding:14px 6px;font-size:13px;color:#5d7177}
-.roles-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 14px;font-size:12px;color:#5d7177}
+.nav-empty{padding:14px 6px;font-size:13px;color:#5b6f75}
+.roles-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 14px;font-size:12px;color:#5b6f75}
 .role-chip{border:1px solid #cfdcde;border-radius:999px;padding:2px 9px;background:#f6f9f9;color:#34525a;font-weight:600}
 .role-chip.on{background:#16313c;border-color:#16313c;color:#fff}
-.roles-row small{color:#8a9b9f}
+.roles-row small{color:#5b6f75}
 
 /* Trasy (0.17) */
 .nav-mode{display:flex;gap:4px;margin:0 0 10px;background:#e3eaea;border-radius:10px;padding:3px}
@@ -203,7 +203,7 @@ h1 .heading{display:block;font-size:18px;font-weight:600;color:#4a6168;letter-sp
 .nav-mode button[aria-selected="true"]{background:#fff;color:#16313c;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .path-card{display:block;padding:10px 11px;margin:6px 0;border-radius:10px;background:#fff;border:1px solid #dbe5e5;text-decoration:none;color:#1d3a43}
 .path-card.current{border-color:#1d7d83}
-.path-card strong{display:block;font-size:13.5px}.path-card span{display:block;font-size:11.5px;color:#6b7f85;margin:3px 0 6px}
+.path-card strong{display:block;font-size:13.5px}.path-card span{display:block;font-size:11.5px;color:#5b6f75;margin:3px 0 6px}
 .pbar{display:block;height:4px;border-radius:4px;background:#e3eaea;overflow:hidden}.pbar b{display:block;height:100%;background:#1d7d83}
 .path-steps,.path-overview{margin:4px 0 10px;padding-left:22px;font-size:12.5px;line-height:1.45}
 .path-steps li,.path-overview li{margin:4px 0}
@@ -212,7 +212,7 @@ h1 .heading{display:block;font-size:18px;font-weight:600;color:#4a6168;letter-sp
 .path-steps li.done::marker,.path-overview li.done::marker{color:#1d7d83;font-weight:800}
 .path-steps li.done a::after,.path-overview li.done a::after{content:' ✓';color:#1d7d83}
 .path-box{background:#f3f8f7;border:1px solid #d3e6e3;border-radius:14px;padding:14px 16px;margin:0 0 22px;font-family:Inter,-apple-system,"Segoe UI",sans-serif}
-.pb-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#5d7177}
+.pb-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#5b6f75}
 .pb-title{font-weight:800;color:#10595d;text-decoration:none}
 .pb-dots{display:flex;gap:5px;margin:9px 0 2px;flex-wrap:wrap}
 .pb-dots a{width:22px;height:6px;border-radius:4px;background:#d3e1e0}

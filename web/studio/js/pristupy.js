@@ -43,7 +43,7 @@
     const byGroup = id => profiles.filter(p => p.role === 'student' && p.group_id === id);
     const owner = rq.me.isOwner;
     c.innerHTML = `
-      <div class="page-head"><div><div class="eyebrow">SPRÁVA</div><h1>Přístupy</h1><p>Studenti dostanou přidělené jméno a náhodné heslo, bez osobních údajů. Účet platí, dokud ho nedeaktivujete.</p></div></div>
+      <div class="page-head"><div><div class="eyebrow">SPRÁVA / PŘÍSTUPY</div><h1>Přístupy</h1><p>Studenti dostanou přidělené jméno a náhodné heslo, bez osobních údajů. Účet platí, dokud ho nedeaktivujete.</p></div></div>
       <div class="card">
         <div class="card-head"><h2>Skupiny studentů</h2></div>
         <form class="form-row" id="newGroup">

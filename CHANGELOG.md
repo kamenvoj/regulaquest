@@ -1,5 +1,12 @@
 # Změny
 
+## 0.20.0 – 2026-11-27 · Moje dokumenty, katalog po skupinách, kontrast
+- Přehled: místo úplného seznamu **Moje dokumenty** – připnuté (☆/★, každý admin sám, v prohlížeči) a 5 naposledy upravovaných;
+  rychlé hledání (Enter otevře katalog s výsledkem) a odkaz „Všech N dokumentů v katalogu“.
+- Jazykové verze jednoho dokumentu (CS/EN) jsou v jednom řádku, každá se svým postupem ověřování – na Přehledu i v katalogu.
+- Katalog: nový filtr **Stav** (připnuté, nezačaté, rozpracované, hotové); údaje každé jazykové verze přes „Údaje CS / EN“.
+- Tmavší drobný šedý text (kontrast ≥ 4,5 : 1) ve Studiu i čtečce; nadpisy stránek sjednoceny podle sekcí levého panelu.
+
 ## 0.19.0 – 2026-11-27 · Úvodní stránka a nápověda
 - Přehled Studia: **Pokračovat, kde jsem skončil** (poslední otevřené ustanovení v tomto prohlížeči, počet vlastních konceptů),
   **Rychlé cesty** a **Poslední aktivita** (kdo co udělal a kde – z existující historie, bez nových dat v databázi).
