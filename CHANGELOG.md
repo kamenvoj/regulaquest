@@ -1,5 +1,8 @@
 # Změny
 
+## 0.31.1 – 2026-11-27
+- Přehled pro studenty: dlaždice Najít předpisy vypadá stejně jako ostatní (bez tmavého zvýraznění a tlačítek).
+
 ## 0.31.0 – 2026-11-27 · Nový Přehled pro studenty
 - **Pokračovat:** čtení, rozpracovaná trasa a nově i prezentace (poslední snímek se ukládá k účtu – bez migrace, stejným
   způsobem jako místo ve čtení).

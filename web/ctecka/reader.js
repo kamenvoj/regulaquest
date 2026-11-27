@@ -750,7 +750,7 @@ function renderHome(){
   const pathOpen = S.paths.filter(p => { const k = progress(p); return k && k < p.steps.length; }).length;
   const tiles = [
     ['docs', '#/dokumenty', 'Dokumenty', 'Předpisy a metodiky s výklady', `${all.length}`],
-    ['finder', '#/najit', 'Najít předpisy', 'Podle oblasti, role, vlastností – nebo průvodce otázkami', '', true],
+    ['finder', '#/najit', 'Najít předpisy', 'Podle oblasti, role a vlastností – nebo průvodce otázkami', ''],
     ['prlist', '#/prezentace', 'Prezentace', 'Snímky z přednášek s odkazy do předpisů', `${prs.length}${prNew ? ` · <b>${prNew} ${prNew === 1 ? 'nová' : 'nové'}</b>` : ''}`],
     ['paths', '#/trasy', 'Trasy', 'Témata krok za krokem napříč předpisy', `${S.paths.length}${pathOpen ? ` · ${pathOpen} rozpracovan${pathOpen === 1 ? 'á' : 'é'}` : ''}`],
     ['cases', '#/pripady', 'Řešené případy', 'Konkrétní situace rozebrané krok za krokem', `${cases.length}`],
@@ -777,7 +777,7 @@ function renderHome(){
     <div class="status"><span class="sdot"></span>Obsah aktualizován <strong>${esc(fmtDate(S.data.published_at))}</strong> <a href="#/novinky">Co je nového</a></div>
     ${cont.length ? `<div class="sec"><h2>Pokračovat</h2></div><div class="home-cont n${cont.length}">${cont.join('')}</div>` : ''}
     <div class="sec"><h2>Rozcestník</h2></div>
-    <nav class="home-tiles" aria-label="Rozcestník">${tiles.map(([k, href, name, desc, n, hl]) => `<a class="tile${hl ? ' hl' : ''}" href="${href}"><span class="ti">${ico(k)}</span><span class="tt"><strong>${name}</strong>${n ? `<em>${n}</em>` : ''}</span><small>${desc}</small>${hl ? '<span class="tg2"><span>Najít předpisy</span><span data-href="#/pruvodce">Průvodce otázkami</span></span>' : ''}</a>`).join('')}</nav>
+    <nav class="home-tiles" aria-label="Rozcestník">${tiles.map(([k, href, name, desc, n, hl]) => `<a class="tile${hl ? ' hl' : ''}" href="${href}"><span class="ti">${ico(k)}</span><span class="tt"><strong>${name}</strong>${n ? `<em>${n}</em>` : ''}</span><small>${desc}</small></a>`).join('')}</nav>
     <div class="home-two">
       <section class="card"><div class="sec in"><h2>Moje záložky</h2>${markN ? `<a href="#/zalozky">Všechny (${markN})</a>` : ''}</div>
         ${markN ? `<div class="marklist flat">${marks.slice(0, 5).map(markRow).join('')}</div>` : '<p class="muted">Záložku přidáte u ustanovení tlačítkem se záložkou vpravo nahoře – můžete jí dát krátký popisek (např. „Na zkoušku – lhůty“). Uloží se k vašemu účtu.</p>'}</section>
@@ -791,7 +791,6 @@ function renderHome(){
     <div class="cards">${cards.map(([g, l]) => docCard(g, l)).join('')}</div>
     <div class="source">${esc(S.data.notice || '')}</div></div>`;
   bindPins($('#panelText'));
-  $('#panelText').querySelectorAll('.tile [data-href]').forEach(x => x.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); go(x.dataset.href); }));
   $('#panelText').querySelectorAll('[data-del-mark]').forEach(b => b.closest('.home') && b.remove());
   document.title = 'RegulaQuest · Čtečka regulace zdravotnických prostředků';
 }

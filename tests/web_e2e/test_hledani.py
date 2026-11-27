@@ -33,7 +33,7 @@ with sync_playwright() as pw:
     r = b.new_page(viewport={'width': 1440, 'height': 900}); r.on('pageerror', lambda e: errs.append('R ' + str(e)))
     r.goto('http://127.0.0.1:8765/ctecka/?nahled=pracovni'); r.fill('#rqUser', 'vojta'); r.fill('#rqPass', 'Heslo12345AB'); r.click('button[type=submit]')
     r.wait_for_selector('.appnav'); time.sleep(0.5)
-    print('přehled – rozcestník:', r.locator('.tile.hl').inner_text().replace('\n', ' '))
+    print('přehled – rozcestník:', r.locator('.tile[href="#/najit"]').inner_text().replace('\n', ' '))
     r.click('.navb[data-nav=finder]'); time.sleep(0.3)
     print('prázdný:', r.locator('.fresults .empty').count(), '| pole:', r.locator('.ff-h strong').all_inner_texts())
     r.click('[data-f=o][data-k=zp]'); time.sleep(0.3)

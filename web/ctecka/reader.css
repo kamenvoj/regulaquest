@@ -554,11 +554,6 @@ div.card:hover{box-shadow:none;border-color:var(--line)}
 .tile em{font-style:normal;font-size:12px;color:var(--muted);white-space:nowrap}
 .tile em b{color:#a8741c}
 .tile small{font-size:12.5px;color:#4d666d;line-height:1.4}
-.tile.hl{background:#16313c;border-color:#16313c}
-.tile.hl strong{color:#fff}.tile.hl small{color:#c6d8da}.tile.hl .ti{background:rgba(233,203,144,.18);color:#E9CB90}
-.tile .tg2{grid-column:2;display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.tile .tg2 span{font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;background:#E9CB90;color:#3d2a05}
-.tile .tg2 span+span{background:transparent;border:1px solid rgba(233,203,144,.6);color:#E9CB90}
 .home-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1180px;margin:26px 0 0}
 .home-two>.card{padding:14px 18px}
 .marklist.flat{padding:0;border:0;box-shadow:none;background:none;max-width:none}
