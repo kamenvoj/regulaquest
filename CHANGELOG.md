@@ -1,5 +1,10 @@
 # Změny
 
+## 0.26.0 – 2026-11-27 · Řazení a stránkování aktualit
+- Studio → Aktuality: řazení (nejnovější / nejstarší nahoře), počet na stránku (10 / 25 / 50 / vše – pamatuje si prohlížeč)
+  a stránkování dole. „Vybrat“ a hromadné akce platí jen pro aktuální stránku.
+- Čtečka → Aktuality: po 10 na stránku se stránkováním.
+
 ## 0.25.0 – 2026-11-27 · Aktuality
 - **Studio – Výuka → Aktuality:** novinky ze zdrojů RSS/Atom (výchozí: SÚKL – Aktuality ZP, Evropská komise – Medical devices:
   latest updates) a ručně přidané odkazy (EUDAMED, MDCG, MZ ČR…). Stavy Nové / Přečtené / Zveřejněné / Zamítnuté, filtr podle

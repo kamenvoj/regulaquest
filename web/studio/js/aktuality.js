@@ -3,7 +3,8 @@
    Redakce je přečte, okomentuje, přiřadí k oblastem, štítkům, dokumentům a ustanovením a vybrané zveřejní
    (studenti je vidí hned, bez publikace obsahu). Nevyřízené se po 90 dnech samy přesunou mezi zamítnuté. */
 window.RQNews = (function () {
-  let N = null, loading = null, tab = 'new', srcF = 'all', areaF = 'all', q = '', sel = new Set(), editing = null;
+  let N = null, loading = null, tab = 'new', srcF = 'all', areaF = 'all', q = '', sel = new Set(), editing = null, sort = 'new', page = 0;
+  let per = (() => { try { return +localStorage.getItem('rq-aktuality-pocet') || 25; } catch { return 25; } })();
   const STATUS = { new: 'Nové', read: 'Přečtené', published: 'Zveřejněné', rejected: 'Zamítnuté' };
   const areas = () => (db.areas || []).filter(a => !a.archived);
   const areaName = k => (db.areas || []).find(a => a.key === k)?.name || k;
@@ -29,10 +30,13 @@ window.RQNews = (function () {
   const syncPick = d => { const s = d.querySelector('summary'), on = [...d.querySelectorAll('input:checked')].map(x => x.parentElement.textContent.trim()); s.textContent = on.length ? on.join(', ') : d.dataset.empty; s.title = s.textContent; };
   const tagItems = () => (db.tag_groups || []).flatMap(g => [{ group: g.name }, ...(db.tags || []).filter(t => t.group_key === g.key && !t.archived).map(t => ({ key: t.key, name: t.name }))]);
 
+  const list = () => { const all = visible(); return per ? all.slice(page * per, page * per + per) : all; };
   function visible() {
     const f = s => s.toLocaleLowerCase('cs');
+    const key = i => i.published_at || i.fetched_at || '';
     return N.items.filter(i => i.status === tab && (srcF === 'all' || String(i.source_id ?? 'manual') === srcF) && (areaF === 'all' || i.area_keys.includes(areaF))
-      && (!q || f([i.title, i.summary, i.comment, i.source_name].join(' ')).includes(f(q))));
+      && (!q || f([i.title, i.summary, i.comment, i.source_name].join(' ')).includes(f(q))))
+      .sort((a, b) => sort === 'old' ? key(a).localeCompare(key(b)) : key(b).localeCompare(key(a)));
   }
 
   function editor(i) {
@@ -62,8 +66,11 @@ window.RQNews = (function () {
   async function render() {
     const box = document.getElementById('newsContent'); if (!box) return;
     if (!N) { box.innerHTML = '<p class="fine">Načítám aktuality…</p>'; try { await load(); } catch (e) { box.innerHTML = `<div class="notice">${esc(e.message)}</div>`; return; } }
-    const cnt = s => N.items.filter(i => i.status === s).length, list = visible();
+    const cnt = s => N.items.filter(i => i.status === s).length, all = visible();
+    const pages = per ? Math.max(1, Math.ceil(all.length / per)) : 1; page = Math.min(page, pages - 1);
+    const list = per ? all.slice(page * per, page * per + per) : all;
     sel = new Set([...sel].filter(id => list.some(i => i.id === id)));
+    const pager = pages > 1 ? `<div class="nw-pager"><button type="button" class="btn tiny" data-pg="${page - 1}" ${page ? '' : 'disabled'}>← Předchozí</button>${Array.from({ length: pages }, (_, k) => `<button type="button" class="btn tiny${k === page ? ' accent' : ''}" data-pg="${k}">${k + 1}</button>`).join('')}<button type="button" class="btn tiny" data-pg="${page + 1}" ${page < pages - 1 ? '' : 'disabled'}>Další →</button></div>` : '';
     const warn = !N.net ? 'Stahování ze zdrojů není zapnuté: v Supabase → Database → Extensions zapněte <b>pg_net</b> a <b>pg_cron</b> a spusťte znovu migraci 20_aktuality.sql. Do té doby jde aktuality přidávat ručně.'
       : !N.scheduled ? 'Automatické načítání (pg_cron) není zapnuté – nové položky načtete tlačítkem „Načíst nové“. Po zapnutí pg_cron spusťte znovu migraci 20_aktuality.sql.' : '';
     const errs = N.sources.filter(s => s.active && s.last_error);
@@ -75,11 +82,13 @@ window.RQNews = (function () {
       <div class="nw-tabs">${Object.entries(STATUS).map(([k, l]) => `<button type="button" class="btn${tab === k ? ' accent' : ''}" data-tab="${k}">${l} (${cnt(k)})</button>`).join('')}</div>
       <div class="nw-filters"><select class="select" id="nwSrc"><option value="all">Všechny zdroje</option>${N.sources.map(s => `<option value="${s.id}" ${srcF === String(s.id) ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}<option value="manual" ${srcF === 'manual' ? 'selected' : ''}>Ručně přidané</option></select>
         <select class="select" id="nwArea"><option value="all">Všechny oblasti</option>${areas().map(a => `<option value="${esc(a.key)}" ${areaF === a.key ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select>
-        <input class="input" id="nwQ" placeholder="Hledat v názvu, výtahu, komentáři…" value="${esc(q)}"></div>
-      <div class="nw-bulk"><label class="inline-check"><input type="checkbox" id="nwAll" ${list.length && sel.size === list.length ? 'checked' : ''}> vybrat vše (${list.length})</label>
+        <input class="input" id="nwQ" placeholder="Hledat v názvu, výtahu, komentáři…" value="${esc(q)}">
+        <select class="select" id="nwSort" aria-label="Řazení"><option value="new" ${sort === 'new' ? 'selected' : ''}>Nejnovější nahoře</option><option value="old" ${sort === 'old' ? 'selected' : ''}>Nejstarší nahoře</option></select>
+        <select class="select" id="nwPer" aria-label="Počet na stránku">${[10, 25, 50, 0].map(n => `<option value="${n}" ${per === n ? 'selected' : ''}>${n ? n + ' na stránku' : 'Vše na jedné stránce'}</option>`).join('')}</select></div>
+      <div class="nw-bulk"><label class="inline-check"><input type="checkbox" id="nwAll" ${list.length && sel.size === list.length ? 'checked' : ''}> vybrat ${pages > 1 ? 'na této stránce' : 'vše'} (${list.length})</label>${pages > 1 ? `<span class="fine">Celkem ${all.length} · stránka ${page + 1} z ${pages}</span>` : ''}
         ${sel.size ? `<span>Vybráno ${sel.size}:</span>${tab !== 'read' ? '<button type="button" class="btn tiny" data-bulk="read">Přečteno</button>' : ''}${tab !== 'published' ? '<button type="button" class="btn tiny accent" data-bulk="published">Zveřejnit</button>' : ''}${tab !== 'rejected' ? '<button type="button" class="btn tiny danger" data-bulk="rejected">Zamítnout</button>' : ''}` : ''}</div>
       ${tab === 'rejected' ? '<p class="fine">Zamítnuté se studentům nezobrazují a znovu se nenačtou. Po roce se smažou úplně.</p>' : ''}
-      <ul class="nw-list">${list.map(row).join('') || '<li class="nw-empty">Nic tu není.</li>'}</ul>`;
+      <ul class="nw-list">${list.map(row).join('') || '<li class="nw-empty">Nic tu není.</li>'}</ul>${pager}`;
     bind(box);
   }
 
@@ -87,11 +96,14 @@ window.RQNews = (function () {
   const setStatus = (ids, s) => run(() => rpc('rq_news_set_status', { p_ids: ids, p_status: s }), { read: 'Označeno jako přečtené.', published: 'Zveřejněno – studenti to vidí hned.', rejected: 'Zamítnuto.', new: 'Vráceno mezi nové.' }[s]);
 
   function bind(box) {
-    box.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; sel.clear(); editing = null; render(); });
-    box.querySelector('#nwSrc').onchange = e => { srcF = e.target.value; render(); };
-    box.querySelector('#nwArea').onchange = e => { areaF = e.target.value; render(); };
-    let t; const qi = box.querySelector('#nwQ'); qi.oninput = () => { clearTimeout(t); t = setTimeout(() => { q = qi.value.trim(); const p = qi.selectionStart; render().then(() => { const n = document.getElementById('nwQ'); n.focus(); n.setSelectionRange(p, p); }); }, 250); };
-    box.querySelector('#nwAll').onchange = e => { visible().forEach(i => e.target.checked ? sel.add(i.id) : sel.delete(i.id)); render(); };
+    box.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; sel.clear(); editing = null; page = 0; render(); });
+    box.querySelector('#nwSrc').onchange = e => { srcF = e.target.value; page = 0; render(); };
+    box.querySelector('#nwArea').onchange = e => { areaF = e.target.value; page = 0; render(); };
+    box.querySelector('#nwSort').onchange = e => { sort = e.target.value; page = 0; render(); };
+    box.querySelector('#nwPer').onchange = e => { per = +e.target.value; page = 0; try { localStorage.setItem('rq-aktuality-pocet', String(per)); } catch {} render(); };
+    box.querySelectorAll('[data-pg]').forEach(b => b.onclick = () => { page = +b.dataset.pg; sel.clear(); editing = null; render(); window.scrollTo(0, 0); });
+    let t; const qi = box.querySelector('#nwQ'); qi.oninput = () => { clearTimeout(t); t = setTimeout(() => { q = qi.value.trim(); page = 0; const p = qi.selectionStart; render().then(() => { const n = document.getElementById('nwQ'); n.focus(); n.setSelectionRange(p, p); }); }, 250); };
+    box.querySelector('#nwAll').onchange = e => { list().forEach(i => e.target.checked ? sel.add(i.id) : sel.delete(i.id)); render(); };
     box.querySelectorAll('.nw-sel').forEach(c => c.onchange = () => { const id = +c.closest('[data-id]').dataset.id; c.checked ? sel.add(id) : sel.delete(id); render(); });
     box.querySelectorAll('[data-bulk]').forEach(b => b.onclick = () => setStatus([...sel], b.dataset.bulk).then(() => sel.clear()));
     box.querySelectorAll('.nw-item').forEach(li => {

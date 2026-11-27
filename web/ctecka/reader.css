@@ -467,3 +467,4 @@ div.card:hover{box-shadow:none;border-color:var(--line)}
 .upd-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
 .upd-doc{font-size:12px;font-weight:700;border:1px solid #cfe1df;border-radius:999px;padding:2px 9px;text-decoration:none}
 .toolbar select{border:1px solid #cfdcde;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;background:#fff;color:#21414a}
+.upd-pager{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 20px;max-width:900px}
