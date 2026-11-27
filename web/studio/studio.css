@@ -511,3 +511,13 @@ dialog:has(#docAreas){width:min(860px,calc(100vw - 24px));max-width:min(860px,ca
 .cs-ulist button:hover{background:#eff7f5}
 .role-chip .cs-go{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:0}
 .gq-head h2{margin:0}
+
+/* ---------- 0.28 Užitečné odkazy ---------- */
+.lk-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+.lk-picks{grid-template-columns:1.2fr 1fr 1fr 160px}
+.lk-form{max-width:1100px;margin:0 0 14px}
+.lk-cat{font-size:13px;margin:18px 0 8px;color:#16313c}
+.lk-cat small{color:#5b6f75;font-weight:600}
+.lk-q{max-width:280px;margin-left:auto}
+.lk-st{width:9px;height:9px;border-radius:50%;margin-top:6px;background:#c9d4d6}
+.lk-st.published{background:#2c9a74}

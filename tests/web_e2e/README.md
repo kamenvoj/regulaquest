@@ -19,6 +19,7 @@ python3 tests/web_e2e/test_oblasti.py   # oblasti a role dokumentů (po test_ano
 python3 tests/web_e2e/test_hledani.py   # Najít předpisy a průvodce (po test_oblasti.py)
 python3 tests/web_e2e/test_aktuality.py # aktuality: načtení (náhrada pg_net), Studio, propojení, čtečka (po test_anotace.py)
 python3 tests/web_e2e/test_pripady.py   # řešené případy: Studio, kroky, propojení z textu, čtečka (po test_anotace.py)
+python3 tests/web_e2e/test_odkazy.py    # užitečné odkazy: Studio a záložka Odkazy ve čtečce
 ```
 
 `test_import.py` naimportuje celé MDR (soubor `podklady/MDR_CS_20260719.html`, v gitu není) a pak upravenou kopii

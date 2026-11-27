@@ -33,6 +33,8 @@ window.RQHelp = (function () {
     ['cases', 'Řešené případy', `<p>Konkrétní případ rozebraný krok za krokem (klasifikace aplikace, analýza rizik…). <b>+ Nový případ</b>: název, krátký popis, zadání, závěr, oblasti a štítky; po založení přidáte <b>kroky</b> – každý může odkazovat na ustanovení (hledání podle označení nebo nadpisu).</p>
       <p>Formát textu: odstavce oddělte prázdným řádkem, odrážky začněte „- “, tabulku zapište řádky „| buňka | buňka |“ (první řádek je záhlaví).</p>
       <p>S ustanovením propojíte případ i z textu dokumentu: pod nadpisem <b>+ Případ</b>. Ve čtečce se u propojených ustanovení (i u ustanovení z kroků) ukáže v Souvislostech jen odkaz. Studenti vidí případy ve stavu <b>Zveřejněný</b> po příští publikaci; v pracovním náhledu i koncepty.</p>`],
+    ['links', 'Užitečné odkazy', `<p>Rozcestník webů pro studenty: úřady (SÚKL, ČMI), databáze (EUDAMED, NANDO), legislativa (EUR-Lex, e-Sbírka), normy, metodiky. U odkazu napište krátký popisek, k čemu stránka slouží, a zvolte kategorii (lze napsat i novou), případně oblasti a štítky. Pořadí v kategorii měníte šipkami.</p>
+      <p>Studenti vidí <b>zveřejněné</b> odkazy hned (bez publikace) v záložce Odkazy; otevírají se v novém okně. Výchozí sada je připravená jako koncepty – zkontrolujte adresy a zveřejněte.</p>`],
     ['news', 'Aktuality', `<p>Novinky ze zdrojů (RSS – SÚKL, Evropská komise…) se načítají samy dvakrát denně; <b>⟳ Načíst nové</b> je načte hned. Zdroje bez RSS (EUDAMED, pokyny MDCG, MZ ČR) přidejte přes <b>+ Přidat ručně</b>.</p>
       <p>Postup: <b>Nové</b> → přečíst (klepnutím na název se otevře zdroj a položka se označí jako přečtená) → <b>Upravit</b> (komentář redakce pro studenty, oblasti, štítky, dokumenty) → <b>Zveřejnit</b>. Zveřejněné studenti vidí <b>hned</b> v záložce Aktuality, bez publikace obsahu. Nerelevantní <b>Zamítnout</b> (lze hromadně zaškrtnutím). Nevyřízené se po 90 dnech samy přesunou mezi zamítnuté, zamítnuté se po roce smažou.</p>
       <p>S ustanovením propojíte aktualitu přímo v textu dokumentu: pod nadpisem <b>+ Aktualita</b>. Studenti ji pak uvidí v Souvislostech u toho ustanovení.</p>`],
@@ -40,7 +42,7 @@ window.RQHelp = (function () {
     ['publish', 'Publikování', `<p>Studenti nevidí Studio, ale <b>publikaci</b> – pevný snímek ověřených textů a schválených položek. Po práci tedy vždy <b>⇪ Publikovat pro studenty</b>. Pracovní náhled ukáže i rozpracované věci (jen admini). Databáze se zálohuje každou noc; ruční záloha stáhne JSON.</p>`],
     ['access', 'Přístupy', `<p>Účty adminů a skupiny studentů (skupinový přístup bez osobních údajů). Hesla se nikde nezobrazují znovu – při vytvoření si je uložte.</p>`],
   ];
-  const PAGE = { home: 'home', documents: 'documents', library: 'library', verified: 'library', review: 'review', relations: 'relations', comments: 'comments', coverage: 'coverage', paths: 'paths', guide: 'guide', news: 'news', cases: 'cases', publish: 'publish', access: 'access' };
+  const PAGE = { home: 'home', documents: 'documents', library: 'library', verified: 'library', review: 'review', relations: 'relations', comments: 'comments', coverage: 'coverage', paths: 'paths', guide: 'guide', news: 'news', cases: 'cases', links: 'links', publish: 'publish', access: 'access' };
 
   function open(section) {
     let el = document.getElementById('rqHelp');

@@ -115,7 +115,7 @@ async function act(data){
  return {editor:result,result};
 }
 function safeAct(obj,cb){act(obj).then(()=>cb&&cb()).catch(e=>toast(e.message,true))}
-function setPage(p){page=p;if(p==='access')RQ.renderAccess();if(p!=='paths'&&window.RQPaths)RQPaths.leave();if(p!=='guide'&&window.RQGuide)RQGuide.leave();if(p!=='cases'&&window.RQCases)RQCases.leave();if(p!=='news'&&window.RQNews&&document.querySelector('#page-news:not(.hidden)'))RQNews.leave();document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.page===(p==='verified'?'library':p)));document.querySelectorAll('.page').forEach(e=>e.classList.toggle('hidden',e.id!=='page-'+p));render()}
+function setPage(p){page=p;if(p==='access')RQ.renderAccess();if(p!=='paths'&&window.RQPaths)RQPaths.leave();if(p!=='guide'&&window.RQGuide)RQGuide.leave();if(p!=='cases'&&window.RQCases)RQCases.leave();if(p!=='links'&&window.RQLinks)RQLinks.leave();if(p!=='news'&&window.RQNews&&document.querySelector('#page-news:not(.hidden)'))RQNews.leave();document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.page===(p==='verified'?'library':p)));document.querySelectorAll('.page').forEach(e=>e.classList.toggle('hidden',e.id!=='page-'+p));render()}
 function documentStats(docId){
  const units=db.units.filter(u=>u.document_id===docId&&!u.editor_archived),idset=new Set(units.map(u=>u.id));
  const withText=units.filter(u=>String(u.body||'').trim()).length;
@@ -175,6 +175,7 @@ function render(){
  if(page==='guide'&&window.RQGuide)RQGuide.render();
  if(page==='news'&&window.RQNews)RQNews.render();
  if(page==='cases'&&window.RQCases)RQCases.render();
+ if(page==='links'&&window.RQLinks)RQLinks.render();
  if(window.RQNews&&!window.rqNewsInit){window.rqNewsInit=1;RQNews.load().catch(()=>{})}
  if(page==='library'){renderDocumentMetrics();renderList();renderReader();renderContext();rqLoadFigures($('#reader'))}
  if(page==='documents')renderDocumentsOverview();if(page==='verified')renderVerifiedOverview();if(page==='review')renderReview();if(page==='relations')renderRelations();if(page==='comments')renderComments();if(page==='publish')renderPublish();

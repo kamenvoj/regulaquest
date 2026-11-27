@@ -56,6 +56,7 @@ async function load(rq){
   index(d);
   await loadMe();
   if (typeof loadNews === 'function') await loadNews();
+  if (typeof loadLinks === 'function') await loadLinks();
   route();
   window.addEventListener('hashchange', route);
 }
@@ -211,7 +212,7 @@ function route(){
   else if ((m = h.match(/^\/d\/(.+)$/)) && S.docs.has(m[1])){ S.view = 'doc'; S.docId = m[1]; }
   else if ((m = h.match(/^\/pripad\/(.+)$/))){ S.view = 'case'; S.caseId = m[1]; }
   else if ((m = h.match(/^\/hledat\/(.+)$/))){ S.view = 'search'; S.query = m[1]; if ($('#search').value.trim() !== S.query) $('#search').value = S.query; }
-  else S.view = ({'/dokumenty':'docs', '/trasy':'paths', '/pojmy':'terms', '/zalozky':'marks', '/novinky':'news', '/aktuality':'updates', '/pripady':'cases'})[h] || 'home';
+  else S.view = ({'/dokumenty':'docs', '/trasy':'paths', '/pojmy':'terms', '/zalozky':'marks', '/novinky':'news', '/aktuality':'updates', '/pripady':'cases', '/odkazy':'links'})[h] || 'home';
   if (S.view !== 'search' && document.activeElement !== $('#search')) { $('#search').value = ''; S.query = ''; }
   render();
   setTab('text', false);
@@ -226,7 +227,7 @@ function setTab(t, scroll=true){
 function render(){
   const v = S.view, reading = v === 'unit' || v === 'doc' || (v === 'path' && S.unitId);
   document.querySelectorAll('.appnav [data-nav]').forEach(x => x.classList.toggle('on',
-    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news', updates:'updates', cases:'cases', case:'cases'})[v]));
+    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news', updates:'updates', cases:'cases', case:'cases', links:'links'})[v]));
   $('#navMarks').textContent = S.me.marks.filter(m => !m.unit_id.startsWith('doc:')).length || '';
   renderNav();
   renderPathNav();
@@ -242,6 +243,7 @@ function render(){
   else if (v === 'news') renderNews();
   else if (v === 'updates') renderUpdates();
   else if (v === 'cases') renderCases();
+  else if (v === 'links') renderLinks();
   else if (v === 'case') renderCase(caseOf(S.caseId));
   else if (v === 'search') renderSearch();
   else if (v === 'finder') renderFinder();

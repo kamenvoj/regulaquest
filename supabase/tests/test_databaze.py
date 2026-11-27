@@ -601,6 +601,22 @@ class DatabaseTest(unittest.TestCase):
         self.call('rq_delete_case', c)
         self.assertEqual(self.sql("select count(*) from case_steps")[0][0], 0)
 
+    def test_links(self):
+        self.as_user(ADMIN)
+        st = self.call('rq_links_admin')
+        self.assertEqual(len(st), 7); self.assertTrue(all(x['status'] == 'draft' for x in st))
+        self.fails('https://', 'rq_save_link', None, {'title': 'X', 'url': 'sukl.gov.cz'})
+        a = self.call('rq_save_link', None, {'title': 'NANDO', 'url': 'https://example.org/nando', 'category': 'Databáze a registry', 'status': 'published', 'area_keys': ['zp']})
+        b = self.call('rq_save_link', None, {'title': 'Druhý', 'url': 'https://example.org/b', 'category': 'Databáze a registry', 'status': 'published'})
+        self.call('rq_move_link', b, -1)
+        self.as_user(STUDENT)
+        self.fails('', 'rq_links_admin')
+        rl = self.call('rq_reader_links')
+        self.assertEqual([x['title'] for x in rl], ['Druhý', 'NANDO'])
+        self.as_user(ADMIN)
+        self.call('rq_delete_link', a)
+        self.assertIn('links', self.call('rq_backup'))
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)

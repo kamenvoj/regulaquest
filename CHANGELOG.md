@@ -1,5 +1,13 @@
 # Změny
 
+## 0.28.0 – 2026-11-27 · Užitečné odkazy
+- **Studio – Výuka → Užitečné odkazy:** název, adresa, krátký popisek, kategorie (Úřady a instituce, Databáze a registry,
+  Legislativa, Metodiky a pokyny, Normy, Ostatní – lze napsat i vlastní), oblasti, štítky, stav koncept / zveřejněný,
+  pořadí v kategorii. Výchozí sada jako koncepty: SÚKL, ČMI, EUDAMED, EUR-Lex, e-Sbírka, pokyny MDCG, ÚNMZ.
+- **Čtečka – Odkazy:** karty podle kategorií s filtrem kategorie a oblasti a hledáním; doména u každého odkazu,
+  tlačítko „Otevřít ↗“ (nové okno), celá adresa po rozkliknutí. Zveřejněné odkazy jsou vidět hned (bez publikace).
+- Migrace 22_odkazy.sql. Úklid testovacích dat odkazy ponechá.
+
 ## 0.27.0 – 2026-11-27 · Řešené případy
 - **Studio – Výuka → Řešené případy:** případ = název, krátký popis, zadání, kroky, závěr, stav (koncept / zveřejněný /
   archivovaný), oblasti a štítky. Kroky s textem a odkazem na ustanovení (hledání podle označení a nadpisu), pořadí šipkami.
