@@ -1,5 +1,21 @@
 # Změny
 
+## 0.29.0 – 2026-11-27 · Prezentace
+- **Studio – Výuka → Prezentace** (samostatně od dokumentů): import z PowerPointu přímo v prohlížeči – převezme nadpisy, sekce,
+  štítky (DISKUZE), karty, pruhy, otázky, tabulky, klíčovou myšlenku a poznámky řečníka. Vzhled dělá jednotná šablona ve stylu
+  aplikace, takže prezentace všech autorů vypadají stejně.
+- Editor snímků: náhled, formulář (typ snímku, sekce, štítek, nadpis, bloky textu / pruhů / otázek / karet / tabulek, klíčová
+  myšlenka, poznámky), přidání, duplikace, posun a mazání snímků. **Odkazy** se nastaví klepnutím na část snímku v náhledu:
+  na ustanovení nebo na jiný snímek téže či jiné prezentace (odstavec, karta, pruh, řádek tabulky, klíčová myšlenka, nadpis).
+- **Nová verze z PowerPointu** bez duplicit: snímky se spárují podle nadpisu a sekce (případně pořadí), ponechají si identitu,
+  odkazy se přenesou na stejné části; před nahráním přehled změn, nepřenesených odkazů a odkazů na odstraněné snímky.
+- Zpřístupnění: stav Koncept / Připravená / Archivovaná a skupiny studentů s datem, od kdy prezentaci vidí.
+- V textu dokumentu řádek „Prezentace“ (odkazy ze snímků + ruční připojení snímku nebo celé prezentace).
+- **Čtečka – Prezentace:** seznam zpřístupněných prezentací, prohlížení snímků (šipky a klávesy, celá obrazovka F, přehled snímků),
+  klikací odkazy s lištou „Zpět na prezentaci“ / „Zpět na snímek“, u ustanovení v Souvislostech „V prezentacích“.
+  Poznámky řečníka vidí jen redakce. Obrázky ve snímcích se doplní po zapojení úložiště (Cloudflare R2).
+- Migrace 23_prezentace.sql. Úklid testovacích dat prezentace ponechá (zruší jen ruční vazby na ustanovení).
+
 ## 0.28.0 – 2026-11-27 · Užitečné odkazy
 - **Studio – Výuka → Užitečné odkazy:** název, adresa, krátký popisek, kategorie (Úřady a instituce, Databáze a registry,
   Legislativa, Metodiky a pokyny, Normy, Ostatní – lze napsat i vlastní), oblasti, štítky, stav koncept / zveřejněný,

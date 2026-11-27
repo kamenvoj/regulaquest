@@ -617,6 +617,53 @@ class DatabaseTest(unittest.TestCase):
         self.call('rq_delete_link', a)
         self.assertIn('links', self.call('rq_backup'))
 
+    def test_presentations(self):
+        self.setup_doc()
+        g = self.group
+        self.as_user(ADMIN)
+        sl = lambda t, u=None: {'data': {'layout': 'content', 'title': t, 'blocks': [{'id': 'b1', 'type': 'text', 'paras': [{'text': 'x', 'link': {'unit': u}}]}] if u else []}, 'notes': 'Poznámka ' + t}
+        pid = self.call('rq_import_presentation', {'title': 'IVDR', 'subtitle': 'Ing. V. K.'}, [sl('Úvod'), sl('Třídy', 'mdr-cs-rule-11'), sl('Konec')])
+        st = self.call('rq_presentations_admin')
+        self.assertEqual(st['presentations'][0]['slides'], 3)
+        self.assertEqual([x['units'] for x in st['slide_index'] if x['title'] == 'Třídy'][0], ['mdr-cs-rule-11'])
+        full = self.call('rq_presentation_admin', pid); ids = [x['id'] for x in full['slides']]
+        self.call('rq_move_slide', ids[2], -1)
+        s4 = self.call('rq_save_slide', None, pid, {'title': 'Vložený'}, '', ids[0])
+        self.assertEqual([x['data']['title'] for x in self.call('rq_presentation_admin', pid)['slides']], ['Úvod', 'Vložený', 'Konec', 'Třídy'])
+        self.call('rq_link_presentation_unit', pid, ids[1], 'mdr-cs-rule-11', True)
+        # student: koncept ani nezpřístupněnou nevidí
+        self.as_user(STUDENT)
+        self.assertEqual(self.call('rq_reader_presentations'), [])
+        self.fails('není dostupná', 'rq_reader_presentation', pid)
+        self.as_user(ADMIN)
+        self.call('rq_save_presentation', pid, {'title': 'IVDR', 'status': 'ready'})
+        self.call('rq_set_presentation_group', pid, g, '2099-01-01', True)
+        self.as_user(STUDENT)
+        self.assertEqual(self.call('rq_reader_presentations'), [])          # zatím nenastalo datum
+        self.as_user(ADMIN)
+        self.call('rq_set_presentation_group', pid, g, None, True)
+        self.as_user(STUDENT)
+        lst = self.call('rq_reader_presentations')
+        self.assertEqual(len(lst), 1); self.assertEqual(len(lst[0]['unit_links']), 1)
+        rp = self.call('rq_reader_presentation', pid)
+        self.assertNotIn('notes', rp['slides'][0])                          # poznámky řečníka studenti nedostanou
+        self.as_user(ADMIN)
+        self.assertIn('notes', self.call('rq_reader_presentation', pid)['slides'][0])
+        # nová verze: Třídy spárované (id zůstane), Vložený a Konec pryč, nový snímek přidán
+        r = self.call('rq_replace_slides', pid, [{'id': ids[0], 'data': {'title': 'Úvod v2'}}, {'id': ids[1], 'data': {'title': 'Třídy v2'}}, {'data': {'title': 'Nový'}}])
+        self.assertEqual(r, {'updated': 2, 'inserted': 1, 'deleted': 2})
+        self.assertEqual([x['data']['title'] for x in self.call('rq_presentation_admin', pid)['slides']], ['Úvod v2', 'Třídy v2', 'Nový'])
+        self.assertEqual(self.sql("select count(*) from presentation_unit_links where slide_id = %s", ids[1])[0][0], 1)
+        other = self.call('rq_import_presentation', {'title': 'Jiná'}, [sl('A')])
+        oid = self.call('rq_presentation_admin', other)['slides'][0]['id']
+        self.fails('nepatří', 'rq_replace_slides', pid, [{'id': oid, 'data': {}}])
+        self.as_user(STUDENT)
+        self.fails('', 'rq_save_slide', ids[0], pid, {}, '', None)
+        self.as_user(ADMIN)
+        self.call('rq_delete_presentation', pid)
+        self.assertEqual(self.sql("select count(*) from presentation_slides where presentation_id = %s", pid)[0][0], 0)
+        self.assertIn('presentations', self.call('rq_backup'))
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)
