@@ -36,6 +36,15 @@ function presCtx(u){
   return xs.length ? `<div class="ctx-section"><h3>V prezentacích</h3>${xs.slice(0, 8).map(o => `<div class="ctx-card"><a class="ctx-link" href="#/prezentace/${encodeURIComponent(o.p.id)}${o.s ? '/' + encodeURIComponent(o.s.id) : ''}"><strong>${esc(o.p.title)}</strong><small>${o.s ? `snímek ${o.i + 1}${o.s.title ? ' – ' + esc(trim(o.s.title, 60)) : ''}` : 'celá prezentace'}</small></a></div>`).join('')}</div>` : '';
 }
 
+// Poslední snímek se ukládá k účtu stejně jako místo ve čtení (klíč „pres:…“)
+let presPosTimer;
+function savePresPos(pid, sid){
+  if (!pid || !sid || !S.me) return;
+  const g = 'pres:' + pid, ex = S.me.positions.find(p => p.doc_group === g), now = new Date().toISOString();
+  if (ex){ ex.unit_id = sid; ex.updated_at = now; } else S.me.positions.unshift({ doc_group: g, unit_id: sid, updated_at: now });
+  S.me.positions.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  clearTimeout(presPosTimer); presPosTimer = setTimeout(() => { RQ.client.rpc('rq_set_position', { p_doc_group: g, p_unit_id: sid }).then(() => {}, () => {}); }, 1500);
+}
 function renderPresList(){
   const areaName = k => (S.data.areas || []).find(a => a.key === k)?.name || k;
   $('#panelText').innerHTML = `<div class="finder"><div class="eyebrow">Prezentace</div><h1>Prezentace</h1>
@@ -76,7 +85,7 @@ async function renderPres(){
   // V režimu celé obrazovky se snímek vymění na místě (překreslení stránky by celou obrazovku ukončilo)
   const paint = k => { const t = slides[k]; PR.slide = t.id; history.replaceState(null, '', hashOf(t));
     $('#pvStage').innerHTML = RQSlides.render(t.data, { ...opts, n: k + 1 }); RQSlides.fit($('#pvStage'));
-    document.querySelectorAll('.pv-count').forEach(c => c.textContent = `${k + 1} / ${slides.length}`); PR.keyN.n = k; };
+    document.querySelectorAll('.pv-count').forEach(c => c.textContent = `${k + 1} / ${slides.length}`); PR.keyN.n = k; savePresPos(PR.id, t.id); };
   const goN = k => { const t = slides[k]; if (!t) return; if (document.fullscreenElement) paint(k); else go(hashOf(t)); };
   ['pvPrev', 'pvPrev2'].forEach(x => { const b = $('#' + x); if (b) b.onclick = () => goN(n - 1); });
   ['pvNext', 'pvNext2'].forEach(x => { const b = $('#' + x); if (b) b.onclick = () => goN(n + 1); });
@@ -94,6 +103,7 @@ async function renderPres(){
     go(href);
   };
   PR.keyN = { n, total: slides.length, goN };
+  savePresPos(PR.id, PR.slide);
   document.title = `${full.title} – snímek ${n + 1} · RegulaQuest`;
 }
 document.addEventListener('keydown', e => {

@@ -538,3 +538,32 @@ div.card:hover{box-shadow:none;border-color:var(--line)}
 .pv-stagewrap:fullscreen:hover .pv-nav:not(:disabled){opacity:.6;background:rgba(255,255,255,.12);color:#fff}
 .pv-stagewrap:fullscreen .pv-fsbar{display:block;position:absolute;right:16px;bottom:10px}
 .pv-stagewrap:fullscreen .pv-fsbar .pv-count{color:#9fb6bb}
+
+/* ---------- 0.31 Přehled pro studenty ---------- */
+.home .sec.in{margin:0 0 8px;padding:0;border:0}
+.home-cont{display:grid;gap:14px;max-width:1180px}
+.home-cont.n1{grid-template-columns:minmax(0,560px)}.home-cont.n2{grid-template-columns:repeat(2,minmax(0,1fr))}.home-cont.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card.cont h3{margin:4px 0 4px;font-size:15px}
+.card.cont .btn{margin-top:10px}
+.home-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:1180px;margin:10px 0 0}
+.tile{display:grid;grid-template-columns:38px 1fr;grid-template-rows:auto 1fr;column-gap:10px;row-gap:2px;align-items:start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;text-decoration:none;color:var(--ink);transition:border-color .12s,box-shadow .12s}
+.tile:hover{border-color:var(--teal);box-shadow:0 4px 16px rgba(20,44,56,.08)}
+.tile .ti{grid-row:1 / span 2;width:38px;height:38px;border-radius:10px;background:var(--teal-soft);color:var(--teal);display:grid;place-items:center}
+.tile .tt{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.tile strong{font-size:14.5px;color:#16313c}
+.tile em{font-style:normal;font-size:12px;color:var(--muted);white-space:nowrap}
+.tile em b{color:#a8741c}
+.tile small{font-size:12.5px;color:#4d666d;line-height:1.4}
+.tile.hl{background:#16313c;border-color:#16313c}
+.tile.hl strong{color:#fff}.tile.hl small{color:#c6d8da}.tile.hl .ti{background:rgba(233,203,144,.18);color:#E9CB90}
+.tile .tg2{grid-column:2;display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tile .tg2 span{font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;background:#E9CB90;color:#3d2a05}
+.tile .tg2 span+span{background:transparent;border:1px solid rgba(233,203,144,.6);color:#E9CB90}
+.home-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1180px;margin:26px 0 0}
+.home-two>.card{padding:14px 18px}
+.marklist.flat{padding:0;border:0;box-shadow:none;background:none;max-width:none}
+.hn-line{font-size:13.5px;margin:0 0 8px;color:#2d454c}
+.upd-list.compact{margin:6px 0 8px;gap:8px}
+.upd-list.compact .upd{padding:9px 12px}
+a.chipb{text-decoration:none;display:inline-block}
+@media (max-width:1180px){ .home-tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .home-two,.home-cont.n2,.home-cont.n3{grid-template-columns:minmax(0,1fr)} }

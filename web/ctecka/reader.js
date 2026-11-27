@@ -730,42 +730,69 @@ function bindPins(box){
   });
 }
 function renderHome(){
-  const all = docGroups(), last = (S.data.history || [])[0];
-  const ua = usedAreas(), area = ua.find(a => a.key === S.area);
-  const gs = area ? all.filter(g => areasOf(g.key).some(x => x.area_key === area.key)) : all;
-  const pinned = gs.filter(g => S.me.marks.some(m => m.unit_id === 'doc:' + g.key));
-  const featured = gs.filter(g => g.featured && !pinned.includes(g)).sort((a, b) => a.sort - b.sort);
-  const recentKeys = S.me.positions.map(p => p.doc_group);
-  const recent = recentKeys.map(k => gs.find(g => g.key === k)).filter(g => g && !pinned.includes(g) && !featured.includes(g));
-  let cards = [...pinned.map(g => [g, 'Připnuté']), ...featured.map(g => [g, 'Doporučené']), ...recent.map(g => [g, 'Naposledy otevřené'])].slice(0, 6);
-  if (area){ const core = gs.filter(g => !cards.some(c => c[0] === g) && areasOf(g.key).some(x => x.area_key === area.key && x.role === 'core'));
-    cards = cards.concat(core.map(g => [g, 'Hlavní předpis'])).slice(0, 6); }
-  if (!cards.length) cards = gs.slice(0, 6).map(g => [g, '']);
+  const all = docGroups(), last = (S.data.history || [])[0], ua = usedAreas();
+  const ico = k => (document.querySelector(`.navb[data-nav="${k}"] svg`) || { outerHTML: '' }).outerHTML;
+  // Pokračovat: čtení, trasa, prezentace
   const pos = S.me.positions.map(p => S.units.get(p.unit_id)).find(Boolean);
   const openPath = S.paths.find(p => { const k = progress(p); return k && k < p.steps.length; });
+  const pp = typeof PR !== 'undefined' ? S.me.positions.filter(p => p.doc_group.startsWith('pres:')).map(p => { const r = slideRef(p.unit_id); return r && r.p.id === p.doc_group.slice(5) ? r : null; }).find(Boolean) : null;
+  const cont = [
+    pos && `<div class="card cont"><div class="kind">Pokračovat ve čtení</div><h3>${esc(docShort(S.docs.get(pos.document_id)))} · ${esc(pos.label)}</h3><div class="muted">${esc(trim(headingOf(pos) || ancestors(pos).map(a => a.label).join(' › '), 90))}</div><a class="btn acc" href="#/u/${encodeURIComponent(pos.id)}">Pokračovat</a></div>`,
+    openPath && `<div class="card cont"><div class="kind">Rozpracovaná trasa</div><h3>${esc(openPath.title)}</h3><i class="pbar"><b style="width:${Math.round(progress(openPath) / openPath.steps.length * 100)}%"></b></i><div class="muted">Prošli jste ${progress(openPath)} z ${openPath.steps.length}</div><a class="btn" href="#/t/${encodeURIComponent(openPath.id)}/${Math.min(openPath.steps.length, progress(openPath) + 1)}">Pokračovat v trase</a></div>`,
+    pp && `<div class="card cont"><div class="kind">Prezentace</div><h3>${esc(pp.p.title)}</h3><i class="pbar"><b style="width:${Math.round((pp.i + 1) / pp.p.slides.length * 100)}%"></b></i><div class="muted">Snímek ${pp.i + 1} z ${pp.p.slides.length}</div><a class="btn" href="#/prezentace/${encodeURIComponent(pp.p.id)}/${encodeURIComponent(pp.s.id)}">Pokračovat</a></div>`
+  ].filter(Boolean);
+  // Rozcestník
+  const since = Date.now() - 14 * 864e5;
+  const prs = typeof PR !== 'undefined' ? PR.list : [], prNew = prs.filter(p => p.visible_from && new Date(p.visible_from) >= since && !S.me.positions.some(x => x.doc_group === 'pres:' + p.id)).length;
+  const seen = (() => { try { return localStorage.getItem('rq-aktuality-videno') || ''; } catch { return ''; } })();
+  const nws = typeof NW !== 'undefined' ? NW.list : [], nwNew = nws.filter(n => (n.published_on || '') > seen).length;
+  const lks = typeof LK !== 'undefined' ? LK.list : [], cases = S.data.cases || [];
+  const pathOpen = S.paths.filter(p => { const k = progress(p); return k && k < p.steps.length; }).length;
+  const tiles = [
+    ['docs', '#/dokumenty', 'Dokumenty', 'Předpisy a metodiky s výklady', `${all.length}`],
+    ['finder', '#/najit', 'Najít předpisy', 'Podle oblasti, role, vlastností – nebo průvodce otázkami', '', true],
+    ['prlist', '#/prezentace', 'Prezentace', 'Snímky z přednášek s odkazy do předpisů', `${prs.length}${prNew ? ` · <b>${prNew} ${prNew === 1 ? 'nová' : 'nové'}</b>` : ''}`],
+    ['paths', '#/trasy', 'Trasy', 'Témata krok za krokem napříč předpisy', `${S.paths.length}${pathOpen ? ` · ${pathOpen} rozpracovan${pathOpen === 1 ? 'á' : 'é'}` : ''}`],
+    ['cases', '#/pripady', 'Řešené případy', 'Konkrétní situace rozebrané krok za krokem', `${cases.length}`],
+    ['updates', '#/aktuality', 'Aktuality', 'Novinky z úřadů a institucí s komentářem', `${nws.length}${nwNew ? ` · <b>${nwNew} ${nwNew === 1 ? 'nová' : nwNew < 5 ? 'nové' : 'nových'}</b>` : ''}`],
+    ['links', '#/odkazy', 'Odkazy', 'Úřady, databáze, legislativa, normy', `${lks.length}`],
+    ['terms', '#/pojmy', 'Pojmy', 'Definice z předpisů', `${S.terms.length}`]
+  ];
+  // Nové pro vás
   const sm = last?.changes?.summary || {};
-  const news = last && !last.changes?.first ? [pl(sm.comments_new, 'nový výklad', 'nové výklady', 'nových výkladů'), pl(sm.relations_new, 'nová vazba', 'nové vazby', 'nových vazeb'), pl(sm.units_changed, 'změněné ustanovení', 'změněná ustanovení', 'změněných ustanovení'), pl(sm.units_new, 'nově zveřejněná část', 'nově zveřejněné části', 'nově zveřejněných částí'), pl(sm.paths_new, 'nová trasa', 'nové trasy', 'nových tras')].filter(Boolean).join(', ') : '';
-  const marks = S.me.marks.filter(m => !m.unit_id.startsWith('doc:') && S.units.has(m.unit_id)).slice(0, 4);
+  const changes = last && !last.changes?.first ? [pl(sm.comments_new, 'nový výklad', 'nové výklady', 'nových výkladů'), pl(sm.relations_new, 'nová vazba', 'nové vazby', 'nových vazeb'), pl(sm.units_changed, 'změněné ustanovení', 'změněná ustanovení', 'změněných ustanovení'), pl(sm.units_new, 'nově zveřejněná část', 'nově zveřejněné části', 'nově zveřejněných částí'), pl(sm.paths_new, 'nová trasa', 'nové trasy', 'nových tras')].filter(Boolean).join(', ') : '';
+  const newPres = prs.filter(p => p.visible_from && new Date(p.visible_from) >= since).slice(0, 2);
+  const marks = S.me.marks.filter(m => !m.unit_id.startsWith('doc:') && S.units.has(m.unit_id)), markN = marks.length;
+  // Dokumenty: připnuté, doporučené, naposledy otevřené
+  const pinned = all.filter(g => S.me.marks.some(m => m.unit_id === 'doc:' + g.key));
+  const featured = all.filter(g => g.featured && !pinned.includes(g)).sort((a, b) => a.sort - b.sort);
+  const recent = S.me.positions.map(p => all.find(g => g.key === p.doc_group)).filter(g => g && !pinned.includes(g) && !featured.includes(g));
+  let cards = [...pinned.map(g => [g, 'Připnuté']), ...featured.map(g => [g, 'Doporučené']), ...recent.map(g => [g, 'Naposledy otevřené'])].slice(0, 3);
+  if (!cards.length) cards = all.slice(0, 3).map(g => [g, '']);
+
   $('#panelText').innerHTML = `<div class="home">
     <div class="eyebrow">Výuková čtečka · FBMI ČVUT</div>
     <h1>Regulace zdravotnických prostředků</h1>
-    <p class="lead">Ověřené texty předpisů a metodik s odbornými výklady redakce, vazbami mezi ustanoveními a trasami k jednotlivým tématům. Studijní pomůcka, ne oficiální zdroj práva.</p>
-    <div class="status"><span class="sdot"></span>Obsah aktualizován <strong>${esc(fmtDate(S.data.published_at))}</strong>${news ? ` · ${esc(news)}` : ''} <a href="#/novinky">Co je nového</a></div>
-    ${pos || openPath ? `<div class="grid2">
-      ${pos ? `<div class="card"><div class="kind">Pokračovat ve čtení</div><h3>${esc(docShort(S.docs.get(pos.document_id)))} · ${esc(pos.label)}</h3><div class="muted">${esc(headingOf(pos) || ancestors(pos).map(a => a.label).join(' › '))}</div><a class="btn acc" href="#/u/${encodeURIComponent(pos.id)}">Pokračovat</a></div>` : ''}
-      ${openPath ? `<div class="card"><div class="kind">Rozpracovaná trasa</div><h3>${esc(openPath.title)}</h3><i class="pbar"><b style="width:${Math.round(progress(openPath)/openPath.steps.length*100)}%"></b></i><div class="muted">Prošli jste ${progress(openPath)} z ${openPath.steps.length}</div><a class="btn" href="#/t/${encodeURIComponent(openPath.id)}/${Math.min(openPath.steps.length, progress(openPath) + 1)}">Pokračovat v trase</a></div>` : ''}
-    </div>` : ''}
-    <div class="findbar"><div><strong>Nevíte, který předpis hledat?</strong><span>Popište situaci několika odpověďmi, nebo vyberte oblast a koho se to týká.</span></div>
-      <a class="btn acc" href="#/pruvodce">Průvodce otázkami</a><a class="btn" href="#/najit">Najít předpisy</a></div>
-    <div class="sec"><h2>Dokumenty${area ? ` · ${esc(area.name)}` : ''}</h2><a href="#/dokumenty">${area ? `Celá oblast (${gs.length})` : `Všechny dokumenty (${gs.length})`}</a></div>
-    ${ua.length ? `<div class="area-switch" role="group" aria-label="Oblast"><button type="button" class="chipb ${!area ? 'on' : ''}" data-area="">Všechny oblasti</button>${ua.map(a => `<button type="button" class="chipb ${area?.key === a.key ? 'on' : ''}" data-area="${esc(a.key)}">${esc(a.name)}</button>`).join('')}</div>` : ''}
+    <p class="lead">Ověřené texty předpisů a metodik s výklady redakce, prezentacemi, trasami a řešenými případy. Studijní pomůcka, ne oficiální zdroj práva.</p>
+    <div class="status"><span class="sdot"></span>Obsah aktualizován <strong>${esc(fmtDate(S.data.published_at))}</strong> <a href="#/novinky">Co je nového</a></div>
+    ${cont.length ? `<div class="sec"><h2>Pokračovat</h2></div><div class="home-cont n${cont.length}">${cont.join('')}</div>` : ''}
+    <div class="sec"><h2>Rozcestník</h2></div>
+    <nav class="home-tiles" aria-label="Rozcestník">${tiles.map(([k, href, name, desc, n, hl]) => `<a class="tile${hl ? ' hl' : ''}" href="${href}"><span class="ti">${ico(k)}</span><span class="tt"><strong>${name}</strong>${n ? `<em>${n}</em>` : ''}</span><small>${desc}</small>${hl ? '<span class="tg2"><span>Najít předpisy</span><span data-href="#/pruvodce">Průvodce otázkami</span></span>' : ''}</a>`).join('')}</nav>
+    <div class="home-two">
+      <section class="card"><div class="sec in"><h2>Moje záložky</h2>${markN ? `<a href="#/zalozky">Všechny (${markN})</a>` : ''}</div>
+        ${markN ? `<div class="marklist flat">${marks.slice(0, 5).map(markRow).join('')}</div>` : '<p class="muted">Záložku přidáte u ustanovení tlačítkem se záložkou vpravo nahoře – můžete jí dát krátký popisek (např. „Na zkoušku – lhůty“). Uloží se k vašemu účtu.</p>'}</section>
+      <section class="card"><div class="sec in"><h2>Nové pro vás</h2><a href="#/novinky">Co je nového</a></div>
+        ${changes ? `<p class="hn-line"><b>Poslední aktualizace obsahu:</b> ${esc(changes)}.</p>` : ''}
+        ${newPres.map(p => `<p class="hn-line"><b>Nová prezentace:</b> <a href="#/prezentace/${encodeURIComponent(p.id)}">${esc(p.title)}</a></p>`).join('')}
+        ${nws.length ? `<div class="upd-list compact">${nws.slice(0, 3).map(n => newsCard(n, false)).join('')}</div><a href="#/aktuality">Všechny aktuality</a>` : (!changes && !newPres.length ? '<p class="muted">Zatím nic nového.</p>' : '')}</section>
+    </div>
+    ${ua.length ? `<div class="sec"><h2>Procházet podle oblasti</h2></div><div class="area-switch">${ua.map(a => `<a class="chipb" href="#/najit?o=${encodeURIComponent(a.key)}">${esc(a.name)}</a>`).join('')}</div>` : ''}
+    <div class="sec"><h2>Dokumenty</h2><a href="#/dokumenty">Všechny dokumenty (${all.length})</a></div>
     <div class="cards">${cards.map(([g, l]) => docCard(g, l)).join('')}</div>
-    ${typeof homeNews === 'function' ? homeNews() : ''}
-    ${S.paths.length ? `<div class="sec"><h2>Trasy</h2><a href="#/trasy">Všechny trasy</a></div><div class="cards">${S.paths.slice(0, 3).map(pathCard).join('')}</div>` : ''}
-    ${marks.length ? `<div class="sec"><h2>Moje záložky</h2><a href="#/zalozky">Všechny</a></div><div class="card marklist">${marks.map(markRow).join('')}</div>` : ''}
-    <div class="source">${esc(S.data.notice||'')}</div></div>`;
+    <div class="source">${esc(S.data.notice || '')}</div></div>`;
   bindPins($('#panelText'));
-  $('#panelText').querySelectorAll('[data-area]').forEach(b => b.onclick = () => { setArea(b.dataset.area); renderHome(); });
+  $('#panelText').querySelectorAll('.tile [data-href]').forEach(x => x.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); go(x.dataset.href); }));
+  $('#panelText').querySelectorAll('[data-del-mark]').forEach(b => b.closest('.home') && b.remove());
   document.title = 'RegulaQuest · Čtečka regulace zdravotnických prostředků';
 }
 function renderDocs(){

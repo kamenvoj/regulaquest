@@ -107,7 +107,7 @@ function matchCases(units){
     score += (c.tags || []).filter(k => F.s.has(k)).length * 5;
     score += [...caseUnits(c)].filter(id => hit.has(id)).length * 2;
     if (qs.length && qs.every(t => fold([c.title, c.summary, c.assignment].join(' ')).includes(t))) score += 8;
-    if (qs.length && score < 8 && !qs.every(t => fold([c.title, c.summary, c.assignment, ...(c.steps || []).map(s => s.title + ' ' + s.body)].join(' ')).includes(t))) score = 0;
+    if (qs.length && !qs.every(t => fold([c.title, c.summary, c.assignment, c.conclusion, ...(c.steps || []).map(s => s.title + ' ' + s.body)].join(' ')).includes(t))) score = 0;   // zadané slovo v případu není
     return { c, score };
   }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).map(x => x.c);
 }

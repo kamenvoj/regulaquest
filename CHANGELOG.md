@@ -1,5 +1,15 @@
 # Změny
 
+## 0.31.0 – 2026-11-27 · Nový Přehled pro studenty
+- **Pokračovat:** čtení, rozpracovaná trasa a nově i prezentace (poslední snímek se ukládá k účtu – bez migrace, stejným
+  způsobem jako místo ve čtení).
+- **Rozcestník:** osm dlaždic (Dokumenty, Najít předpisy s průvodcem otázkami, Prezentace, Trasy, Řešené případy, Aktuality,
+  Odkazy, Pojmy) s počty a novinkami (nové prezentace, nové aktuality, rozpracované trasy).
+- **Moje záložky** (posledních pět) a **Nové pro vás** (souhrn poslední aktualizace, nové prezentace, nejnovější aktuality).
+- **Procházet podle oblasti** otevře Najít předpisy s vybranou oblastí; dokumenty kompaktně (připnuté, doporučené, naposledy otevřené).
+- Nápověda k Přehledu aktualizovaná.
+- Oprava: Najít předpisy ukazovalo řešené případy i tehdy, když zadané slovo neobsahovaly.
+
 ## 0.30.0 – 2026-11-27 · Přehled Studia doplněný o výuku
 - Přehled Studia: nová karta **Výuka** – nové aktuality k přečtení, prezentace (připravené a které brzy uvidí studenti),
   rozpracované řešené případy, koncepty odkazů a počet úprav od poslední publikace, které studenti ještě nevidí.
