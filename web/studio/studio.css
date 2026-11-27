@@ -329,3 +329,10 @@ dialog.wide{width:min(1100px,calc(100vw - 24px));max-width:min(1100px,calc(100vw
 .tg-row small{font-size:10.5px;color:#7a8d91}
 .tg-row.new{grid-template-columns:1fr auto}
 .tg-row.arch .input{color:#9aa8ab;text-decoration:line-through}
+/* 0.16 dokumenty */
+.doc-danger{margin:16px 0 4px;padding:12px;border:1px solid #f0d7cf;background:#fdf7f5;border-radius:10px}
+.doc-danger p{font-size:12px;color:#6a5752;margin:4px 0 8px}
+.home-archived{margin-top:14px}
+.home-archived summary{cursor:pointer;font-size:12px;font-weight:700;color:#5f7479;padding:6px 0}
+.home-doc-row.arch{opacity:.75}
+.notice.warn{background:#fdf3e6;border-color:#f0d9b5}

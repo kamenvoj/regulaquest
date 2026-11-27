@@ -10,6 +10,7 @@ cp -r web /tmp/e2e-web && for a in studio ctecka; do cp tests/web_e2e/supabase-m
 python3 tests/web_e2e/server.py "host=/tmp/pg port=5544 user=postgres dbname=rqe2e" /tmp/e2e-web &
 python3 tests/web_e2e/test_ui.py      # heslo v testu: Heslo12345AB
 python3 tests/web_e2e/test_anotace.py # poznámky k výběru, zvýraznění, čtečka (pracovní náhled)
+python3 tests/web_e2e/test_dokumenty.py # archivace a smazání dokumentu
 ```
 
 `test_import.py` naimportuje celé MDR (soubor `podklady/MDR_CS_20260719.html`, v gitu není) a pak upravenou kopii

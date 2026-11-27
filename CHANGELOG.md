@@ -1,5 +1,11 @@
 # Změny
 
+## 0.16.0 – 2026-11-27 · Archivace a smazání dokumentu
+- Katalog → „Upravit údaje a tagy“ → **Archivovat dokument** (skryje v katalogu a od příští publikace ve čtečce; obnovit lze na úvodní stránce
+  v „Archivované dokumenty“) nebo **Smazat dokument trvale…** (jen nepublikovaný dokument bez schválených komentářů, vazeb a pojmů;
+  potvrzení opsáním názvu; smaže i soubory v úložišti).
+- Migrace 15_dokumenty.sql.
+
 ## 0.15.0 – 2026-11-26 · Štítky a úklid testovacích dat
 - Štítky u částí: obecný slovník skupin a štítků spravovaný ve Studiu („+ Štítek“ → „Spravovat štítky…“), použitelný i pro jiné předpisy.
   Předvyplněno pro ZP: Koho se týká (výrobce, dovozce, oznámený subjekt …), Třída rizika (I, Is, Im, Ir, IIa, IIb, III),

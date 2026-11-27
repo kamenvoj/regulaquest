@@ -377,6 +377,26 @@ class DatabaseTest(unittest.TestCase):
         self.assertNotIn(k, [t['key'] for t in pv['tags']])
         self.assertIn('tags', self.call('rq_backup'))
 
+    def test_document_archive_and_delete(self):
+        self.setup_doc()
+        self.as_user(ADMIN)
+        title = self.sql("select title from documents where id='mdr-cs'")[0][0]
+        self.call('rq_verify_unit', 'mdr-cs-rule-11', None)
+        self.call('rq_archive_document', 'mdr-cs', True)
+        self.assertEqual(self.call('rq_draft_preview')['documents'], [])
+        self.call('rq_archive_document', 'mdr-cs', False)
+        self.fails('opište', 'rq_delete_document', 'mdr-cs', 'jiný název')
+        c = self.call('rq_new_comment', 'mdr-cs-rule-11', 'explanation', 'cs', 'x', 'R')
+        self.call('rq_comment_status', c, 'approved')
+        self.fails('schválené komentáře', 'rq_delete_document', 'mdr-cs', title)
+        self.call('rq_publish', 'x')
+        self.fails('publikován', 'rq_delete_document', 'mdr-cs', title)
+        self.sql("with x as (delete from publications returning 1) select count(*) from x")
+        self.sql("with x as (update comments set status='draft' returning 1) select count(*) from x")
+        r = self.call('rq_delete_document', 'mdr-cs', title)
+        self.assertEqual(r['units'], 3)
+        self.assertEqual(self.sql("select count(*) from units")[0][0], 0)
+
     def test_structure_editor(self):
         self.setup_doc()
         self.as_user(ADMIN)

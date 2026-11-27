@@ -64,6 +64,14 @@ async function rpc(name,args){const {data,error}=await RQ.client.rpc(name,args);
 async function refresh(){
  const state=await rpc('rq_studio_state');
  for(const key of ['relation_history','comment_history'])for(const h of state[key]||[]){h.before_json=asText(h.before_json);h.after_json=asText(h.after_json)}
+ // archivované dokumenty (a jejich části) mimo běžné seznamy
+ const arch=new Set((state.documents||[]).filter(d=>d.archived).map(d=>d.id));
+ state.archivedDocuments=(state.documents||[]).filter(d=>arch.has(d.id));
+ if(arch.size){const off=new Set(state.units.filter(u=>arch.has(u.document_id)).map(u=>u.id));
+  state.documents=state.documents.filter(d=>!arch.has(d.id));state.units=state.units.filter(u=>!off.has(u.id));
+  state.comments=state.comments.filter(c=>!off.has(c.unit_id));state.relations=state.relations.filter(r=>!off.has(r.source_id)&&!off.has(r.target_id));
+  state.terms=(state.terms||[]).filter(t=>!off.has(t.unit_id));}
+ if(activeDocId&&!state.documents.some(d=>d.id===activeDocId))activeDocId=state.documents[0]?.id||null;
  db=state;lastLoad=Date.now();render();
 }
 const field_=(d,keys)=>Object.fromEntries(keys.filter(k=>d[k]!==undefined).map(k=>[k,d[k]]));
@@ -143,6 +151,9 @@ function renderHome(){
     <div class="home-doc-progress"><strong>${st.verified} / ${st.withText} ověřeno</strong><div class="progress-track"><span style="width:${st.percent}%"></span></div><small>${st.total} položek v osnově · ${st.pending} vazeb ke kontrole · ${st.approved} schválených</small></div>
     <button type="button" class="btn accent" data-home-document="${esc(d.id)}">Otevřít dokument ↗</button></div>`;
  }).join('');
+ const ad=db.archivedDocuments||[];
+ if(ad.length){$('#homeDocuments').insertAdjacentHTML('beforeend',`<details class="home-archived"><summary>Archivované dokumenty (${ad.length})</summary>${ad.map(d=>`<div class="home-doc-row arch"><div class="home-doc-ident"><strong>${esc(d.family)} · ${esc(d.language.toUpperCase())}</strong><span>${esc(d.title)}</span></div><button type="button" class="btn tiny" data-restore-doc="${esc(d.id)}">Obnovit</button></div>`).join('')}</details>`);
+  $('#homeDocuments').querySelectorAll('[data-restore-doc]').forEach(b=>b.onclick=async()=>{try{await rpc('rq_archive_document',{p_id:b.dataset.restoreDoc,p_archived:false});await refresh();toast('Dokument obnoven.')}catch(e){toast(e.message,true)}});}
  $('#homeDocuments').querySelectorAll('[data-home-document]').forEach(b=>b.onclick=()=>selectDocument(b.dataset.homeDocument));
 }
 function renderDocumentMetrics(){
@@ -637,8 +648,13 @@ function dialogDocumentMetadata(id){
  ${select('Druh dokumentu','document_type',Object.entries(docTypes),d.document_type||'other')}
  <label class="form-field"><span>Odborné tagy (oddělit čárkou)</span><textarea class="textarea" name="topics" placeholder="Např. klasifikace, software, klinické hodnocení">${esc((d.topics||[]).join(', '))}</textarea><small class="form-hint">Zvolte jednotné názvy. Tagy nepředstavují samotnou odbornou vazbu na ustanovení.</small></label>
  <div class="notice">Dokumentová skupina: ${esc(d.group_key||d.id)}. Změna typu, původu a tagů bude platit pro propojené jazykové verze. Text ani schválené vazby se nemění.</div>
+ <div class="doc-danger"><strong>Odstranění dokumentu</strong><p>Archivace dokument skryje v katalogu i ve čtečce (od příští publikace); vše zůstane a lze ho obnovit. Trvalé smazání je jen pro omyly – u dokumentu, který ještě nebyl publikován a nemá schválený obsah.</p>
+  <button class="btn tiny" type="button" id="archiveDoc">Archivovat dokument</button> <button class="btn tiny danger" type="button" id="deleteDoc">Smazat dokument trvale…</button></div>
  <div class="modal-actions"><button class="btn" type="button" id="cancelMetadata">Zrušit</button><button class="btn accent" type="submit">Uložit metadata</button></div>`;
  f.querySelector('#cancelMetadata').onclick=()=>modal.close();
+ f.querySelector('#archiveDoc').onclick=async()=>{if(!confirm(`Archivovat ${d.family} · ${d.language.toUpperCase()}? Dokument zmizí z katalogu a po příští publikaci i ze čtečky. Obnovit ho lze na úvodní stránce.`))return;
+  try{await rpc('rq_archive_document',{p_id:id,p_archived:true});modal.close();await refresh();setPage('home');toast('Dokument archivován.')}catch(e){toast(e.message,true)}};
+ f.querySelector('#deleteDoc').onclick=()=>{modal.close();setTimeout(()=>rqDeleteDocument(id),0)};
  f.onsubmit=e=>{e.preventDefault();const raw=Object.fromEntries(new FormData(f).entries());const topics=[...new Set(String(raw.topics||'').split(',').map(t=>t.trim()).filter(Boolean))];if(topics.length>40){toast('Maximálně 40 tagů',true);return}
  safeAct({action:'update_document_metadata',document_id:id,title:raw.title,family:raw.family,version:raw.version,publisher:raw.publisher,url:raw.url,jurisdiction:raw.jurisdiction,document_type:raw.document_type,topics});modal.close();};
  modal.showModal();
@@ -1014,6 +1030,32 @@ function rqTagManager(){
  };
  d.classList.add('wide');d.addEventListener('close',()=>d.classList.remove('wide'),{once:true});
  draw();d.showModal();
+}
+/* Trvalé smazání dokumentu (jen nepublikovaný bez schváleného obsahu) včetně souborů v úložišti. */
+function rqDeleteDocument(id){
+ const d=getDoc(id);if(!d)return;
+ const us=db.units.filter(u=>u.document_id===id),ids=new Set(us.map(u=>u.id));
+ const nc=db.comments.filter(c=>ids.has(c.unit_id)).length,nr=db.relations.filter(r=>ids.has(r.source_id)||ids.has(r.target_id)).length;
+ const f=$('#modalContent'),modal=$('#modal');f.onsubmit=e=>e.preventDefault();
+ f.innerHTML=`<h2>Smazat dokument trvale</h2><p><strong>${esc(d.family)} · ${esc(d.language.toUpperCase())}</strong> – ${esc(d.title)}</p>
+ <div class="notice warn">Smaže se ${us.length} částí, ${nc} komentářů, ${nr} vazeb (i z jiných dokumentů na tento), pojmy, historie, záznamy importu a soubory v úložišti. Nelze vrátit.</div>
+ <label class="form-field"><span>Pro potvrzení opište název dokumentu</span><textarea class="textarea" id="delTitle" rows="2"></textarea></label>
+ <div class="modal-actions"><button class="btn" type="button" id="delCancel">Zrušit</button><button class="btn danger" type="button" id="delGo" disabled>Smazat trvale</button></div>`;
+ const t=f.querySelector('#delTitle'),go=f.querySelector('#delGo');
+ t.oninput=()=>go.disabled=t.value.trim()!==d.title.trim();
+ f.querySelector('#delCancel').onclick=()=>modal.close();
+ go.onclick=async()=>{go.disabled=true;go.textContent='Mažu…';
+  try{await rpc('rq_delete_document',{p_id:id,p_confirm_title:t.value});
+   let nf=0;for(const b of ['originals','figures'])nf+=await rqRemoveFolder(b,id);
+   modal.close();await refresh();setPage('home');toast(`Dokument smazán${nf?` (souborů v úložišti: ${nf})`:''}.`)}
+  catch(e){toast(e.message,true);go.textContent='Smazat trvale';go.disabled=false}};
+ modal.showModal();
+}
+async function rqRemoveFolder(bucket,prefix){
+ const st=RQ.client.storage.from(bucket);let paths=[];
+ const walk=async p=>{const {data,error}=await st.list(p,{limit:1000});if(error||!data)return;for(const x of data){const full=p+'/'+x.name;if(x.id)paths.push(full);else await walk(full)}};
+ try{await walk(prefix);for(let i=0;i<paths.length;i+=100){await st.remove(paths.slice(i,i+100))}}catch(e){console.warn('Úložiště',e)}
+ return paths.length;
 }
 let rqFocus=null;
 function rqSetFocus(src){
