@@ -1,5 +1,13 @@
 # Změny
 
+## 0.24.0 – 2026-11-27 · Osnova ve vlastním panelu
+- Čtečka: při čtení dokumentu nebo trasy se hlavní navigace zúží na pruh ikon (název po najetí myší, počet záložek
+  jako odznak) a osnova dokumentu / kroky trasy mají vlastní panel s vlastním posuvníkem. Trasy a ostatní stránky jsou tak
+  vždy na jedno klepnutí.
+- Osnovu lze skrýt (« v panelu, zpět ikonou osnovy v pruhu; pamatuje si to prohlížeč), tlačítko » rozbalí navigaci s popisky.
+- Na stránkách bez dokumentu (Přehled, Najít předpisy, Trasy…) zůstává navigace s popisky. Na telefonu je osnova pod
+  navigací v záložce Menu.
+
 ## 0.23.0 – 2026-11-27 · Najít předpisy a průvodce otázkami
 - **Čtečka – Najít předpisy** (levý panel, odkaz i z Přehledu): pole Oblast, skupiny štítků (Koho se týká, Třída rizika, Typ…),
   další upřesnění (druh dokumentu, původ, téma) a slovo v textu. Výsledky hned: dokumenty seřazené podle shody s důvodem

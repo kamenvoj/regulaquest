@@ -409,3 +409,46 @@ div.card:hover{box-shadow:none;border-color:var(--line)}
 .g-sofar{margin:24px 0 0;padding:12px 14px;border:1px dashed #cfdcdd;border-radius:12px;font-size:13px;color:#3d565d;max-width:780px}
 .g-sofar strong{display:block;margin-bottom:4px;color:#16313c}
 .linkish{border:0;background:none;padding:0;font:inherit;color:var(--teal);cursor:pointer;text-decoration:underline;margin-right:6px}
+
+/* ---------- 0.24 Osnova ve vlastním panelu, navigace jako pruh ikon ---------- */
+.outline{display:none;background:#f4f8f7;border-right:1px solid var(--line);position:relative}
+.outline .nav-sub{margin:0;padding:12px 8px 40px;border:0}
+.outline .nd-head{padding:4px 34px 8px 6px}
+.ol-close{position:absolute;top:10px;right:8px;z-index:2;width:26px;height:26px;border:1px solid #d3e0e0;background:#fff;border-radius:7px;color:#4b6168;cursor:pointer;font-weight:800;line-height:1}
+.ol-close:hover{border-color:var(--teal);color:var(--teal)}
+.rail-tools{display:none;margin-top:auto;padding-top:12px;border-top:1px solid #d9e4e3}
+.navb .lbl{flex:1;min-width:0}
+@media (min-width:761px){
+ body.has-outline .outline{display:block}
+ body.has-outline.outline-off .outline{display:none}
+ body.has-outline .layout{grid-template-columns:64px 290px minmax(0,1fr) minmax(280px,340px)}
+ body.has-outline.no-ctx .layout{grid-template-columns:64px 290px minmax(0,1fr)}
+ body.has-outline.outline-off .layout{grid-template-columns:64px minmax(0,1fr) minmax(280px,340px)}
+ body.has-outline.outline-off.no-ctx .layout{grid-template-columns:64px minmax(0,1fr)}
+ body.has-outline.rail-open .layout{grid-template-columns:230px 290px minmax(0,1fr) minmax(280px,340px)}
+ body.has-outline.rail-open.no-ctx .layout{grid-template-columns:230px 290px minmax(0,1fr)}
+ body.has-outline.rail-open.outline-off .layout{grid-template-columns:230px minmax(0,1fr) minmax(280px,340px)}
+ body.has-outline.rail-open.outline-off.no-ctx .layout{grid-template-columns:230px minmax(0,1fr)}
+ body.has-outline .appnav{min-height:100%;padding:12px 8px 14px}
+ body.has-outline .rail-tools{display:block}
+ body.has-outline:not(.rail-open) .appnav{align-items:center}
+ body.has-outline:not(.rail-open) .navb{justify-content:center;padding:9px 0;width:46px;position:relative}
+ body.has-outline:not(.rail-open) .navb .lbl,body.has-outline:not(.rail-open) .nav-k{display:none}
+ body.has-outline:not(.rail-open) .navb .cnt{position:absolute;top:3px;right:1px;margin:0;font-size:9.5px;padding:0 5px}
+ body.has-outline:not(.rail-open) #railOpen{transform:none}
+ body.has-outline.rail-open #railOpen svg{transform:scaleX(-1)}
+ body.has-outline:not(.rail-open) #railOpen .lbl{display:none}
+ #railOutline[aria-pressed="true"]{background:#d9e9e6;color:#10595d}
+}
+@media (min-width:761px) and (max-width:1180px){
+ body.has-outline .layout{grid-template-columns:64px 260px minmax(0,1fr)}
+ body.has-outline.outline-off .layout,body.has-outline.outline-off.no-ctx .layout{grid-template-columns:64px minmax(0,1fr)}
+ body.has-outline.rail-open .layout{grid-template-columns:230px 260px minmax(0,1fr)}
+ body.has-outline.rail-open.outline-off .layout{grid-template-columns:230px minmax(0,1fr)}
+ body.has-outline .text,body.has-outline .context{grid-column:-2}
+ body.has-outline .outline{position:sticky;top:var(--top);height:calc(100vh - var(--top));grid-row:1 / span 2;overflow-y:auto}
+}
+@media (max-width:760px){
+ body[data-tab="nav"] .outline{display:block;border-right:0;border-top:1px solid var(--line)}
+ .ol-close{display:none}
+}

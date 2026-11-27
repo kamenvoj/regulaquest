@@ -126,6 +126,11 @@ function index(d){
   if (last && Date.now() - new Date(last.published_at) < 14 * 864e5) (Array.isArray(last.changes?.items) ? last.changes.items : []).forEach(i => S.newUnits.set(i.unit_id, i.what));
   const seen = +(localStorage.getItem('rq-novinky-videno') || 0);
   $('#navNews').classList.toggle('hidden', !last || last.id <= seen || !!last.changes?.first);
+  // Osnova a kroky trasy mají vlastní panel; navigace se při čtení zúží na pruh ikon.
+  $('#railOpen').onclick = () => { const on = !document.body.classList.contains('rail-open'); document.body.classList.toggle('rail-open', on); $('#railOpen').setAttribute('aria-expanded', on); };
+  const setOutline = off => { try { localStorage.setItem('rq-osnova-skryta', off ? '1' : ''); } catch {} layoutPanels(); };
+  $('#railOutline').onclick = () => setOutline(!outlineOff());
+  $('#outlineClose').onclick = () => setOutline(true);
   const help = () => window.RQReaderHelp && RQReaderHelp.open(S.view);
   $('#helpBtn').onclick = help; $('#navHelp').onclick = help;
 }
@@ -187,6 +192,7 @@ function mirrorRelations(list){
 
 /* ---------- Routing ---------- */
 function route(){
+  document.body.classList.remove('rail-open'); $('#railOpen')?.setAttribute('aria-expanded', false);
   S.focus = null; S.path = null; S.unitId = null;
   const raw = location.hash.slice(1), h = decodeURIComponent(raw) || '/';
   let m;
@@ -222,6 +228,7 @@ function render(){
   $('#navMarks').textContent = S.me.marks.filter(m => !m.unit_id.startsWith('doc:')).length || '';
   renderNav();
   renderPathNav();
+  layoutPanels();
   document.body.classList.toggle('no-ctx', !(v === 'unit' || (v === 'path' && S.unitId)));
   if (v === 'path') renderStep();
   else if (v === 'unit') renderUnit(S.units.get(S.unitId));
@@ -239,6 +246,17 @@ function render(){
   $('#panelText').scrollTop = 0; window.scrollTo(0, 0);
   const cur = document.querySelector('.node a.current');
   if (cur && reading) cur.scrollIntoView({block:'nearest'});
+}
+
+function outlineOff(){ try { return localStorage.getItem('rq-osnova-skryta') === '1'; } catch { return false; } }
+function layoutPanels(){
+  const has = !$('#navDoc').classList.contains('hidden') || !$('#navPath').classList.contains('hidden');
+  const b = document.body;
+  b.classList.toggle('has-outline', has);
+  b.classList.toggle('outline-off', has && outlineOff());
+  if (!has) b.classList.remove('rail-open');
+  $('#railOutline').setAttribute('aria-pressed', has && !outlineOff());
+  $('#railOutline').title = outlineOff() ? 'Zobrazit osnovu' : 'Skrýt osnovu';
 }
 
 /* ---------- Text formatting & search ---------- */
