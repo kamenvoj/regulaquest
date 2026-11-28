@@ -24,7 +24,7 @@ window.RQSimAdmin = (function () {
   function page(p) {
     initSpaces();
     const shared = ['feedback', 'usage', 'access'].includes(p);
-    if (!shared) document.body.classList.toggle('space-sim', p === 'sim');
+    if (!shared) document.body.classList.toggle('space-sim', /^sim/.test(p));
     document.querySelectorAll('#spaces [data-space]').forEach(b => b.classList.toggle('on', (b.dataset.space === 'sim') === document.body.classList.contains('space-sim')));
   }
 
@@ -34,7 +34,7 @@ window.RQSimAdmin = (function () {
     const box = document.getElementById('simContent'); if (!box) return;
     if (window.RQSimEditor && RQSimEditor.isOpen()) return RQSimEditor.redraw();
     if (!A) { box.innerHTML = '<p class="fine">Načítám…</p>'; try { await load(); } catch (e) { box.innerHTML = `<div class="notice">${esc(e.message)}</div>`; return; } }
-    box.innerHTML = `<div class="page-head"><div><div class="eyebrow">SIMULACE / SCÉNÁŘE</div><h1>Simulace</h1>
+    box.innerHTML = `<div class="page-head"><div><div class="eyebrow">SIMULACE / EDITOR UDÁLOSTÍ</div><h1>Scénáře simulací</h1>
       <p>Scénáře, ve kterých si studenti vyzkouší regulatorní práci v praxi. Studenti vidí jen scénáře ve stavu <b>Připraveno</b> zpřístupněné jejich skupině. Výsledky jsou jen souhrnné – bez účtů; průchody redakce se nepočítají.</p></div>
       <div class="head-actions"><button class="btn accent" id="simNew">+ Nový scénář</button></div></div>
       ${A.scenarios.length ? A.scenarios.map(card).join('') : '<div class="notice">Zatím žádný scénář.</div>'}`;

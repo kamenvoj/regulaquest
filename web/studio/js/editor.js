@@ -180,6 +180,7 @@ function render(){
  if(page==='feedback'&&window.RQFeedback)RQFeedback.render();
  if(page==='usage'&&window.RQUsage)RQUsage.render();
  if(page==='sim'&&window.RQSimAdmin)RQSimAdmin.render();
+ if(['simsub','simprod','simcfg'].includes(page)&&window.RQSimCat)RQSimCat.render(page);
  if(window.RQSimAdmin)RQSimAdmin.page(page);
  if(window.RQNews&&!window.rqNewsInit){window.rqNewsInit=1;RQNews.load().catch(()=>{})}
  if(page==='library'){renderDocumentMetrics();renderList();renderReader();renderContext();rqLoadFigures($('#reader'))}

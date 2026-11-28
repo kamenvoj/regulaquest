@@ -32,6 +32,8 @@ begin
   if to_regclass('public.document_areas') is not null then
     truncate table public.document_areas;
   end if;
+  -- Průchody simulací z testování (scénáře a katalog simulací zůstávají)
+  if to_regclass('public.sim_runs') is not null then truncate table public.sim_runs; end if;
   -- Připomínky a statistiky využívání z testování
   if to_regclass('public.feedback') is not null then
     truncate table public.feedback, public.usage_days, public.usage_content, public.usage_search restart identity;

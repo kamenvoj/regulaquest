@@ -7,9 +7,9 @@
 <title>RegulaQuest Studio</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23142c38'/%3E%3Cpath d='M18 6L21.5 15L30 18L21 21.5L18 30L15 21.5L6 18L15 15Z' fill='%23E9CB90'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="sdilene/prihlaseni.css">
-<link rel="stylesheet" href="sdilene/anotace.css?v=0.38.0">
-<link rel="stylesheet" href="sdilene/snimky.css?v=0.38.0">
-<link rel="stylesheet" href="studio.css?v=0.38.0">
+<link rel="stylesheet" href="sdilene/anotace.css?v=0.39.0">
+<link rel="stylesheet" href="sdilene/snimky.css?v=0.39.0">
+<link rel="stylesheet" href="studio.css?v=0.39.0">
 </head>
 <body>
 <div id="app"><div class="rq-login"></div></div>
@@ -40,7 +40,10 @@
   <button class="nav-item" data-page="news"><span class="nav-icon">✉</span> Aktuality <span class="nav-count" id="navNews"></span></button>
   <button class="nav-item" data-page="links"><span class="nav-icon">⧉</span> Užitečné odkazy</button>
   <div class="rail-kicker" data-space="sim">SIMULACE</div>
-  <button class="nav-item" data-page="sim" data-space="sim"><span class="nav-icon">▷</span> Scénáře</button>
+  <button class="nav-item" data-page="sim" data-space="sim"><span class="nav-icon">▷</span> Editor událostí</button>
+  <button class="nav-item" data-page="simsub" data-space="sim"><span class="nav-icon">◎</span> Subjekty</button>
+  <button class="nav-item" data-page="simprod" data-space="sim"><span class="nav-icon">◇</span> Produkty</button>
+  <button class="nav-item" data-page="simcfg" data-space="sim"><span class="nav-icon">⚙</span> Nastavení polí</button>
   <div class="rail-kicker" data-shared>ZPĚTNÁ VAZBA</div>
   <button class="nav-item" data-page="feedback"><span class="nav-icon">⚑</span> Připomínky studentů <span class="nav-count" id="navFeedback"></span></button>
   <button class="nav-item" data-page="usage"><span class="nav-icon">◑</span> Využívání</button>
@@ -131,6 +134,9 @@
   <section class="page hidden" id="page-feedback"><div id="feedbackContent"></div></section>
   <section class="page hidden" id="page-usage"><div id="usageContent"></div></section>
   <section class="page hidden" id="page-sim"><div id="simContent"></div></section>
+  <section class="page hidden" id="page-simsub"><div id="simSubContent"></div></section>
+  <section class="page hidden" id="page-simprod"><div id="simProdContent"></div></section>
+  <section class="page hidden" id="page-simcfg"><div id="simCfgContent"></div></section>
   <section class="page hidden" id="page-pres"><div id="presContent"></div></section>
   <section class="page hidden" id="page-access"><div id="accessContent"></div></section>
  </main>
@@ -143,34 +149,35 @@
 <script src="sdilene/supabase.js"></script>
 <script src="sdilene/config.js"></script>
 <script src="sdilene/prihlaseni.js"></script>
-<script src="sdilene/anotace.js?v=0.38.0"></script>
-<script src="sdilene/snimky.js?v=0.38.0"></script>
+<script src="sdilene/anotace.js?v=0.39.0"></script>
+<script src="sdilene/snimky.js?v=0.39.0"></script>
 <script src="vendor/qrcode.js"></script>
-<script src="js/import-eurlex.js?v=0.38.0"></script>
-<script src="js/reference-suggest.js?v=0.38.0"></script>
-<script src="js/related-search.js?v=0.38.0"></script>
-<script src="js/import-pdf.js?v=0.38.0"></script>
-<script src="js/editor.js?v=0.38.0"></script>
-<script src="js/structure-ui.js?v=0.38.0"></script>
-<script src="js/pojmy.js?v=0.38.0"></script>
-<script src="js/trasy.js?v=0.38.0"></script>
-<script src="js/pruvodce.js?v=0.38.0"></script>
-<script src="js/aktuality.js?v=0.38.0"></script>
-<script src="js/pripady.js?v=0.38.0"></script>
-<script src="js/odkazy.js?v=0.38.0"></script>
-<script src="js/vyuziti.js?v=0.38.0"></script>
+<script src="js/import-eurlex.js?v=0.39.0"></script>
+<script src="js/reference-suggest.js?v=0.39.0"></script>
+<script src="js/related-search.js?v=0.39.0"></script>
+<script src="js/import-pdf.js?v=0.39.0"></script>
+<script src="js/editor.js?v=0.39.0"></script>
+<script src="js/structure-ui.js?v=0.39.0"></script>
+<script src="js/pojmy.js?v=0.39.0"></script>
+<script src="js/trasy.js?v=0.39.0"></script>
+<script src="js/pruvodce.js?v=0.39.0"></script>
+<script src="js/aktuality.js?v=0.39.0"></script>
+<script src="js/pripady.js?v=0.39.0"></script>
+<script src="js/odkazy.js?v=0.39.0"></script>
+<script src="js/vyuziti.js?v=0.39.0"></script>
 <script src="sdilene/simulace.js"></script>
-<script src="js/simulace.js?v=0.38.0"></script>
-<script src="js/sim-editor.js?v=0.38.0"></script>
-<script src="js/pptx-import.js?v=0.38.0"></script>
-<script src="js/prezentace.js?v=0.38.0"></script>
-<script src="js/pokryti.js?v=0.38.0"></script>
-<script src="js/domov.js?v=0.38.0"></script>
-<script src="js/dokumenty.js?v=0.38.0"></script>
-<script src="js/oblasti.js?v=0.38.0"></script>
-<script src="js/napoveda.js?v=0.38.0"></script>
-<script src="js/pristupy.js?v=0.38.0"></script>
-<script>window.RQ_VERSION="0.38.0"</script>
-<script src="js/studio.js?v=0.38.0"></script>
+<script src="js/simulace.js?v=0.39.0"></script>
+<script src="js/sim-editor.js?v=0.39.0"></script>
+<script src="js/sim-katalog.js?v=0.39.0"></script>
+<script src="js/pptx-import.js?v=0.39.0"></script>
+<script src="js/prezentace.js?v=0.39.0"></script>
+<script src="js/pokryti.js?v=0.39.0"></script>
+<script src="js/domov.js?v=0.39.0"></script>
+<script src="js/dokumenty.js?v=0.39.0"></script>
+<script src="js/oblasti.js?v=0.39.0"></script>
+<script src="js/napoveda.js?v=0.39.0"></script>
+<script src="js/pristupy.js?v=0.39.0"></script>
+<script>window.RQ_VERSION="0.39.0"</script>
+<script src="js/studio.js?v=0.39.0"></script>
 </body>
 </html>

@@ -822,5 +822,20 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(self.call('rq_sim_reset_runs', sid), 1)
         self.call('rq_sim_delete_scenario', sid)
 
+    def test_sim_catalog(self):
+        self.as_user(ADMIN)
+        cat = self.call('rq_sim_catalog')
+        self.assertEqual(len(cat['config']['subject_types']), 9)
+        self.assertIn('v-infusim-p3', [m['id'] for m in cat['models']])
+        sid = self.call('rq_sim_cat_save', 'subject', None, {'type': 'distributor', 'name': 'Test distributor', 'data': {'iszp': True}})
+        mid = self.call('rq_sim_cat_save', 'model', None, {'product_id': 'p-infuzni-pumpa', 'manufacturer_id': 's-medivia', 'name': 'InfuSIM P4', 'data': {'sw': '1.0', 'trida': 'IIa'}})
+        uid = self.call('rq_sim_cat_save', 'unit', None, {'model_id': mid, 'holder_id': 's-bor', 'data': {'sn': 'SIM-P4-1'}})
+        rid = self.call('rq_sim_rel_save', None, {'subject_id': sid, 'kind': 'distribuuje', 'target_kind': 'model', 'target_id': mid, 'data': {'od': '2026-01-01'}})
+        self.fails('jen archivovat', 'rq_sim_cat_delete', 'model', mid)            # má kusy a vztahy
+        self.call('rq_sim_cat_save', 'model', mid, {'archived': True})
+        self.call('rq_sim_rel_delete', rid); self.call('rq_sim_cat_delete', 'unit', uid); self.call('rq_sim_cat_delete', 'model', mid); self.call('rq_sim_cat_delete', 'subject', sid)
+        self.fails('jen archivovat', 'rq_sim_cat_delete', 'subject', 's-medivia')
+        self.as_user(STUDENT); self.fails('', 'rq_sim_catalog')
+
 if __name__ == '__main__':
     unittest.main()

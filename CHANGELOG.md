@@ -1,5 +1,18 @@
 # Změny
 
+## 0.39.0 – 2026-11-28 · Katalog simulací (fáze A)
+- Studio → Simulace: **Editor událostí** (dříve Scénáře), nově **Subjekty**, **Produkty** a **Nastavení polí**.
+- Subjekty: typy (výrobce, zplnomocněný zástupce, dovozce, distributor, poskytovatel, servis, oznámený subjekt,
+  orgán, metrologické středisko) s poli podle typu; výrobky výrobce, kusy u subjektu, **vztahy** (distribuuje, dováží,
+  oprávněný servis, certifikoval, zastupuje, dodává, dozoruje) s podrobnostmi (platnost, číslo smlouvy/certifikátu).
+- Produkty ve třech úrovních: obecný ZP (třída, určený účel, BTK, elektrorevize, měřicí funkce → stanovené měřidlo,
+  zdroj IZ → kategorie, zkoušky) → výrobek výrobce (obchodní název, UDI, verze SW; dědí vlastnosti, jednotlivé lze
+  přepsat) → kus. U výrobku přehled „kdo s výrobkem pracuje“.
+- Nastavení polí: typy subjektů a jejich pole, pole produktu (i s podmínkou „zobrazit jen když“), výrobku, kusu,
+  druhy a podrobnosti vztahů – bez programování. Mazání jen nepoužitých položek, jinak archivace.
+- Ukázkový smyšlený svět (Medivia, InfuSIM P3, nemocnice Lipovec a Bor, servis, oznámený subjekt, orgány).
+- Migrace 29_simulace_katalog.sql. Úklid testovacích dat maže i průchody simulací.
+
 ## 0.38.0 – 2026-11-28 · Editor scénářů simulací
 - Studio: **editor scénářů** – scénář se skládá klikáním, JSON není potřeba (zůstává jako záložka pro pokročilé).
   Záložky Základ, Ukazatele, Zprávy a podklady, Akce, Události, Hodnocení, Časová osa, JSON; průběžná kontrola chyb
