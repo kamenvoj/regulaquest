@@ -1,5 +1,18 @@
 # Změny
 
+## 0.38.0 – 2026-11-28 · Editor scénářů simulací
+- Studio: **editor scénářů** – scénář se skládá klikáním, JSON není potřeba (zůstává jako záložka pro pokročilé).
+  Záložky Základ, Ukazatele, Zprávy a podklady, Akce, Události, Hodnocení, Časová osa, JSON; průběžná kontrola chyb
+  a upozornění (nepoužité zprávy, příznaky bez zdroje, chybějící konec…).
+- **Skládačka podmínek**: řádky Akce (hotová / zahájena / do dne / dřív než…), Událost, Příznak, Odpověď / volba
+  (je, je jedna z, obsahuje…, text obsahuje slovo), Ukazatel (≥ ≤ =), Čas, Lhůta od příznaku; skupiny „všechny /
+  alespoň jedna“, vnořená skupina.
+- **Efekty** u akcí, možností voleb a událostí: poslat zprávy, nastavit příznaky, změnit ukazatele, ukončit simulaci.
+- Šablony akcí podle oblasti (balíček Vigilance: posouzení závažnosti, hlášení, FSCA, FSN, konečná zpráva…; obecné:
+  volba, formulář, počkat, uzavřít). Nový scénář: prázdný v oblasti, kopie existujícího nebo z JSON.
+- Jádro simulací: **ukazatele** (čísla zobrazená studentovi, mění je akce i události), konec podmínkou,
+  **váhy pravidel**, textové odpovědi s klíčovými slovy. Scénář s chybami nelze označit jako připravený.
+
 ## 0.37.0 – 2026-11-28 · Simulace – běžící čas a náhodný průběh
 - Jádro simulací v2: simulovaný čas v hodinách; režim **tahový** (čas jen kroky) nebo **běžící hodiny**
   (`time.rate` = simulovaných hodin za 1 minutu, nastavitelné u scénáře); volitelná **příprava** (`time.prep_minutes`) –

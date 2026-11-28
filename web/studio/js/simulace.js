@@ -32,12 +32,13 @@ window.RQSimAdmin = (function () {
   async function load(force) { if (!A || force) A = await rpc('rq_sim_admin', {}); return A; }
   async function render() {
     const box = document.getElementById('simContent'); if (!box) return;
+    if (window.RQSimEditor && RQSimEditor.isOpen()) return RQSimEditor.redraw();
     if (!A) { box.innerHTML = '<p class="fine">Načítám…</p>'; try { await load(); } catch (e) { box.innerHTML = `<div class="notice">${esc(e.message)}</div>`; return; } }
     box.innerHTML = `<div class="page-head"><div><div class="eyebrow">SIMULACE / SCÉNÁŘE</div><h1>Simulace</h1>
       <p>Scénáře, ve kterých si studenti vyzkouší regulatorní práci v praxi. Studenti vidí jen scénáře ve stavu <b>Připraveno</b> zpřístupněné jejich skupině. Výsledky jsou jen souhrnné – bez účtů; průchody redakce se nepočítají.</p></div>
-      <div class="head-actions"><button class="btn" id="simNew">+ Nový scénář (JSON)</button></div></div>
+      <div class="head-actions"><button class="btn accent" id="simNew">+ Nový scénář</button></div></div>
       ${A.scenarios.length ? A.scenarios.map(card).join('') : '<div class="notice">Zatím žádný scénář.</div>'}`;
-    box.querySelector('#simNew').onclick = () => editor(null);
+    box.querySelector('#simNew').onclick = newScenario;
     A.scenarios.forEach(s => bind(box.querySelector(`.sim-sc[data-id="${CSS.escape(s.id)}"]`), s));
   }
   function card(s) {
@@ -58,25 +59,39 @@ window.RQSimAdmin = (function () {
         <ul class="sim-rules-a">${rules.map(r => { const p = rate(r); return `<li><span>${esc(r.label)}</span><span class="sim-bar"><i style="width:${p == null ? 0 : p}%"></i></span><b>${p == null ? '–' : p + ' %'}</b></li>`; }).join('')}</ul>
         <p class="fine">Procento = podíl dokončených průchodů, ve kterých student pravidlo splnil (u pravidel, která v daném průchodu platila).</p></details>
       <div class="sim-sc-act"><a class="btn" href="${esc(reader())}/#/simulace/${encodeURIComponent(s.id)}" target="_blank" rel="noopener">Vyzkoušet ve studentské části ↗</a>
-        <button class="btn" data-edit>Upravit scénář (JSON)</button><button class="btn" data-dl>Stáhnout JSON</button>
+        <button class="btn accent" data-edit>Upravit scénář</button><button class="btn" data-copy>Duplikovat</button><button class="btn" data-dl>Stáhnout JSON</button>
         <button class="btn" data-reset>Vymazat výsledky</button><button class="btn danger" data-del>Smazat</button>
         <span class="fine">Upraveno ${esc(fmt(s.updated_at))}</span></div></section>`;
   }
   function bind(el, s) {
     if (!el) return;
     const run = (p, msg) => p.then(() => load(true)).then(() => { openId = s.id; render(); if (msg) toast(msg); }).catch(e => toast(e.message, true));
-    el.querySelector('[data-status]').onclick = () => run(rpc('rq_sim_save_scenario', { p_id: s.id, p_patch: { status: s.status === 'ready' ? 'draft' : 'ready' } }), s.status === 'ready' ? 'Vráceno do konceptu.' : 'Scénář je připravený – studenti ho uvidí ve zpřístupněných skupinách.');
+    el.querySelector('[data-status]').onclick = () => { const errs = RQSim.validate(s.definition); if (s.status !== 'ready' && errs.length) { toast(`Scénář má ${errs.length} chyb – opravte je v editoru (záložka Kontrola).`, true); return; } run(rpc('rq_sim_save_scenario', { p_id: s.id, p_patch: { status: s.status === 'ready' ? 'draft' : 'ready' } }), s.status === 'ready' ? 'Vráceno do konceptu.' : 'Scénář je připravený – studenti ho uvidí ve zpřístupněných skupinách.'); };
     el.querySelectorAll('[data-grp]').forEach(cb => cb.onchange = () => {
       const g = cb.dataset.grp, d = el.querySelector(`[data-from="${CSS.escape(g)}"]`).value || null;
       run(rpc('rq_sim_set_group', { p_scenario_id: s.id, p_group_id: g, p_visible_from: d, p_on: cb.checked }), cb.checked ? 'Zpřístupněno.' : 'Zpřístupnění zrušeno.');
     });
     el.querySelectorAll('[data-from]').forEach(inp => inp.onchange = () => run(rpc('rq_sim_set_group', { p_scenario_id: s.id, p_group_id: inp.dataset.from, p_visible_from: inp.value || null, p_on: true }), 'Datum uloženo.'));
-    el.querySelector('[data-edit]').onclick = () => editor(s);
+    el.querySelector('[data-edit]').onclick = () => RQSimEditor.open(s, back);
+    el.querySelector('[data-copy]').onclick = () => RQSimEditor.open(null, back, { definition: s.definition, copy: true });
     el.querySelector('[data-dl]').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(s.definition, null, 2)], { type: 'application/json' })); a.download = s.id + '.json'; a.click(); };
     el.querySelector('[data-reset]').onclick = () => { if (confirm('Vymazat všechny průchody a výsledky tohoto scénáře? (Např. po zásadní úpravě scénáře nebo před novým semestrem.)')) run(rpc('rq_sim_reset_runs', { p_scenario_id: s.id }), 'Výsledky vymazány.'); };
     el.querySelector('[data-del]').onclick = () => { if (confirm(`Smazat scénář „${s.title}“ včetně všech průchodů?`)) run(rpc('rq_sim_delete_scenario', { p_id: s.id }), 'Scénář smazán.'); };
   }
-  // Editor definice: zatím jako JSON s kontrolou (plnohodnotný editor až podle zkušeností)
+  const back = () => { A = null; render(); };
+  // Nový scénář: prázdný v dané oblasti, nebo z JSON souboru
+  function newScenario() {
+    document.getElementById('simEd')?.remove();
+    const box = document.createElement('div'); box.id = 'simEd'; box.className = 'sim-overlay';
+    box.innerHTML = `<div class="sim-modal" style="width:min(560px,100%)"><h2>Nový scénář</h2>
+      <label class="form-field"><span>Oblast (balíček šablon)</span><select class="select" id="snMod">${Object.entries(MOD).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}<option value="obecne">Obecná simulace</option></select></label>
+      <div class="modal-actions" style="justify-content:flex-start"><button class="btn accent" data-blank>Začít prázdný scénář</button><button class="btn" data-json>Nahrát / vložit JSON…</button><button class="btn" data-x>Zrušit</button></div></div>`;
+    document.body.appendChild(box);
+    box.querySelector('[data-x]').onclick = () => box.remove();
+    box.querySelector('[data-blank]').onclick = () => { const m = box.querySelector('#snMod').value; box.remove(); RQSimEditor.open(null, back, { module: m }); };
+    box.querySelector('[data-json]').onclick = () => { box.remove(); editor(null); };
+  }
+  // Nahrání definice jako JSON (pro pokročilé; běžně se používá editor)
   function editor(s) {
     document.getElementById('simEd')?.remove();
     const box = document.createElement('div'); box.id = 'simEd'; box.className = 'sim-overlay';

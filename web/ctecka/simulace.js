@@ -148,6 +148,7 @@ function simPaint(){
   box.innerHTML = `<div class="sim-play">
     <div class="sim-head"><div><div class="eyebrow">Simulace · ${esc(SIM_MODULES[d.module] || d.module || '')}${SM.status === 'draft' ? ' · koncept' : ''}</div><h1>${esc(SM.title)}</h1>${d.role ? `<div class="muted">${esc(d.role)}</div>` : ''}</div>
       <div class="sim-clock" aria-live="off"><strong id="simClock" class="${RQSim.live(d) && !prep ? 'live' : ''}">${prep ? 'Příprava' : esc(simClock(st.t))}</strong><button type="button" class="btn small" id="simRestart" title="Zahodit tento průchod a začít znovu">Začít znovu</button></div></div>
+    ${(d.indicators || []).some(i => i.visible !== false) ? `<div class="sim-ind">${(d.indicators || []).filter(i => i.visible !== false).map(i => `<span><small>${esc(i.label || i.var)}</small><b>${Number(st.vars[i.var] ?? i.start ?? 0).toLocaleString('cs-CZ')}${i.unit ? ' ' + esc(i.unit) : ''}</b></span>`).join('')}</div>` : ''}
     ${prep ? `<div class="sim-prep"><div><b>Seznamte se s podklady.</b> Hodiny zatím stojí. Krize začne za <b id="simPrepLeft">${simMmSs(st.prep_ms)}</b>.</div><button type="button" class="btn acc" id="simBegin">Jsem připraven(a), začít</button></div>` : ''}
     ${simAdmin() ? simDebugBar() : ''}
     <div class="sim-grid">

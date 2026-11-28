@@ -54,6 +54,7 @@
       if (c.has) return Array.isArray(v) && v.includes(c.has);
       if (c.has_all) return Array.isArray(v) && c.has_all.every(x => v.includes(x));
       if (c.has_any) return Array.isArray(v) && c.has_any.some(x => v.includes(x));
+      if (c.contains_any) { const t = String(v || '').toLowerCase(); return c.contains_any.some(w => w && t.includes(String(w).toLowerCase())); }
       if ('gte' in c) return Number(v) >= c.gte;
       if ('lte' in c) return Number(v) <= c.lte;
       return v != null && v !== false && v !== '';
@@ -93,6 +94,7 @@
       msgRef(w, e.messages); msgRef(w + ' (else)', e.else?.messages);
     });
     (def.rules || []).forEach((r, i) => { if (!r.label || !r.ok) err.push(`Pravidlo ${r.id || '#' + (i + 1)}: chybí popisek nebo podmínka.`); });
+    (def.indicators || []).forEach((x, i) => { if (!x.var) err.push(`Ukazatel #${i + 1}: chybí název proměnné.`); });
     const ref = c => { if (!c || typeof c !== 'object') return; for (const [k, v] of Object.entries(c)) {
       if ((k === 'done' || k === 'started') && typeof v === 'string' && !ids.has(v)) err.push(`Podmínka odkazuje na neznámou akci „${v}“.`);
       if (k === 'event' && typeof v === 'string' && !evIds.has(v)) err.push(`Podmínka odkazuje na neznámou událost „${v}“.`);
@@ -104,6 +106,9 @@
   // ---------- pomocné ----------
   function deliver(def, st, ids) { (ids || []).forEach(id => { const m = def.messages?.[id]; if (m) { st.inbox.push({ id, t: st.t, read: false }); st.log.push({ t: st.t, kind: 'msg', text: (m.from ? m.from + ': ' : '') + m.subject }); } }); }
   function setVars(st, set) { Object.entries(set || {}).forEach(([k, v]) => { if (v && !st.vars[k]) st.vars['t:' + k] = st.t; st.vars[k] = v; }); }
+  // změna číselných ukazatelů: {rozpocet: -50000, pacienti: 3}
+  function addVars(st, add) { Object.entries(add || {}).forEach(([k, v]) => { st.vars[k] = Math.round(((Number(st.vars[k]) || 0) + Number(v || 0)) * 1000) / 1000; }); }
+  function effects(def, st, b) { setVars(st, b.set); addVars(st, b.add); deliver(def, st, b.messages); }
   const live = def => (def.time?.mode || 'step') === 'live';
   // naplánuje události s pevným časem / oknem (při startu) a „after“ (jakmile nastane kotva)
   function schedule(def, st) {
@@ -125,7 +130,7 @@
   function fire(def, st, e, branch) {
     st.fired[e.id] = st.t;
     const b = branch || e;
-    setVars(st, b.set); deliver(def, st, b.messages);
+    effects(def, st, b);
     if (b.end) { st.ended = true; st.phase = 'end'; st.log.push({ t: st.t, kind: 'end', text: 'Čas simulace vypršel.' }); }
   }
   // vyhodnotí vše, co má v čase st.t nastat (dokončené akce, události), dokud se něco děje
@@ -135,6 +140,7 @@
       again = false;
       for (const p of st.pending.filter(p => p.due <= st.t + 1e-9)) { st.pending = st.pending.filter(x => x !== p); complete(def, st, p); again = true; if (st.ended) return; }
       schedule(def, st);
+      if (def.end_when && st.phase === 'run' && test(def.end_when, st)) { st.ended = true; st.phase = 'end'; st.log.push({ t: st.t, kind: 'end', text: def.end_text || 'Simulace skončila.' }); return; }
       for (const e of def.events || []) {
         if (st.fired[e.id] != null) continue;
         const s = st.sched[e.id];
@@ -150,17 +156,18 @@
   }
   function complete(def, st, p) {
     const a = (def.actions || []).find(x => x.id === p.id); if (!a) return;
-    if (a.choice) { const o = a.choice.options.find(x => x.id === p.payload?.choice); if (o) { setVars(st, o.set); deliver(def, st, o.messages); } }
+    if (a.choice) { const o = a.choice.options.find(x => x.id === p.payload?.choice); if (o) effects(def, st, o); }
     if (!a.repeat || st.done[a.id] == null) st.done[a.id] = st.t;
     st.log.push({ t: st.t, kind: 'act', text: (p.async ? 'Dokončeno: ' : '') + p.text });
-    setVars(st, a.set); deliver(def, st, a.messages);
-    if (a.end) { st.ended = true; st.phase = 'end'; st.log.push({ t: st.t, kind: 'end', text: 'Případ uzavřen.' }); }
+    effects(def, st, a);
+    if (a.end || (a.choice && a.choice.options.find(x => x.id === p.payload?.choice)?.end)) { st.ended = true; st.phase = 'end'; st.log.push({ t: st.t, kind: 'end', text: 'Případ uzavřen.' }); }
   }
 
   // ---------- průběh ----------
   function start(def, seed) {
     const st = { v: 2, t: 0, phase: 'run', prep_ms: 0, seed: (seed ?? Math.floor(Math.random() * 2 ** 31)) >>> 0, sched: {}, pending: [], started: {},
       vars: {}, done: {}, fired: {}, inbox: [], log: [], ended: false };
+    (def.indicators || []).forEach(i => { if (i.var) st.vars[i.var] = Number(i.start) || 0; });
     deliver(def, st, def.prep_messages);
     if (live(def) && def.time?.prep_minutes > 0) { st.phase = 'prep'; st.prep_ms = def.time.prep_minutes * 60000; return st; }
     return begin(def, st);
@@ -216,7 +223,8 @@
   }
   function evaluate(def, st) {
     const items = (def.rules || []).filter(r => test(r.only_if, st)).map(r => ({ rule: r, ok: test(r.ok, st) }));
-    const pct = items.length ? Math.round(items.filter(x => x.ok).length / items.length * 100) : 0;
+    const w = x => x.rule.weight == null ? 1 : Number(x.rule.weight) || 0, tot = items.reduce((a, x) => a + w(x), 0);
+    const pct = tot ? Math.round(items.filter(x => x.ok).reduce((a, x) => a + w(x), 0) / tot * 100) : 0;
     const out = (def.outcomes || []).slice().sort((a, b) => b.min - a.min).find(o => pct >= o.min) || null;
     return { items, pct, outcome: out };
   }

@@ -13,7 +13,7 @@ ADMIN = str(uuid.UUID(int=1))
 if not c.execute("select 1 from publications limit 1").fetchone():      # studentská část potřebuje publikaci
     c.execute("select set_config('request.jwt.claim.sub', %s, false)", (ADMIN,)); c.execute("set role authenticated")
     c.execute("select rq_publish('test simulací')"); c.execute("reset role")
-c.execute("delete from sim_runs"); c.execute("delete from sim_scenario_groups"); c.execute("update sim_scenarios set status = 'draft'")
+c.execute("delete from sim_scenarios where id <> 'vigilance-infuzni-pumpa'"); c.execute("delete from sim_runs"); c.execute("delete from sim_scenario_groups"); c.execute("update sim_scenarios set status = 'draft'")
 errs = []
 def login(p, url, user):
     p.goto(url); p.fill('#rqUser', user); p.fill('#rqPass', 'Heslo12345AB'); p.click('button[type=submit]')
