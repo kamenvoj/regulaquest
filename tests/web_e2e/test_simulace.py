@@ -1,0 +1,67 @@
+# Simulace (fáze 1): přepínač prostorů ve Studiu i u studentů, zpřístupnění scénáře, průchod Vigilancí, rozbor, souhrny ve Studiu.
+# Spouštět po test_anotace.py (studentský účet rq-test01 si test založí sám).
+import time, uuid, psycopg
+from playwright.sync_api import sync_playwright
+DSN = "host=/tmp/pg port=5544 user=postgres dbname=rqe2e"
+SID = str(uuid.UUID(int=3)); SC = 'vigilance-infuzni-pumpa'
+c = psycopg.connect(DSN, autocommit=True)
+g = c.execute("select id from student_groups order by created_at limit 1").fetchone()
+g = g[0] if g else c.execute("insert into student_groups(name) values ('Testovací skupina') returning id").fetchone()[0]
+c.execute("insert into auth.users(id, email) values (%s, 'rq-test01@studenti.regulaquest.invalid') on conflict do nothing", (SID,))
+c.execute("insert into profiles(user_id, username, role, group_id) values (%s, 'rq-test01', 'student', %s) on conflict (user_id) do update set group_id = excluded.group_id, active = true", (SID, g))
+ADMIN = str(uuid.UUID(int=1))
+if not c.execute("select 1 from publications limit 1").fetchone():      # studentská část potřebuje publikaci
+    c.execute("select set_config('request.jwt.claim.sub', %s, false)", (ADMIN,)); c.execute("set role authenticated")
+    c.execute("select rq_publish('test simulací')"); c.execute("reset role")
+c.execute("delete from sim_runs"); c.execute("delete from sim_scenario_groups"); c.execute("update sim_scenarios set status = 'draft'")
+errs = []
+def login(p, url, user):
+    p.goto(url); p.fill('#rqUser', user); p.fill('#rqPass', 'Heslo12345AB'); p.click('button[type=submit]')
+def act(r, label, pick=None):
+    r.locator('.sim-act', has_text=label).first.click(); time.sleep(0.2)
+    if pick is not None:
+        for v in pick: r.locator(f'#simDlg input[value="{v}"]').first.check()
+        r.locator('#simDlg button[type=submit]').click(); time.sleep(0.3)
+with sync_playwright() as pw:
+    b = pw.chromium.launch()
+    p = b.new_page(viewport={'width': 1440, 'height': 950}); p.on('pageerror', lambda e: errs.append('S ' + str(e)))
+    login(p, 'http://127.0.0.1:8765/studio/', 'vojta'); p.wait_for_selector('#page-home'); time.sleep(0.8)
+    vis = lambda sel: p.locator(sel).first.is_visible()
+    print('Studio legislativa: Dokumenty viditelné', vis('.nav-item[data-page=library]'), '| Scénáře skryté', not vis('.nav-item[data-page=sim]'))
+    p.click('#spaces [data-space=sim]'); time.sleep(1)
+    print('Studio simulace: Scénáře viditelné', vis('.nav-item[data-page=sim]'), '| Dokumenty skryté', not vis('.nav-item[data-page=library]'), '| Přístupy viditelné', vis('.nav-item[data-page=access]'))
+    print('scénáře:', p.locator('.sim-sc h2').all_inner_texts())
+    r = b.new_page(viewport={'width': 1440, 'height': 950}); r.on('pageerror', lambda e: errs.append('R ' + str(e)))
+    login(r, 'http://127.0.0.1:8765/ctecka/', 'rq-test01'); r.wait_for_selector('.appnav'); time.sleep(0.6)
+    print('student před zpřístupněním – přepínač skrytý:', r.locator('#spaces').is_hidden())
+    p.click('.sim-sc [data-status]'); time.sleep(0.8)
+    p.locator('.sim-sc [data-grp]').first.check(); time.sleep(0.8)
+    print('stav:', p.locator('.sim-sc .badge').first.inner_text())
+    p.screenshot(path='/tmp/s1-studio.png', full_page=True)
+    r.reload(); r.wait_for_selector('.appnav'); time.sleep(0.8)
+    print('student po zpřístupnění – přepínač:', r.locator('#spaces').is_visible())
+    r.click('#spaces [data-space=sim]'); time.sleep(0.6)
+    print('seznam:', r.locator('.sim-card h2').all_inner_texts(), '| Dokumenty v menu skryté:', not r.locator('.navb[data-nav=docs]').is_visible())
+    r.click('.sim-card .btn'); time.sleep(0.6); r.click('#simStart'); time.sleep(0.6)
+    print('hodiny:', r.locator('.sim-clock strong').inner_text(), '| pošta:', r.locator('.sim-inbox li').count())
+    act(r, 'Vyžádat si podrobnosti'); act(r, 'Posoudit závažnost', ['serious'])
+    r.screenshot(path='/tmp/s2-play.png')
+    act(r, 'Podat hlášení', ['initial', 'serious', 'event', 'device', 'cause'])
+    act(r, 'Zjistit, kolik pump'); act(r, 'Prověřit podobné')
+    r.reload(); r.wait_for_selector('.sim-clock'); time.sleep(0.6)
+    print('po obnovení stránky pokračuje:', r.locator('.sim-clock strong').inner_text())
+    act(r, 'Vyžádat vrácení'); act(r, 'Technická analýza')
+    act(r, 'Zahájit bezpečnostní', ['sw', 'v23', 'before'])
+    act(r, 'Připravit bezpečnostní upozornění', ['ident', 'problem', 'now', 'plan', 'forward', 'contact'])
+    act(r, 'Podat konečnou zprávu')
+    r.once('dialog', lambda d: d.accept()); r.locator('.sim-act', has_text='Uzavřít případ').click(); time.sleep(1.5)
+    print('rozbor:', r.locator('.sim-score').inner_text().replace('\n', ' ')[:60], '| pravidel ✓:', r.locator('.sim-rules li.ok').count(), '✗:', r.locator('.sim-rules li.no').count())
+    r.screenshot(path='/tmp/s3-result.png', full_page=True)
+    r.click('text=Zpět na simulace'); time.sleep(0.6)
+    print('seznam po dokončení:', r.locator('.sim-card-act').inner_text().replace('\n', ' '))
+    p.reload(); p.wait_for_selector('#page-home'); time.sleep(0.6); p.click('#spaces [data-space=sim]'); time.sleep(1)
+    print('Studio souhrn:', p.locator('.sim-kpi').inner_text())
+    p.click('.sim-more summary'); time.sleep(0.3); p.screenshot(path='/tmp/s4-studio.png', full_page=True)
+    p.click('#spaces [data-space=leg]'); time.sleep(0.6)
+    print('zpět v legislativě (domů):', p.locator('#page-home').is_visible())
+print('chyby:', errs or 'žádné')

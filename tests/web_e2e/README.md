@@ -23,6 +23,7 @@ python3 tests/web_e2e/test_odkazy.py    # užitečné odkazy: Studio a záložka
 python3 tests/web_e2e/test_prezentace.py # prezentace: import .pptx, editor, odkazy, nová verze, čtečka (RQ_PPTX=cesta k ukázkové prezentaci; do gitu se nedává)
 python3 tests/web_e2e/test_napric.py   # hledání napříč obsahem, prezentace ve vyhledávači, pojmy ve snímku, Souvisí, upozornění před publikací (po test_prezentace.py)
 python3 tests/web_e2e/test_vyuziti.py  # připomínky studentů a přehled využívání (studentský účet rq-test01; po test_napric.py)
+python3 tests/web_e2e/test_simulace.py # simulace: přepínač prostorů, zpřístupnění, průchod Vigilancí, rozbor, souhrny (po test_anotace.py)
 ```
 
 `test_import.py` naimportuje celé MDR (soubor `podklady/MDR_CS_20260719.html`, v gitu není) a pak upravenou kopii

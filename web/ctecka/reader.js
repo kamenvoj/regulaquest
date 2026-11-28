@@ -58,6 +58,7 @@ async function load(rq){
   if (typeof loadNews === 'function') await loadNews();
   if (typeof loadLinks === 'function') await loadLinks();
   if (typeof loadPresentations === 'function') await loadPresentations();
+  if (typeof loadSims === 'function') await loadSims();
   route();
   window.addEventListener('hashchange', route);
 }
@@ -205,6 +206,7 @@ function route(){
   if (/^\/najit(\?|$)/.test(raw)){ S.view = 'finder'; finderParse(raw.split('?')[1]); }
   else if (raw === '/pruvodce'){ S.view = 'guide'; G.pos = 0; }
   else if (raw === '/o-aplikaci') S.view = 'about';
+  else if ((m = h.match(/^\/simulace(?:\/([^/]+))?(?:\/rozbor\/([^/]+))?$/))){ S.simId = m[1] || null; S.simRun = m[2] || null; S.view = !m[1] ? 'simlist' : m[2] ? 'simdone' : 'sim'; }
   else if ((m = h.match(/^\/t\/([^/]+)(?:\/(\d+))?$/)) && S.paths.find(x => x.id === m[1])){
     const p = S.paths.find(x => x.id === m[1]);
     const n = Math.min(+(m[2] || 0), p.steps.length), st = n ? p.steps[n-1] : null;
@@ -235,7 +237,8 @@ function setTab(t, scroll=true){
 function render(){
   const v = S.view, reading = v === 'unit' || v === 'doc' || (v === 'path' && S.unitId);
   document.querySelectorAll('.appnav [data-nav]').forEach(x => x.classList.toggle('on',
-    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news', updates:'updates', cases:'cases', case:'cases', links:'links', prlist:'prlist', pres:'prlist'})[v]));
+    x.dataset.nav === ({home:'home', docs:'docs', doc:'docs', unit:'docs', search:'docs', finder:'finder', guide:'finder', paths:'paths', path:'paths', terms:'terms', marks:'marks', news:'news', updates:'updates', cases:'cases', case:'cases', links:'links', prlist:'prlist', pres:'prlist', simlist:'simlist', sim:'simlist', simdone:'simlist'})[v]));
+  if (typeof spacesMark === 'function') spacesMark();
   $('#navMarks').textContent = S.me.marks.filter(m => !m.unit_id.startsWith('doc:')).length || '';
   renderNav();
   renderPathNav();
@@ -259,6 +262,7 @@ function render(){
   else if (v === 'finder') renderFinder();
   else if (v === 'guide') renderGuide();
   else if (v === 'about') renderAbout();
+  else if (v.startsWith('sim')) renderSim();
   else renderHome();
   renderContext();
   $('#panelText').scrollTop = 0; window.scrollTo(0, 0);

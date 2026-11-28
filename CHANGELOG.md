@@ -1,5 +1,18 @@
 # Změny
 
+## 0.36.0 – 2026-11-28 · Simulace – fáze 1 (jádro + Vigilance)
+- Nový prostor **Simulace** vedle Legislativy: přepínač nahoře ve Studiu i ve studentské části. Studentům se ukáže,
+  jen pokud mají zpřístupněnou simulaci; redakce ho vidí vždy. Legislativa se nemění.
+- Společné jádro simulací (`sdilene/simulace.js`): scénář jako definice JSON – zprávy, akce s cenou v simulovaných
+  dnech, volby a formuláře, události podle času a stavu, pravidla hodnocení s odkazy na předpisy.
+- Ukázkový scénář Vigilance „Předávkování z infuzní pumpy“ (koncept, `supabase/simulace/vigilance-infuzni-pumpa.json`).
+- Studentská část: seznam simulací, průchod (pošta, akce, hodiny, průběh), přerušení a pokračování, začít znovu,
+  rozbor s výsledkem a odkazy do Legislativy (pokud je předpis publikovaný).
+- Studio: Simulace → Scénáře – stav koncept / připraveno, zpřístupnění skupinám od data, souhrnné výsledky
+  (počet průchodů, průměr, úspěšnost u každého pravidla – bez účtů, bez průchodů redakce), úprava / nahrání JSON
+  s kontrolou, stažení, vymazání výsledků, smazání.
+- Migrace 27_simulace.sql (jen nové tabulky sim_* a funkce rq_sim_*).
+
 ## 0.35.2 – 2026-11-27 · Název studentské části
 - Studentská část má podnázev „Výukové prostředí pro práci s legislativou“ (dříve „Čtečka regulace zdravotnických
   prostředků“); v jejích textech se místo „čtečka“ píše „aplikace“. Platí i pro lístečky s přístupy.

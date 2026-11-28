@@ -179,6 +179,8 @@ function render(){
  if(page==='pres'&&window.RQPres)RQPres.render();
  if(page==='feedback'&&window.RQFeedback)RQFeedback.render();
  if(page==='usage'&&window.RQUsage)RQUsage.render();
+ if(page==='sim'&&window.RQSimAdmin)RQSimAdmin.render();
+ if(window.RQSimAdmin)RQSimAdmin.page(page);
  if(window.RQNews&&!window.rqNewsInit){window.rqNewsInit=1;RQNews.load().catch(()=>{})}
  if(page==='library'){renderDocumentMetrics();renderList();renderReader();renderContext();rqLoadFigures($('#reader'))}
  if(page==='documents')renderDocumentsOverview();if(page==='verified')renderVerifiedOverview();if(page==='review')renderReview();if(page==='relations')renderRelations();if(page==='comments')renderComments();if(page==='publish')renderPublish();

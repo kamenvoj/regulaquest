@@ -793,5 +793,33 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(self.call('rq_feedback_admin')[0]['status'], 'done')
         self.as_user(STUDENT); self.fails('', 'rq_usage_report')
 
+    def test_simulations(self):
+        self.as_user(ADMIN)
+        adm = self.call('rq_sim_admin')
+        self.assertEqual([x['id'] for x in adm['scenarios']], ['vigilance-infuzni-pumpa'])
+        sid = self.call('rq_sim_save_scenario', None, {'definition': {'title': 'Test', 'module': 'vigilance', 'actions': [{'id': 'a', 'label': 'A'}]}})
+        self.as_user(STUDENT)
+        self.assertEqual(self.call('rq_sim_list'), [])                          # koncept a nezpřístupněné nevidí
+        self.fails('není dostupná', 'rq_sim_scenario', sid)
+        self.as_user(ADMIN)
+        grp = self.sql("select group_id::text from profiles where user_id = %s", STUDENT)[0][0]
+        self.call('rq_sim_save_scenario', sid, {'status': 'ready'})
+        self.con.execute('select rq_sim_set_group(%s, %s::uuid, null::date, true)', (sid, grp))
+        self.as_user(STUDENT)
+        self.assertEqual([x['id'] for x in self.call('rq_sim_list')], [sid])
+        run = str(self.call('rq_sim_save_run', sid, None, {'day': 0}))
+        self.assertEqual(self.call('rq_sim_scenario', sid)['run']['id'], run)
+        self.call('rq_sim_save_run', sid, run, {'day': 3}, {'pct': 80, 'outcome': 'Zvládnuto', 'ok': ['r1'], 'bad': ['r2']})
+        self.fails('nelze uložit', 'rq_sim_save_run', sid, run, {'day': 4})     # dokončený průchod je uzavřený
+        self.assertEqual(self.call('rq_sim_list')[0]['runs'][0]['result']['pct'], 80)
+        self.as_user(STUDENT2)
+        self.assertIsNone(self.call('rq_sim_run', run))                       # cizí průchod nevidí
+        self.as_user(ADMIN)
+        st = [x for x in self.call('rq_sim_admin')['scenarios'] if x['id'] == sid][0]['stats']
+        self.assertEqual((st['runs'], st['finished'], st['pct_avg'], st['outcomes'], st['rules']['r2']), (1, 1, 80, {'Zvládnuto': 1}, {'ok': 0, 'n': 1}))
+        self.assertNotIn('user', json.dumps(st))
+        self.assertEqual(self.call('rq_sim_reset_runs', sid), 1)
+        self.call('rq_sim_delete_scenario', sid)
+
 if __name__ == '__main__':
     unittest.main()
