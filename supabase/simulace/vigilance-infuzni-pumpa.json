@@ -1,14 +1,16 @@
 {
-  "version": 1,
+  "version": 2,
   "module": "vigilance",
   "title": "Předávkování z infuzní pumpy",
   "summary": "Nemocnice hlásí, že pumpa podala pacientovi několikanásobek dávky heparinu. Zjistěte, co se stalo, posuďte závažnost, nahlaste a rozhodněte o nápravném opatření – dřív, než se to stane jinde.",
-  "minutes": 30,
+  "minutes": 75,
   "role": "Vigilance výrobce – Medivia Systems s.r.o. (fiktivní výrobce)",
-  "clock": "Den {d} od přijetí hlášení",
-  "max_day": 25,
-  "intro": "Jste odpovědní za vigilanci u výrobce infuzních pump. Právě vám přišlo hlášení z nemocnice. Každý krok stojí čas (počet dní je u tlačítka) – lhůty běží od okamžiku, kdy se výrobce o příhodě dozvěděl, tedy ode dne 0. Nic vám nepřipomene termín; hlídejte si ho sami.\n\nVšechny firmy, nemocnice, prostředky a údaje jsou smyšlené.",
-  "start_messages": ["m_hlaseni"],
+  "clock": "Den {d}",
+  "max_day": 20,
+  "intro": "Jste odpovědní za vigilanci u výrobce infuzních pump. Nejdřív máte 10 minut na seznámení s podklady – hodiny stojí. Potom začne krize: hodiny běží (1 minuta = 8 hodin simulovaného času) a informace přicházejí průběžně. Kroky, které trvají několik dní, běží souběžně – výsledek přijde do pošty, mezitím můžete dělat jiné věci. Lhůty běží ode dne, kdy se výrobce o příhodě dozvěděl (den 0). Nic vám nepřipomene termín.\n\nPokud okno zavřete, hodiny se zastaví a po návratu pokračují.\n\nVšechny firmy, nemocnice, prostředky a údaje jsou smyšlené.",
+  "start_messages": [
+    "m_hlaseni"
+  ],
   "messages": {
     "m_hlaseni": {
       "from": "Krajská nemocnice Lipovec – ARO",
@@ -79,115 +81,717 @@
       "from": "SÚKL – vigilance zdravotnických prostředků (simulace)",
       "subject": "Potvrzení přijetí hlášení (Nemocnice Bor)",
       "body": "Potvrzujeme přijetí hlášení k události v Nemocnici Bor."
+    },
+    "p_prostredek": {
+      "from": "Podklady – technická dokumentace",
+      "subject": "InfuSIM P3 – popis prostředku",
+      "body": "Volumetrická infuzní pumpa InfuSIM P3, třída IIb, výrobce Medivia Systems s.r.o. (fiktivní). Určena ke kontinuálnímu a bolusovému podávání léčiv v nemocnicích.\n\n- certifikát oznámeného subjektu platný,\n- software: verze 2.2 (od uvedení na trh), verze 2.3 (vydána před dvěma měsíci – úprava menu a nová funkce rychlé změny rychlosti),\n- aktualizace softwaru se instaluje při pravidelném servisu,\n- v provozu v Česku a na Slovensku."
+    },
+    "p_rizika": {
+      "from": "Podklady – řízení rizik",
+      "subject": "Výňatek z analýzy rizik",
+      "body": "Identifikovaná nebezpečí (výběr):\n\n- nadměrné podání léčiva (over-infusion) – příčiny: chyba obsluhy při nastavení, porucha čerpacího mechanismu, chyba softwaru; opatření: alarmy, kontrola rychlosti, validace softwaru,\n- nedostatečné podání (under-infusion),\n- vzduch v systému.\n\nZávažnost nadměrného podání: kritická (možné vážné zhoršení zdravotního stavu až úmrtí podle léčiva)."
+    },
+    "p_postup": {
+      "from": "Podklady – systém kvality",
+      "subject": "Interní postup vigilance (zkráceno)",
+      "body": "- každou informaci o možné nežádoucí příhodě zaznamenat a posoudit bez zbytečného odkladu,\n- posoudit souvislost s prostředkem a závažnost; lhůty pro hlášení příslušnému orgánu stanoví MDR,\n- šetření: informace od uživatele, vrácení a analýza prostředku, posouzení rozsahu (dotčené šarže / verze),\n- nápravná opatření v terénu (FSCA) a bezpečnostní upozornění (FSN) schvaluje vedoucí kvality,\n- komunikace s médii jen přes vedení společnosti."
+    },
+    "m_stiznost": {
+      "from": "Fakultní nemocnice Rovina – zdravotnická technika",
+      "subject": "Pumpa InfuSIM P3 podává rychleji",
+      "body": "Dobrý den, u pumpy InfuSIM P3 (software 2.3) jsme si všimli, že po změně rychlosti během bolusu pokračovala vyšší rychlostí, než byla nastavena. Sestra to zachytila včas, pacient bez následků. Prosíme o informaci, zda jde o známý problém."
+    },
+    "m_novinar": {
+      "from": "Redakce Zdravotnického deníku (simulace)",
+      "subject": "Dotaz k infuzním pumpám",
+      "body": "Dobrý den, slyšeli jsme o problému s vašimi infuzními pumpami v jedné z krajských nemocnic. Můžete se k tomu vyjádřit? Uzávěrka zítra v poledne."
     }
   },
   "actions": [
-    { "id": "a_detaily", "group": "Zjistit víc", "label": "Vyžádat si podrobnosti od nemocnice", "days": 1, "messages": ["m_detaily"] },
-    { "id": "a_vraceni", "group": "Zjistit víc", "label": "Vyžádat vrácení pumpy a protokolu událostí", "days": 3, "set": { "pump_returned": true }, "messages": ["m_vraceni"] },
-    { "id": "a_analyza", "group": "Zjistit víc", "label": "Technická analýza pumpy", "days": 2, "when": { "done": "a_vraceni" }, "need": "Nejdřív potřebujete pumpu z nemocnice.", "set": { "root_cause": true }, "messages": ["m_analyza"] },
-    { "id": "a_baze", "group": "Zjistit víc", "label": "Zjistit, kolik pump a s jakým softwarem je v provozu", "days": 1, "messages": ["m_baze"] },
-    { "id": "a_trend", "group": "Zjistit víc", "label": "Prověřit podobné stížnosti z poslední doby", "days": 1, "messages": ["m_trend"] },
-    { "id": "a_zavaznost", "group": "Posoudit a nahlásit", "label": "Posoudit závažnost události", "days": 0,
-      "choice": { "prompt": "Jak událost z Lipovce vyhodnotíte?", "var": "severity", "options": [
-        { "id": "serious", "label": "Závažná nežádoucí příhoda – vedla k vážnému zhoršení zdravotního stavu pacienta" },
-        { "id": "threat", "label": "Závažné ohrožení veřejného zdraví" },
-        { "id": "nonserious", "label": "Nežádoucí příhoda, která není závažná – zaznamenat a sledovat v trendech" },
-        { "id": "user", "label": "Chyba obsluhy – nehlásit, vyřešit doškolením" } ] } },
-    { "id": "a_mir", "group": "Posoudit a nahlásit", "label": "Podat hlášení příslušnému orgánu (SÚKL)", "days": 0, "messages": ["m_mir_ok"],
-      "form": { "title": "Hlášení závažné nežádoucí příhody (zjednodušený formulář)", "intro": "Simulace hlášení výrobce. Uveďte, co o případu víte – počáteční hlášení může být neúplné a doplní se.", "fields": [
-        { "id": "type", "label": "Typ hlášení", "type": "select", "options": [ { "id": "initial", "label": "Počáteční" }, { "id": "combined", "label": "Kombinované počáteční a konečné" }, { "id": "final", "label": "Konečné" } ] },
-        { "id": "class", "label": "Klasifikace", "type": "select", "options": [ { "id": "serious", "label": "Závažná nežádoucí příhoda" }, { "id": "threat", "label": "Závažné ohrožení veřejného zdraví" }, { "id": "death", "label": "Úmrtí nebo nepředvídané vážné zhoršení zdravotního stavu" } ] },
-        { "id": "content", "label": "Co hlášení obsahuje", "type": "checks", "options": [ { "id": "event", "label": "Popis události a důsledků pro pacienta" }, { "id": "device", "label": "Identifikace prostředku (typ, výrobní číslo, verze softwaru)" }, { "id": "provider", "label": "Kdo událost ohlásil (poskytovatel)" }, { "id": "cause", "label": "Předběžné hodnocení příčiny (je-li známo)" }, { "id": "steps", "label": "Další plánované kroky šetření" } ] } ] } },
-    { "id": "a_mir2", "group": "Posoudit a nahlásit", "label": "Nahlásit událost z Nemocnice Bor", "days": 0, "when": { "flag": "second_incident" }, "need": "Zatím není co hlásit.", "messages": ["m_druha_ok"],
-      "form": { "title": "Hlášení k události v Nemocnici Bor", "fields": [
-        { "id": "class", "label": "Klasifikace", "type": "select", "options": [ { "id": "serious", "label": "Závažná nežádoucí příhoda" }, { "id": "threat", "label": "Závažné ohrožení veřejného zdraví" }, { "id": "death", "label": "Úmrtí nebo nepředvídané vážné zhoršení zdravotního stavu" } ] } ] } },
-    { "id": "a_fsca", "group": "Nápravná opatření", "label": "Zahájit bezpečnostní nápravné opatření (FSCA)", "days": 2, "messages": ["m_fsca_ok"], "set": { "fsca": true },
-      "form": { "title": "Bezpečnostní nápravné opatření (FSCA)", "fields": [
-        { "id": "measure", "label": "Opatření", "type": "select", "options": [
-          { "id": "sw", "label": "Aktualizace na opravenou verzi softwaru; do té doby pokyn neměnit rychlost během bolusu" },
-          { "id": "recall", "label": "Stáhnout z trhu všechny pumpy InfuSIM P3" },
-          { "id": "warn", "label": "Jen upozornit uživatele, bez technického řešení" } ] },
-        { "id": "scope", "label": "Kterých pump se týká", "type": "select", "options": [ { "id": "v23", "label": "Pump se softwarem 2.3" }, { "id": "all", "label": "Všech pump InfuSIM P3" }, { "id": "one", "label": "Jen pumpy z Lipovce" } ] },
-        { "id": "notify", "label": "Příslušný orgán", "type": "checks", "options": [ { "id": "before", "label": "Oznámit opatření příslušnému orgánu před jeho zahájením" } ] } ] } },
-    { "id": "a_fsn", "group": "Nápravná opatření", "label": "Připravit bezpečnostní upozornění (FSN) pro uživatele", "days": 1, "when": { "done": "a_fsca" }, "need": "Nejdřív rozhodněte o nápravném opatření.", "messages": ["m_fsn_ok"],
-      "form": { "title": "Bezpečnostní upozornění (FSN)", "intro": "Vyberte, co do upozornění patří.", "fields": [
-        { "id": "content", "label": "Obsah upozornění", "type": "checks", "options": [
-          { "id": "ident", "label": "Identifikace dotčených pump (typ, verze softwaru, výrobní čísla)" },
-          { "id": "problem", "label": "Popis problému a rizika pro pacienty" },
-          { "id": "now", "label": "Co mají uživatelé udělat hned (neměnit rychlost během bolusu)" },
-          { "id": "plan", "label": "Opatření výrobce a termín aktualizace" },
-          { "id": "forward", "label": "Žádost o předání všem uživatelům a potvrzení přijetí" },
-          { "id": "contact", "label": "Kontakt na výrobce" },
-          { "id": "discount", "label": "Omluva a sleva na příští nákup" },
-          { "id": "blame", "label": "Upozornění, že jde o chybu obsluhy" } ] } ] } },
-    { "id": "a_final", "group": "Posoudit a nahlásit", "label": "Podat konečnou zprávu", "days": 1, "when": { "all": [ { "done": "a_mir" }, { "flag": "root_cause" } ] }, "need": "Konečná zpráva předpokládá podané hlášení a známou příčinu.", "messages": ["m_final_ok"] },
-    { "id": "a_wait", "group": "Čas", "label": "Počkat jeden den", "days": 1, "repeat": true },
-    { "id": "a_close", "group": "Čas", "label": "Uzavřít případ a zobrazit rozbor", "days": 0, "end": true, "confirm": "Opravdu uzavřít? Další kroky už nepůjdou udělat." }
+    {
+      "id": "a_detaily",
+      "group": "Zjistit víc",
+      "label": "Vyžádat si podrobnosti od nemocnice",
+      "days": 1,
+      "messages": [
+        "m_detaily"
+      ]
+    },
+    {
+      "id": "a_vraceni",
+      "group": "Zjistit víc",
+      "label": "Vyžádat vrácení pumpy a protokolu událostí",
+      "days": 3,
+      "set": {
+        "pump_returned": true
+      },
+      "messages": [
+        "m_vraceni"
+      ]
+    },
+    {
+      "id": "a_analyza",
+      "group": "Zjistit víc",
+      "label": "Technická analýza pumpy",
+      "days": 2,
+      "when": {
+        "done": "a_vraceni"
+      },
+      "need": "Nejdřív potřebujete pumpu z nemocnice.",
+      "set": {
+        "root_cause": true
+      },
+      "messages": [
+        "m_analyza"
+      ]
+    },
+    {
+      "id": "a_baze",
+      "group": "Zjistit víc",
+      "label": "Zjistit, kolik pump a s jakým softwarem je v provozu",
+      "days": 1,
+      "messages": [
+        "m_baze"
+      ]
+    },
+    {
+      "id": "a_trend",
+      "group": "Zjistit víc",
+      "label": "Prověřit podobné stížnosti z poslední doby",
+      "days": 1,
+      "messages": [
+        "m_trend"
+      ]
+    },
+    {
+      "id": "a_zavaznost",
+      "group": "Posoudit a nahlásit",
+      "label": "Posoudit závažnost události",
+      "days": 0,
+      "choice": {
+        "prompt": "Jak událost z Lipovce vyhodnotíte?",
+        "var": "severity",
+        "options": [
+          {
+            "id": "serious",
+            "label": "Závažná nežádoucí příhoda – vedla k vážnému zhoršení zdravotního stavu pacienta"
+          },
+          {
+            "id": "threat",
+            "label": "Závažné ohrožení veřejného zdraví"
+          },
+          {
+            "id": "nonserious",
+            "label": "Nežádoucí příhoda, která není závažná – zaznamenat a sledovat v trendech"
+          },
+          {
+            "id": "user",
+            "label": "Chyba obsluhy – nehlásit, vyřešit doškolením"
+          }
+        ]
+      }
+    },
+    {
+      "id": "a_mir",
+      "group": "Posoudit a nahlásit",
+      "label": "Podat hlášení příslušnému orgánu (SÚKL)",
+      "days": 0,
+      "messages": [
+        "m_mir_ok"
+      ],
+      "form": {
+        "title": "Hlášení závažné nežádoucí příhody (zjednodušený formulář)",
+        "intro": "Simulace hlášení výrobce. Uveďte, co o případu víte – počáteční hlášení může být neúplné a doplní se.",
+        "fields": [
+          {
+            "id": "type",
+            "label": "Typ hlášení",
+            "type": "select",
+            "options": [
+              {
+                "id": "initial",
+                "label": "Počáteční"
+              },
+              {
+                "id": "combined",
+                "label": "Kombinované počáteční a konečné"
+              },
+              {
+                "id": "final",
+                "label": "Konečné"
+              }
+            ]
+          },
+          {
+            "id": "class",
+            "label": "Klasifikace",
+            "type": "select",
+            "options": [
+              {
+                "id": "serious",
+                "label": "Závažná nežádoucí příhoda"
+              },
+              {
+                "id": "threat",
+                "label": "Závažné ohrožení veřejného zdraví"
+              },
+              {
+                "id": "death",
+                "label": "Úmrtí nebo nepředvídané vážné zhoršení zdravotního stavu"
+              }
+            ]
+          },
+          {
+            "id": "content",
+            "label": "Co hlášení obsahuje",
+            "type": "checks",
+            "options": [
+              {
+                "id": "event",
+                "label": "Popis události a důsledků pro pacienta"
+              },
+              {
+                "id": "device",
+                "label": "Identifikace prostředku (typ, výrobní číslo, verze softwaru)"
+              },
+              {
+                "id": "provider",
+                "label": "Kdo událost ohlásil (poskytovatel)"
+              },
+              {
+                "id": "cause",
+                "label": "Předběžné hodnocení příčiny (je-li známo)"
+              },
+              {
+                "id": "steps",
+                "label": "Další plánované kroky šetření"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "a_mir2",
+      "group": "Posoudit a nahlásit",
+      "label": "Nahlásit událost z Nemocnice Bor",
+      "days": 0,
+      "when": {
+        "flag": "second_incident"
+      },
+      "need": "Zatím není co hlásit.",
+      "messages": [
+        "m_druha_ok"
+      ],
+      "form": {
+        "title": "Hlášení k události v Nemocnici Bor",
+        "fields": [
+          {
+            "id": "class",
+            "label": "Klasifikace",
+            "type": "select",
+            "options": [
+              {
+                "id": "serious",
+                "label": "Závažná nežádoucí příhoda"
+              },
+              {
+                "id": "threat",
+                "label": "Závažné ohrožení veřejného zdraví"
+              },
+              {
+                "id": "death",
+                "label": "Úmrtí nebo nepředvídané vážné zhoršení zdravotního stavu"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "a_fsca",
+      "group": "Nápravná opatření",
+      "label": "Zahájit bezpečnostní nápravné opatření (FSCA)",
+      "days": 2,
+      "messages": [
+        "m_fsca_ok"
+      ],
+      "set": {
+        "fsca": true
+      },
+      "form": {
+        "title": "Bezpečnostní nápravné opatření (FSCA)",
+        "fields": [
+          {
+            "id": "measure",
+            "label": "Opatření",
+            "type": "select",
+            "options": [
+              {
+                "id": "sw",
+                "label": "Aktualizace na opravenou verzi softwaru; do té doby pokyn neměnit rychlost během bolusu"
+              },
+              {
+                "id": "recall",
+                "label": "Stáhnout z trhu všechny pumpy InfuSIM P3"
+              },
+              {
+                "id": "warn",
+                "label": "Jen upozornit uživatele, bez technického řešení"
+              }
+            ]
+          },
+          {
+            "id": "scope",
+            "label": "Kterých pump se týká",
+            "type": "select",
+            "options": [
+              {
+                "id": "v23",
+                "label": "Pump se softwarem 2.3"
+              },
+              {
+                "id": "all",
+                "label": "Všech pump InfuSIM P3"
+              },
+              {
+                "id": "one",
+                "label": "Jen pumpy z Lipovce"
+              }
+            ]
+          },
+          {
+            "id": "notify",
+            "label": "Příslušný orgán",
+            "type": "checks",
+            "options": [
+              {
+                "id": "before",
+                "label": "Oznámit opatření příslušnému orgánu před jeho zahájením"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "a_fsn",
+      "group": "Nápravná opatření",
+      "label": "Připravit bezpečnostní upozornění (FSN) pro uživatele",
+      "days": 1,
+      "when": {
+        "done": "a_fsca"
+      },
+      "need": "Nejdřív rozhodněte o nápravném opatření.",
+      "messages": [
+        "m_fsn_ok"
+      ],
+      "form": {
+        "title": "Bezpečnostní upozornění (FSN)",
+        "intro": "Vyberte, co do upozornění patří.",
+        "fields": [
+          {
+            "id": "content",
+            "label": "Obsah upozornění",
+            "type": "checks",
+            "options": [
+              {
+                "id": "ident",
+                "label": "Identifikace dotčených pump (typ, verze softwaru, výrobní čísla)"
+              },
+              {
+                "id": "problem",
+                "label": "Popis problému a rizika pro pacienty"
+              },
+              {
+                "id": "now",
+                "label": "Co mají uživatelé udělat hned (neměnit rychlost během bolusu)"
+              },
+              {
+                "id": "plan",
+                "label": "Opatření výrobce a termín aktualizace"
+              },
+              {
+                "id": "forward",
+                "label": "Žádost o předání všem uživatelům a potvrzení přijetí"
+              },
+              {
+                "id": "contact",
+                "label": "Kontakt na výrobce"
+              },
+              {
+                "id": "discount",
+                "label": "Omluva a sleva na příští nákup"
+              },
+              {
+                "id": "blame",
+                "label": "Upozornění, že jde o chybu obsluhy"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "a_final",
+      "group": "Posoudit a nahlásit",
+      "label": "Podat konečnou zprávu",
+      "days": 1,
+      "when": {
+        "all": [
+          {
+            "done": "a_mir"
+          },
+          {
+            "flag": "root_cause"
+          }
+        ]
+      },
+      "need": "Konečná zpráva předpokládá podané hlášení a známou příčinu.",
+      "messages": [
+        "m_final_ok"
+      ]
+    },
+    {
+      "id": "a_wait",
+      "group": "Čas",
+      "label": "Počkat jeden den",
+      "days": 1,
+      "repeat": true
+    },
+    {
+      "id": "a_close",
+      "group": "Čas",
+      "label": "Uzavřít případ a zobrazit rozbor",
+      "days": 0,
+      "end": true,
+      "confirm": "Opravdu uzavřít? Další kroky už nepůjdou udělat."
+    }
   ],
   "events": [
-    { "id": "e_pripominka", "when": { "all": [ { "day_gte": 3 }, { "not": { "done": "a_detaily" } } ] }, "messages": ["m_pripominka"] },
-    { "id": "e_druha", "when": { "all": [ { "day_gte": 12 }, { "not": { "done": "a_fsca" } } ] }, "set": { "second_incident": true }, "messages": ["m_druha"] },
-    { "id": "e_sukl", "when": { "all": [ { "day_gte": 16 }, { "not": { "done": "a_mir" } } ] }, "set": { "inspection": true }, "messages": ["m_sukl"] },
-    { "id": "e_konec", "when": { "day_gte": 25 }, "end": true }
+    {
+      "id": "e_pripominka",
+      "at_day": 2.5,
+      "when": {
+        "not": {
+          "started": "a_detaily"
+        }
+      },
+      "messages": [
+        "m_pripominka"
+      ]
+    },
+    {
+      "id": "e_stiznost",
+      "window_days": [
+        3,
+        7
+      ],
+      "messages": [
+        "m_stiznost"
+      ]
+    },
+    {
+      "id": "e_novinar",
+      "window_days": [
+        5,
+        9
+      ],
+      "probability": 0.5,
+      "messages": [
+        "m_novinar"
+      ]
+    },
+    {
+      "id": "e_druha",
+      "window_days": [
+        10,
+        13
+      ],
+      "when": {
+        "not": {
+          "started": "a_fsca"
+        }
+      },
+      "set": {
+        "second_incident": true
+      },
+      "messages": [
+        "m_druha"
+      ]
+    },
+    {
+      "id": "e_sukl",
+      "at_day": 16,
+      "when": {
+        "not": {
+          "done": "a_mir"
+        }
+      },
+      "set": {
+        "inspection": true
+      },
+      "messages": [
+        "m_sukl"
+      ]
+    }
   ],
   "rules": [
-    { "id": "r_class", "label": "Událost jste vyhodnotili jako závažnou nežádoucí příhodu", "ok": { "var": "severity", "eq": "serious" },
+    {
+      "id": "r_class",
+      "label": "Událost jste vyhodnotili jako závažnou nežádoucí příhodu",
+      "ok": {
+        "var": "severity",
+        "eq": "serious"
+      },
       "good": "Pacient potřeboval transfuzi a převoz na JIP – vážné zhoršení zdravotního stavu, tedy závažná nežádoucí příhoda.",
       "bad": "Pacient potřeboval transfuzi a převoz na JIP – jde o vážné zhoršení zdravotního stavu, tedy závažnou nežádoucí příhodu. Nejde o chybu obsluhy (postup odpovídal návodu) ani o „nezávažnou“ příhodu; závažné ohrožení veřejného zdraví by vyžadovalo riziko pro širokou populaci.",
-      "refs": ["MDR|Článek 2", "MDCG 2023-3"] },
-    { "id": "r_mir", "label": "Hlášení podáno nejpozději 15. den od přijetí informace", "ok": { "done_by": { "action": "a_mir", "day_lte": 15 } },
+      "refs": [
+        "MDR|Článek 2",
+        "MDCG 2023-3"
+      ]
+    },
+    {
+      "id": "r_mir",
+      "label": "Hlášení podáno nejpozději 15. den od přijetí informace",
+      "ok": {
+        "done_by": {
+          "action": "a_mir",
+          "day_lte": 15
+        }
+      },
       "good": "Výrobce hlásí bezodkladně, jakmile je souvislost s prostředkem prokázaná nebo přiměřeně možná, nejpozději do 15 dnů. Na úplné výsledky šetření se nečeká – podá se počáteční hlášení.",
       "bad": "Lhůta běží ode dne, kdy se výrobce o příhodě dozvěděl. Hlásí se bezodkladně, nejpozději do 15 dnů – i s neúplnými informacemi (počáteční hlášení), výsledky šetření se doplní.",
-      "refs": ["MDR|Článek 87"] },
-    { "id": "r_mir_class", "label": "V hlášení správná klasifikace", "only_if": { "done": "a_mir" }, "ok": { "var": "form.a_mir.class", "eq": "serious" },
+      "refs": [
+        "MDR|Článek 87"
+      ]
+    },
+    {
+      "id": "r_mir_class",
+      "label": "V hlášení správná klasifikace",
+      "only_if": {
+        "done": "a_mir"
+      },
+      "ok": {
+        "var": "form.a_mir.class",
+        "eq": "serious"
+      },
       "good": "Správně: závažná nežádoucí příhoda (riziko nadměrného podání je v analýze rizik uvedené, nejde tedy o nepředvídané zhoršení).",
       "bad": "Správná klasifikace je závažná nežádoucí příhoda. Kratší lhůty platí pro závažné ohrožení veřejného zdraví a pro úmrtí či nepředvídané vážné zhoršení zdravotního stavu.",
-      "refs": ["MDR|Článek 87"] },
-    { "id": "r_info", "label": "Před rozhodováním jste si vyžádali podrobnosti", "ok": { "done": "a_detaily" },
+      "refs": [
+        "MDR|Článek 87"
+      ]
+    },
+    {
+      "id": "r_info",
+      "label": "Před rozhodováním jste si vyžádali podrobnosti",
+      "ok": {
+        "done": "a_detaily"
+      },
       "good": "Podrobnosti (verze softwaru, postup obsluhy) navedly šetření správným směrem.",
       "bad": "Bez podrobností od nemocnice nevíte o verzi softwaru ani o postupu obsluhy – a šetření se snadno stočí k „chybě obsluhy“.",
-      "refs": ["MDR|Článek 89"] },
-    { "id": "r_root", "label": "Zjistili jste příčinu (technická analýza)", "ok": { "flag": "root_cause" },
+      "refs": [
+        "MDR|Článek 89"
+      ]
+    },
+    {
+      "id": "r_root",
+      "label": "Zjistili jste příčinu (technická analýza)",
+      "ok": {
+        "flag": "root_cause"
+      },
       "good": "Analýza odhalila chybu softwaru 2.3 – bez ní by nápravné opatření mířilo naslepo.",
       "bad": "Bez analýzy vrácené pumpy příčinu neznáte; výrobce musí provést šetření příhody včetně posouzení prostředku.",
-      "refs": ["MDR|Článek 89"] },
-    { "id": "r_trend", "label": "Prověřili jste podobné stížnosti", "ok": { "done": "a_trend" },
+      "refs": [
+        "MDR|Článek 89"
+      ]
+    },
+    {
+      "id": "r_trend",
+      "label": "Prověřili jste podobné stížnosti",
+      "ok": {
+        "done": "a_trend"
+      },
       "good": "Dvě dřívější stížnosti uzavřené jako „chyba obsluhy“ byly ve skutečnosti varovný signál.",
       "bad": "V evidenci byly dvě podobné stížnosti uzavřené jako chyba obsluhy. Sledování trendů je povinnost výrobce a pomáhá odhalit problém dřív.",
-      "refs": ["MDR|Článek 88"] },
-    { "id": "r_scope", "label": "Rozsah (kolik pump a s jakým softwarem) jste znali před opatřením", "only_if": { "done": "a_fsca" }, "ok": { "done_before": ["a_baze", "a_fsca"] },
+      "refs": [
+        "MDR|Článek 88"
+      ]
+    },
+    {
+      "id": "r_scope",
+      "label": "Rozsah (kolik pump a s jakým softwarem) jste znali před opatřením",
+      "only_if": {
+        "done": "a_fsca"
+      },
+      "ok": {
+        "done_before": [
+          "a_baze",
+          "a_fsca"
+        ]
+      },
       "good": "Opatření jste cílili na skutečně dotčené pumpy.",
-      "bad": "Bez znalosti rozsahu nevíte, koho opatření týká – hrozí příliš úzké nebo zbytečně široké opatření." },
-    { "id": "r_fsca_time", "label": "Nápravné opatření zahájeno včas (do 11. dne)", "ok": { "done_by": { "action": "a_fsca", "day_lte": 11 } },
+      "bad": "Bez znalosti rozsahu nevíte, koho opatření týká – hrozí příliš úzké nebo zbytečně široké opatření."
+    },
+    {
+      "id": "r_fsca_time",
+      "label": "Nápravné opatření zahájeno včas (do 10. dne)",
+      "ok": {
+        "started_by": {
+          "action": "a_fsca",
+          "day_lte": 10
+        }
+      },
       "good": "Včasné opatření zabránilo další příhodě.",
-      "bad": "Bez včasného opatření se stejná chyba projevila v jiné nemocnici. Ochrana dalších pacientů nečeká na dokončení všech analýz.",
-      "refs": ["MDR|Článek 89"] },
-    { "id": "r_fsca_measure", "label": "Přiměřené opatření a správný rozsah", "only_if": { "done": "a_fsca" }, "ok": { "all": [ { "var": "form.a_fsca.measure", "eq": "sw" }, { "var": "form.a_fsca.scope", "eq": "v23" } ] },
+      "bad": "Bez včasného opatření se stejná chyba může projevit v jiné nemocnici – a v tomto průchodu se projevila nebo hrozila. Ochrana dalších pacientů nečeká na dokončení všech analýz; dočasný pokyn uživatelům lze vydat hned.",
+      "refs": [
+        "MDR|Článek 89"
+      ]
+    },
+    {
+      "id": "r_fsca_measure",
+      "label": "Přiměřené opatření a správný rozsah",
+      "only_if": {
+        "done": "a_fsca"
+      },
+      "ok": {
+        "all": [
+          {
+            "var": "form.a_fsca.measure",
+            "eq": "sw"
+          },
+          {
+            "var": "form.a_fsca.scope",
+            "eq": "v23"
+          }
+        ]
+      },
       "good": "Aktualizace softwaru u pump s verzí 2.3 a do té doby jasný pokyn – cílené a přiměřené.",
-      "bad": "Příčina je v softwaru 2.3: přiměřené je opravit software u dotčených pump a do té doby dát uživatelům pokyn. Stažení všech pump by zbytečně ohrozilo péči, samotné upozornění bez opravy problém neodstraní." },
-    { "id": "r_fsca_notify", "label": "FSCA oznámeno příslušnému orgánu předem", "only_if": { "done": "a_fsca" }, "ok": { "var": "form.a_fsca.notify", "has": "before" },
+      "bad": "Příčina je v softwaru 2.3: přiměřené je opravit software u dotčených pump a do té doby dát uživatelům pokyn. Stažení všech pump by zbytečně ohrozilo péči, samotné upozornění bez opravy problém neodstraní."
+    },
+    {
+      "id": "r_fsca_notify",
+      "label": "FSCA oznámeno příslušnému orgánu předem",
+      "only_if": {
+        "done": "a_fsca"
+      },
+      "ok": {
+        "var": "form.a_fsca.notify",
+        "has": "before"
+      },
       "good": "Nápravné opatření se příslušnému orgánu oznamuje před jeho zahájením (kromě naléhavých případů).",
       "bad": "Nápravné opatření se příslušnému orgánu oznamuje před jeho zahájením, kromě naléhavých případů.",
-      "refs": ["MDR|Článek 87", "MDR|Článek 89"] },
-    { "id": "r_fsn", "label": "Bezpečnostní upozornění obsahuje, co má", "only_if": { "done": "a_fsca" }, "ok": { "all": [ { "var": "form.a_fsn.content", "has_all": ["ident", "problem", "now", "plan", "forward", "contact"] }, { "not": { "var": "form.a_fsn.content", "has_any": ["discount", "blame"] } } ] },
+      "refs": [
+        "MDR|Článek 87",
+        "MDR|Článek 89"
+      ]
+    },
+    {
+      "id": "r_fsn",
+      "label": "Bezpečnostní upozornění obsahuje, co má",
+      "only_if": {
+        "done": "a_fsca"
+      },
+      "ok": {
+        "all": [
+          {
+            "var": "form.a_fsn.content",
+            "has_all": [
+              "ident",
+              "problem",
+              "now",
+              "plan",
+              "forward",
+              "contact"
+            ]
+          },
+          {
+            "not": {
+              "var": "form.a_fsn.content",
+              "has_any": [
+                "discount",
+                "blame"
+              ]
+            }
+          }
+        ]
+      },
       "good": "Upozornění jednoznačně identifikuje pumpy, vysvětluje riziko a říká, co dělat.",
       "bad": "FSN má identifikovat dotčené prostředky, popsat problém a riziko, říct uživatelům, co mají dělat, uvést opatření výrobce, požádat o předání a dát kontakt. Obchodní nabídky ani svalování viny na obsluhu do něj nepatří.",
-      "refs": ["MDR|Článek 89"] },
-    { "id": "r_second", "label": "Událost z Nemocnice Bor nahlášena do 10 dnů", "only_if": { "flag": "second_incident" }, "ok": { "within": { "action": "a_mir2", "from_flag": "second_incident", "days": 10 } },
+      "refs": [
+        "MDR|Článek 89"
+      ]
+    },
+    {
+      "id": "r_second",
+      "label": "Událost z Nemocnice Bor nahlášena do 10 dnů",
+      "only_if": {
+        "flag": "second_incident"
+      },
+      "ok": {
+        "within": {
+          "action": "a_mir2",
+          "from_flag": "second_incident",
+          "days": 10
+        }
+      },
       "good": "U úmrtí platí kratší lhůta – nejpozději 10 dnů.",
       "bad": "U úmrtí nebo nepředvídaného vážného zhoršení zdravotního stavu je lhůta kratší – nejpozději 10 dnů.",
-      "refs": ["MDR|Článek 87"] },
-    { "id": "r_final", "label": "Podána konečná zpráva", "ok": { "done": "a_final" },
+      "refs": [
+        "MDR|Článek 87"
+      ]
+    },
+    {
+      "id": "r_final",
+      "label": "Podána konečná zpráva",
+      "ok": {
+        "done": "a_final"
+      },
       "good": "Šetření je uzavřené konečnou zprávou s příčinou a opatřeními.",
       "bad": "Po dokončení šetření výrobce podává konečnou zprávu se závěry a přijatými opatřeními.",
-      "refs": ["MDR|Článek 89"] },
-    { "id": "r_noharm", "label": "Nedošlo k další příhodě", "ok": { "not": { "flag": "second_incident" } },
+      "refs": [
+        "MDR|Článek 89"
+      ]
+    },
+    {
+      "id": "r_noharm",
+      "label": "Nedošlo k další příhodě",
+      "ok": {
+        "not": {
+          "flag": "second_incident"
+        }
+      },
       "good": "Další pacienti nebyli poškozeni.",
-      "bad": "Chyba se projevila znovu a pacientka zemřela. Rozhodující bylo včasné opatření." }
+      "bad": "Chyba se projevila znovu a pacientka zemřela. Rozhodující bylo včasné nápravné opatření."
+    }
   ],
   "outcomes": [
-    { "min": 90, "label": "Výborně zvládnuto", "text": "Postupovali jste jako zkušený výrobce: včas jste hlásili, našli příčinu a cíleně ochránili další pacienty." },
-    { "min": 65, "label": "Zvládnuto s výhradami", "text": "Hlavní kroky jste udělali, ale v něčem jste zaváhali – podívejte se na body níže." },
-    { "min": 0, "label": "Nezvládnuto", "text": "Některé zásadní povinnosti zůstaly nesplněné. Zkuste případ znovu a zaměřte se na lhůty a ochranu pacientů." }
+    {
+      "min": 90,
+      "label": "Výborně zvládnuto",
+      "text": "Postupovali jste jako zkušený výrobce: včas jste hlásili, našli příčinu a cíleně ochránili další pacienty."
+    },
+    {
+      "min": 65,
+      "label": "Zvládnuto s výhradami",
+      "text": "Hlavní kroky jste udělali, ale v něčem jste zaváhali – podívejte se na body níže."
+    },
+    {
+      "min": 0,
+      "label": "Nezvládnuto",
+      "text": "Některé zásadní povinnosti zůstaly nesplněné. Zkuste případ znovu a zaměřte se na lhůty a ochranu pacientů."
+    }
+  ],
+  "time": {
+    "mode": "live",
+    "rate": 8,
+    "prep_minutes": 10,
+    "pause_when_closed": true
+  },
+  "prep_messages": [
+    "p_prostredek",
+    "p_rizika",
+    "p_postup"
   ]
 }

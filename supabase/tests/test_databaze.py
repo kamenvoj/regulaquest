@@ -809,6 +809,7 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual([x['id'] for x in self.call('rq_sim_list')], [sid])
         run = str(self.call('rq_sim_save_run', sid, None, {'day': 0}))
         self.assertEqual(self.call('rq_sim_scenario', sid)['run']['id'], run)
+        self.assertEqual(self.call('rq_sim_scenario', sid)['run']['definition']['title'], 'Test')   # průchod nese kopii scénáře
         self.call('rq_sim_save_run', sid, run, {'day': 3}, {'pct': 80, 'outcome': 'Zvládnuto', 'ok': ['r1'], 'bad': ['r2']})
         self.fails('nelze uložit', 'rq_sim_save_run', sid, run, {'day': 4})     # dokončený průchod je uzavřený
         self.assertEqual(self.call('rq_sim_list')[0]['runs'][0]['result']['pct'], 80)

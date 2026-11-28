@@ -44,7 +44,8 @@ window.RQSimAdmin = (function () {
     const st = s.stats || {}, d = s.definition || {}, rules = d.rules || [], open = openId === s.id;
     const rate = r => { const x = (st.rules || {})[r.id]; return x && x.n ? Math.round(x.ok / x.n * 100) : null; };
     return `<section class="card sim-sc" data-id="${esc(s.id)}">
-      <div class="sim-sc-head"><div><div class="eyebrow">${esc(MOD[s.module] || s.module)}</div><h2>${esc(s.title)}</h2><p class="fine">${esc(s.summary || '')}</p></div>
+      <div class="sim-sc-head"><div><div class="eyebrow">${esc(MOD[s.module] || s.module)}</div><h2>${esc(s.title)}</h2><p class="fine">${esc(s.summary || '')}</p>
+        <p class="fine">${(d.time?.mode || 'step') === 'live' ? `Běžící čas: 1 minuta = ${d.time.rate} h simulovaného času${d.time.prep_minutes ? ` · příprava ${d.time.prep_minutes} min` : ''} · ${d.time.pause_when_closed === false ? 'hodiny běží i při zavřeném okně' : 'při zavřeném okně se hodiny zastaví'}` : 'Tahový režim – čas se posouvá jen kroky studenta'}${d.max_day ? ` · konec nejpozději ${d.max_day}. den` : ''}</p></div>
         <div class="sim-sc-st"><span class="badge ${s.status === 'ready' ? 'b-ok' : 'b-draft'}">${s.status === 'ready' ? 'Připraveno' : 'Koncept'}</span>
         <button class="btn tiny" data-status>${s.status === 'ready' ? 'Vrátit do konceptu' : 'Označit jako připravené'}</button></div></div>
       <div class="sim-sc-grid">

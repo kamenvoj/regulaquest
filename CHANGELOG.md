@@ -1,5 +1,19 @@
 # Změny
 
+## 0.37.0 – 2026-11-28 · Simulace – běžící čas a náhodný průběh
+- Jádro simulací v2: simulovaný čas v hodinách; režim **tahový** (čas jen kroky) nebo **běžící hodiny**
+  (`time.rate` = simulovaných hodin za 1 minutu, nastavitelné u scénáře); volitelná **příprava** (`time.prep_minutes`) –
+  hodiny stojí, student čte podklady, pak začne krize; volba, zda hodiny běží i při zavřeném okně.
+- Akce s délkou při běžícím čase běží **souběžně** – výsledek přijde později, mezitím lze dělat jiné kroky (panel „Probíhá“).
+- Spouštěče událostí: podmínka, pevný den, **náhodný okamžik v časovém okně** (každý student jinak), řetězení „X dní po…“,
+  **pravděpodobnost**, podmínka v okamžiku spuštění + větev „jinak“. Náhoda je stálá v rámci průchodu (seed).
+- Průchod si ukládá kopii scénáře – úprava scénáře rozehrané průchody nerozbije (migrace 28_simulace_cas.sql).
+- Zkušební průchod pro redakci: ladicí lišta ve studentské části (zrychlení ×5–×60, posun +6 h / +1 den / +3 dny,
+  zobrazení stavu a naplánovaných událostí).
+- Scénář Vigilance převeden: 10 min příprava (popis prostředku, výňatek z analýzy rizik, interní postup vigilance),
+  1 minuta = 8 h, události v náhodných oknech (další stížnost, dotaz novináře s pravděpodobností 50 %, druhá příhoda
+  mezi 10. a 13. dnem, pokud nebylo zahájeno FSCA).
+
 ## 0.36.0 – 2026-11-28 · Simulace – fáze 1 (jádro + Vigilance)
 - Nový prostor **Simulace** vedle Legislativy: přepínač nahoře ve Studiu i ve studentské části. Studentům se ukáže,
   jen pokud mají zpřístupněnou simulaci; redakce ho vidí vždy. Legislativa se nemění.
